@@ -27,7 +27,12 @@ import VoiceSearchScreen from '../screens/VoiceSearchScreen';
 import ConciergeNavigator from './ConciergeNavigator';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import FlameIcon from '../components/FlameIcon';
-import { auth, onAuthStateChanged, type AuthUser } from '../services/firebaseAuth';
+import {
+  auth,
+  onAuthStateChanged,
+  isSignUpTransitionActive,
+  type AuthUser,
+} from '../services/firebaseAuth';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -62,6 +67,12 @@ export default function AppNavigator() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, nextUser => {
+      if (nextUser && isSignUpTransitionActive()) {
+        // Ignore the momentary signed-in state createUserWithEmailAndPassword
+        // produces during sign-up — SignUpScreen signs back out right after,
+        // which will fire this listener again with null.
+        return;
+      }
       setUser(nextUser);
       setInitializing(false);
     });

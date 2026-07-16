@@ -7,7 +7,10 @@
  * truth. Wired to real Firebase Authentication (createUserWithEmailAndPassword,
  * then updateProfile with the entered name) — see
  * src/services/firebaseAuth.ts for the shared auth instance and error
- * mapping.
+ * mapping. Signs the new user back out immediately after creation so they
+ * land on Login and sign in with their new credentials, rather than being
+ * dropped straight into Main by createUserWithEmailAndPassword's implicit
+ * sign-in.
  */
 
 import React, { useState } from 'react';
@@ -29,7 +32,13 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createUserWithEmailAndPassword, updateProfile } from '@react-native-firebase/auth';
 import FlameIcon from '../components/FlameIcon';
-import { auth, getAuthErrorMessage } from '../services/firebaseAuth';
+import {
+  auth,
+  beginSignUpTransition,
+  endSignUpTransition,
+  getAuthErrorMessage,
+  signOut,
+} from '../services/firebaseAuth';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 
@@ -66,14 +75,21 @@ export default function SignUpScreen() {
     }
 
     setSubmitting(true);
+    // createUserWithEmailAndPassword signs the new user in automatically;
+    // suppress AppNavigator's session listener for that one transient event
+    // so Main never mounts before we sign back out below.
+    beginSignUpTransition();
     try {
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(credential.user, { displayName: fullName.trim() });
-      // No explicit navigation — AppNavigator's onAuthStateChanged listener
-      // swaps the root stack to Main as soon as it observes the new session.
+      await signOut(auth);
+      Alert.alert('Account Created', 'Please sign in with your new credentials.', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
     } finally {
+      endSignUpTransition();
       setSubmitting(false);
     }
   };

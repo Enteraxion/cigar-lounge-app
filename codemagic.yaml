@@ -1,0 +1,52 @@
+workflows:
+  ios-testflight:
+    name: iOS TestFlight Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic_appstore # name of the App Store Connect API key integration you add in Codemagic > Team settings > Integrations
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.cigarloungeapp.app # change to match the bundle ID you set in Xcode + App Store Connect
+      vars:
+        XCODE_WORKSPACE: "ios/CigarLoungeApp.xcworkspace"
+        XCODE_SCHEME: "CigarLoungeApp"
+      node: 22.11.0
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Restore GoogleService-Info.plist
+        script: |
+          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > ios/CigarLoungeApp/GoogleService-Info.plist
+      - name: Install CocoaPods dependencies
+        script: cd ios && pod install
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+      - name: Set build number
+        script: |
+          cd $CM_BUILD_DIR/ios
+          agvtool new-version -all $CM_BUILD_NUMBER
+      - name: Build ipa for distribution
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Managers # create this internal/external testing group in App Store Connect and add your manager's email to it
+      email:
+        recipients:
+          - rohith.akepati@enteraxion.com
+        notify:
+          success: true
+          failure: true

@@ -19,6 +19,27 @@ export type AuthUser = User;
 export { onAuthStateChanged, signOut };
 
 /**
+ * createUserWithEmailAndPassword signs the new user in immediately, firing
+ * a signed-in event on this same `auth` instance before SignUpScreen can
+ * sign back out. AppNavigator's session listener checks this flag to
+ * ignore that one transient signed-in event, so it never mounts Main for
+ * an instant during sign-up.
+ */
+let signUpTransitionActive = false;
+
+export function beginSignUpTransition() {
+  signUpTransitionActive = true;
+}
+
+export function endSignUpTransition() {
+  signUpTransitionActive = false;
+}
+
+export function isSignUpTransitionActive() {
+  return signUpTransitionActive;
+}
+
+/**
  * Maps a Firebase Auth error to a short, member-facing message. Falls back
  * to a generic message for codes we haven't special-cased.
  */

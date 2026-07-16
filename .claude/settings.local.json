@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp /tmp/PlayfairDisplay-Regular.ttf /tmp/PlayfairDisplay-SemiBold.ttf /tmp/Inter-Regular.ttf /tmp/Inter-Medium.ttf /tmp/Inter-SemiBold.ttf /tmp/Inter-Bold.ttf /Users/rohithreddy/cigar-lounge-app/assets/fonts/ *)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp"
+    ]
+  }
+}

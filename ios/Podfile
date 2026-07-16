@@ -8,11 +8,18 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
+# Required by @react-native-firebase/* — several Firebase Swift pods
+# (FirebaseAuthInterop, GoogleUtilities, etc.) don't define Clang modules,
+# which static-library builds need in order to be imported from Swift.
+use_modular_headers!
+
+# Defaults to static frameworks (overridable via USE_FRAMEWORKS=dynamic).
+# Required by @react-native-firebase/auth: FirebaseAuth is a Swift pod, and
+# static *libraries* can't expose it as an importable Swift module — only
+# static/dynamic *frameworks* can.
+linkage = ENV['USE_FRAMEWORKS'] || 'static'
+Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+use_frameworks! :linkage => linkage.to_sym
 
 target 'CigarLoungeApp' do
   config = use_native_modules!
@@ -30,5 +37,34 @@ target 'CigarLoungeApp' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # React Native's own headers (React-Core, etc.) aren't modular. With
+    # use_frameworks!, pods like RNFBApp/RNFBAuth are built as Clang
+    # framework modules and importing those non-modular RN headers is a
+    # hard error under -Werror unless we relax it here.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
+
+    # RNFBApp doesn't ship any Swift and nothing imports it as
+    # `RNFBApp-Swift.h`/`@import RNFBApp`, so it doesn't need to be a Clang
+    # module itself. But since use_frameworks! makes it one by default,
+    # RNFBApp's own headers "claim" ownership of React-Core symbols (e.g.
+    # RCTBridgeModule) the first time they're pulled in. When RNFBFirestore
+    # (which DOES need DEFINES_MODULE — it has its own Swift pipeline files)
+    # textually imports the same React-Core header, Clang errors with
+    # "declaration of 'RCTBridgeModule' must be imported from module
+    # 'RNFBApp.RNFBAppModule' before it is required". Turning off module
+    # generation for RNFBApp specifically removes that ownership claim so
+    # React-Core headers stay plain/textual everywhere, avoiding the
+    # conflict without touching any vendored RNFBFirestore source.
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'RNFBApp'
+      target.build_configurations.each do |config|
+        config.build_settings['DEFINES_MODULE'] = 'NO'
+      end
+    end
   end
 end

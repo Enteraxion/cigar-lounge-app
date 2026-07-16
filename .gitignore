@@ -66,6 +66,17 @@ yarn-error.log
 # testing
 /coverage
 
+# Firebase Admin SDK service account key — see scripts/seedFirestore.ts
+# header comment. Never commit this; it grants full admin access to the
+# Firebase project.
+serviceAccountKey.json
+**/serviceAccountKey.json
+
+# Firebase client config — contains API keys, don't commit
+android/app/google-services.json
+ios/CigarLoungeApp/GoogleService-Info.plist
+.scripts-build/
+
 # Yarn
 .yarn/*
 !.yarn/patches

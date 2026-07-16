@@ -1,0 +1,406 @@
+/**
+ * EditProfileScreen
+ *
+ * Matches the app's existing edit-form design system (see
+ * CreateCollectionScreen for the same tappable-photo + text-field +
+ * submit-button pattern). Reached from ProfileScreen's "Edit Profile"
+ * button. Editable fields: profile photo, name, home city, favorite
+ * brand, favorite lounge (a plain text field rather than a lounge
+ * picker — simpler to build and just as functional for a free-text
+ * "favorite" preference).
+ *
+ * Saving writes to two places:
+ *  - Firebase Auth (updateProfile: displayName/photoURL) — the source of
+ *    truth for identity, read back by useUserProfile.ts.
+ *  - Firestore users/{userId} (setDoc with merge: true, via
+ *    userActionsService.ts's updateUserProfile()) — works whether the
+ *    doc already exists or is being created for the first time, since
+ *    real sign-ups never get one created automatically.
+ *
+ * The photo picker + upload flow mirrors CreateCollectionScreen's cover
+ * photo exactly: local preview immediately, upload to Firebase Storage
+ * in the background (src/services/storageService.ts, under
+ * users/{uid}/profile/) with a progress/error overlay, and Save blocks
+ * until that upload resolves.
+ */
+
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { Camera, Check, ChevronLeft, User } from 'lucide-react-native';
+import { updateProfile } from '@react-native-firebase/auth';
+import { theme } from '../theme';
+import { auth } from '../services/firebaseAuth';
+import { getUserProfile, updateUserProfile } from '../services/userActionsService';
+import { uploadImage } from '../services/storageService';
+import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+
+type EditProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
+
+export default function EditProfileScreen() {
+  const navigation = useNavigation<EditProfileNavigationProp>();
+  const authUser = auth.currentUser;
+
+  const [name, setName] = useState(authUser?.displayName ?? '');
+  const [homeCity, setHomeCity] = useState('');
+  const [favoriteBrand, setFavoriteBrand] = useState('');
+  const [favoriteLounge, setFavoriteLounge] = useState('');
+
+  const [avatarUri, setAvatarUri] = useState<string | null>(authUser?.photoURL ?? null);
+  const [avatarRemoteUrl, setAvatarRemoteUrl] = useState<string | null>(authUser?.photoURL ?? null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarProgress, setAvatarProgress] = useState(0);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!authUser) return;
+    getUserProfile(authUser.uid)
+      .then(profile => {
+        if (!profile) return;
+        setHomeCity(profile.homeCity ?? '');
+        setFavoriteBrand(profile.favoriteBrand ?? '');
+        setFavoriteLounge(profile.favoriteLounge ?? '');
+        if (!authUser.photoURL && profile.avatarUrl) {
+          setAvatarUri(profile.avatarUrl);
+          setAvatarRemoteUrl(profile.avatarUrl);
+        }
+      })
+      .catch(() => {
+        // Fields just stay empty — not worth blocking the edit form over
+        // a failed prefill read.
+      });
+  }, [authUser]);
+
+  const uploadAvatar = async (localUri: string) => {
+    if (!authUser) return;
+    setAvatarUploading(true);
+    setAvatarError(null);
+    setAvatarProgress(0);
+    try {
+      const url = await uploadImage(authUser.uid, localUri, 'profile', setAvatarProgress);
+      setAvatarRemoteUrl(url);
+    } catch (error) {
+      console.error('Avatar upload failed', error);
+      const code = (error as { code?: string })?.code;
+      setAvatarError(
+        code === 'storage/unauthorized'
+          ? "Upload failed — you don't have permission to save a photo."
+          : 'Upload failed — check your connection.',
+      );
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const pickAvatar = () => {
+    launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 }, response => {
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert(
+          "Couldn't open photo library",
+          response.errorCode === 'permission'
+            ? 'Allow photo library access in Settings to choose a profile photo.'
+            : response.errorMessage ?? 'Something went wrong.',
+        );
+        return;
+      }
+      const uri = response.assets?.[0]?.uri;
+      if (!uri) return;
+      setAvatarUri(uri);
+      setAvatarRemoteUrl(null);
+      uploadAvatar(uri);
+    });
+  };
+
+  const save = async () => {
+    if (!authUser) {
+      Alert.alert("Couldn't save", 'You need to be signed in to do that.');
+      return;
+    }
+    if (!name.trim()) {
+      Alert.alert('Name required', 'Enter your name before saving.');
+      return;
+    }
+    if (avatarUploading) {
+      Alert.alert('Still uploading', 'Wait for your profile photo to finish uploading.');
+      return;
+    }
+    if (submitting) return;
+
+    setSubmitting(true);
+    try {
+      await updateProfile(authUser, {
+        displayName: name.trim(),
+        ...(avatarRemoteUrl ? { photoURL: avatarRemoteUrl } : null),
+      });
+      await updateUserProfile(authUser.uid, {
+        name: name.trim(),
+        email: authUser.email ?? '',
+        avatarUrl: avatarRemoteUrl ?? '',
+        homeCity: homeCity.trim(),
+        favoriteBrand: favoriteBrand.trim(),
+        favoriteLounge: favoriteLounge.trim(),
+      });
+      navigation.goBack();
+    } catch {
+      Alert.alert("Couldn't save profile", 'Check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+          <ChevronLeft size={20} color={theme.colors.white} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* ---------------- Profile Photo ---------------- */}
+        <View style={styles.avatarField}>
+          <Pressable style={styles.avatarArea} onPress={pickAvatar}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
+                <User size={40} color={theme.colors.secondarySilver} />
+              </View>
+            )}
+            <View style={styles.avatarOverlay}>
+              {avatarUploading ? (
+                <>
+                  <ActivityIndicator color={theme.colors.white} />
+                  <Text style={styles.avatarOverlayLabel}>{Math.round(avatarProgress * 100)}%</Text>
+                </>
+              ) : avatarError ? (
+                <>
+                  <Text style={styles.avatarOverlayLabel}>{avatarError}</Text>
+                  <Text style={styles.avatarRetryLabel}>Tap to try again</Text>
+                </>
+              ) : (
+                <View style={styles.avatarIconCircle}>
+                  <Camera size={18} color={theme.colors.primaryNavy} />
+                </View>
+              )}
+            </View>
+          </Pressable>
+        </View>
+
+        {/* ---------------- Name ---------------- */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Name</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+            placeholderTextColor={theme.colors.mutedGray}
+            style={styles.textInput}
+          />
+        </View>
+
+        {/* ---------------- Home City ---------------- */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Home City</Text>
+          <TextInput
+            value={homeCity}
+            onChangeText={setHomeCity}
+            placeholder="e.g. New York, NY"
+            placeholderTextColor={theme.colors.mutedGray}
+            style={styles.textInput}
+          />
+        </View>
+
+        {/* ---------------- Favorite Brand ---------------- */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Favorite Brand</Text>
+          <TextInput
+            value={favoriteBrand}
+            onChangeText={setFavoriteBrand}
+            placeholder="e.g. Padrón"
+            placeholderTextColor={theme.colors.mutedGray}
+            style={styles.textInput}
+          />
+        </View>
+
+        {/* ---------------- Favorite Lounge ---------------- */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Favorite Lounge</Text>
+          <TextInput
+            value={favoriteLounge}
+            onChangeText={setFavoriteLounge}
+            placeholder="e.g. The Heritage Oak Room"
+            placeholderTextColor={theme.colors.mutedGray}
+            style={styles.textInput}
+          />
+        </View>
+
+        <Pressable
+          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+          onPress={save}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color={theme.colors.primaryNavy} />
+          ) : (
+            <>
+              <Text style={styles.submitButtonText}>Save Changes</Text>
+              <Check size={18} color={theme.colors.primaryNavy} />
+            </>
+          )}
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+
+  // ---- Header ----
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.radius.full,
+    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 17,
+    color: theme.colors.white,
+  },
+  headerSpacer: {
+    width: 32,
+  },
+
+  scrollContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.xl,
+  },
+
+  // ---- Avatar ----
+  avatarField: {
+    alignItems: 'center',
+  },
+  avatarArea: {
+    position: 'relative',
+    width: 120,
+    height: 120,
+    borderRadius: theme.radius.full,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.surfaceNavy,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.2)',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(5, 10, 24, 0.35)',
+  },
+  avatarOverlayLabel: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 12,
+    color: theme.colors.white,
+    textAlign: 'center',
+    paddingHorizontal: theme.spacing.sm,
+  },
+  avatarRetryLabel: {
+    ...theme.typography.caption,
+    fontSize: 10,
+    fontFamily: theme.fontFamily.semibold,
+    color: theme.colors.accentGold,
+  },
+  avatarIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ---- Fields ----
+  field: {
+    gap: theme.spacing.sm,
+  },
+  fieldLabel: {
+    ...theme.typography.caption,
+    fontSize: 11,
+    color: theme.colors.mutedGray,
+  },
+  textInput: {
+    ...theme.typography.body,
+    height: 50,
+    fontSize: 14,
+    color: theme.colors.white,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surfaceNavy,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.15)',
+  },
+
+  // ---- Submit ----
+  submitButton: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.white,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 15,
+    color: theme.colors.primaryNavy,
+  },
+});

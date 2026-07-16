@@ -28,14 +28,19 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>The Reserve uses your photo library so you can attach photos to reviews and collection covers.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The Reserve uses your camera so you can take photos to attach to reviews and collection covers.</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -55,5 +60,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Inter-Medium.ttf</string>
+		<string>PlayfairDisplay-SemiBold.ttf</string>
+		<string>Inter-Bold.ttf</string>
+		<string>Inter-Regular.ttf</string>
+		<string>PlayfairDisplay-Regular.ttf</string>
+		<string>Inter-SemiBold.ttf</string>
+		<string>Ionicons.ttf</string>
+	</array>
 </dict>
 </plist>

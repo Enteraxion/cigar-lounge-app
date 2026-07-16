@@ -10,6 +10,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.cigarloungeapp.app # change to match the bundle ID you set in Xcode + App Store Connect
       vars:
+        BUNDLE_ID: "com.cigarloungeapp.app"
         XCODE_WORKSPACE: "ios/CigarLoungeApp.xcworkspace"
         XCODE_SCHEME: "CigarLoungeApp"
       node: 22.11.0
@@ -23,7 +24,14 @@ workflows:
           echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > ios/CigarLoungeApp/GoogleService-Info.plist
       - name: Install CocoaPods dependencies
         script: cd ios && pod install
-      - name: Set up code signing
+      - name: Set up keychain
+        script: keychain initialize
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Use signing files
         script: |
           xcode-project use-profiles
       - name: Set build number

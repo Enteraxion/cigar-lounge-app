@@ -9,6 +9,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.cigarloungeapp.app # change to match the bundle ID you set in Xcode + App Store Connect
+      groups:
+        - ios_signing
       vars:
         BUNDLE_ID: "com.cigarloungeapp.app"
         XCODE_WORKSPACE: "ios/CigarLoungeApp.xcworkspace"

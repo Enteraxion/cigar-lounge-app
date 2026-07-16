@@ -42,7 +42,7 @@ workflows:
         auth: integration
         submit_to_testflight: true
         beta_groups:
-          - Managers # create this internal/external testing group in App Store Connect and add your manager's email to it
+          - Testers # create this internal/external testing group in App Store Connect and add tester emails to it
       email:
         recipients:
           - rohith.akepati@enteraxion.com

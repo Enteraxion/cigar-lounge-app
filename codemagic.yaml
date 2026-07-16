@@ -24,8 +24,6 @@ workflows:
           echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > ios/CigarLoungeApp/GoogleService-Info.plist
       - name: Install CocoaPods dependencies
         script: cd ios && pod install
-      - name: Set up keychain
-        script: keychain initialize
       - name: Use signing files
         script: |
           xcode-project use-profiles

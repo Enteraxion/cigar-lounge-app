@@ -29,10 +29,6 @@ workflows:
       - name: Use signing files
         script: |
           xcode-project use-profiles
-      - name: Set build number
-        script: |
-          cd $CM_BUILD_DIR/ios
-          agvtool new-version -all $CM_BUILD_NUMBER
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \

@@ -56,6 +56,7 @@ import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { haversineDistanceMiles } from '../utils/loungeSearch';
 import { defaultRegion } from '../data/mockMap';
+import { useCurrentLocation } from '../hooks/useCurrentLocation';
 // TODO(firestore): Cigar of the Week / Member Events aren't modeled in
 // Firestore yet — see header comment above.
 import { cigarOfWeek, memberEvents } from '../data/mockHome';
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   const { profile } = useUserProfile();
   const { count: unreadNotificationCount } = useUnreadNotificationCount();
+  const { location: currentLocation } = useCurrentLocation();
   const [lounges, setLounges] = useState<Lounge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -105,16 +107,17 @@ export default function HomeScreen() {
     ? [...lounges].sort((a, b) => b.ratings.overall - a.ratings.overall)[0]
     : null;
 
-  // Sorted by distance from the app's placeholder "current location" (see
-  // src/utils/loungeSearch.ts's file header — no real device geolocation
-  // anywhere in this app yet), same reference point Search/Map use.
+  // Sorted by distance from the user's real device location (see
+  // src/hooks/useCurrentLocation.ts), falling back to defaultRegion if
+  // permission was denied or no fix is available yet — same reference
+  // point Search/Map use.
   const nearbyLounges = lounges
     ? [...lounges]
         .filter(l => l.id !== featuredLounge?.id)
         .sort(
           (a, b) =>
-            haversineDistanceMiles(defaultRegion, a.coordinates) -
-            haversineDistanceMiles(defaultRegion, b.coordinates),
+            haversineDistanceMiles(currentLocation ?? defaultRegion, a.coordinates) -
+            haversineDistanceMiles(currentLocation ?? defaultRegion, b.coordinates),
         )
         .slice(0, NEARBY_COUNT)
     : [];

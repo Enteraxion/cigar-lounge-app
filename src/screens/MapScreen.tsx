@@ -7,10 +7,12 @@
  * card, custom lounge pin markers, right-side map controls, and a
  * persistent bottom info card for the selected lounge. Pins are real
  * lounges from Firestore via src/services/loungeService.ts, plotted at
- * their own `coordinates` field — no real GPS/location permissions wired
- * up yet, so the map still centers on a static default region rather
- * than the user's actual location. Weather widget and Concierge
- * suggestion stay local mock data — neither is modeled in Firestore.
+ * their own `coordinates` field. The initial region and the recenter
+ * control use real device GPS via useCurrentLocation, falling back to a
+ * static default region (src/data/mockMap.ts's `defaultRegion`) if
+ * permission is denied or no fix is available yet — see that hook's
+ * header comment. Weather widget and Concierge suggestion stay local
+ * mock data — neither is modeled in Firestore.
  *
  * PROVIDER_DEFAULT resolves to Apple Maps (MapKit) on iOS, which is what
  * this project actually renders — there's no Google Maps API key or
@@ -45,6 +47,7 @@ import SimplifiedMapView from '../components/SimplifiedMapView';
 // modeled in Firestore yet — see header comment above.
 import { conciergeSuggestion, defaultRegion, mapFilterChips, weatherWidget } from '../data/mockMap';
 import { getAllLounges, type Lounge } from '../services/loungeService';
+import { useCurrentLocation } from '../hooks/useCurrentLocation';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 
 function MapPin({
@@ -78,6 +81,15 @@ function MapPin({
 export default function MapScreen() {
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   const mapRef = useRef<MapView>(null);
+  const { location } = useCurrentLocation();
+  const initialRegion = location
+    ? {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: defaultRegion.latitudeDelta,
+        longitudeDelta: defaultRegion.longitudeDelta,
+      }
+    : defaultRegion;
   const [selectedChip, setSelectedChip] = useState('all');
   const [lounges, setLounges] = useState<Lounge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,10 +118,27 @@ export default function MapScreen() {
     loadLounges();
   }, [loadLounges]);
 
+  // initialRegion only applies at first mount; if the GPS fix resolves
+  // after the map has already rendered with the fallback defaultRegion,
+  // animate over to the real position once it arrives.
+  useEffect(() => {
+    if (location) {
+      mapRef.current?.animateToRegion(
+        {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: defaultRegion.latitudeDelta,
+          longitudeDelta: defaultRegion.longitudeDelta,
+        },
+        400,
+      );
+    }
+  }, [location]);
+
   const selectedLounge = lounges?.find(lounge => lounge.id === selectedLoungeId) ?? null;
 
   const recenter = () => {
-    mapRef.current?.animateToRegion(defaultRegion, 400);
+    mapRef.current?.animateToRegion(initialRegion, 400);
   };
 
   const openVoiceSearch = () => {
@@ -186,7 +215,7 @@ export default function MapScreen() {
           style={StyleSheet.absoluteFill}
           provider={PROVIDER_DEFAULT}
           userInterfaceStyle="dark"
-          initialRegion={defaultRegion}
+          initialRegion={initialRegion}
           mapType={mapType}
           onPress={() => setSelectedLoungeId(null)}
         >

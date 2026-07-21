@@ -36,7 +36,7 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string/>
+	<string>The Reserve uses your location to show nearby cigar lounges and center the map on where you are.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>The Reserve uses your photo library so you can attach photos to reviews and collection covers.</string>
 	<key>NSCameraUsageDescription</key>

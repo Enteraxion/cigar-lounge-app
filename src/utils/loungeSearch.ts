@@ -8,18 +8,23 @@
  * (see src/services/loungeService.ts) and the real fields on
  * `LoungeDocument` (src/types/firestore.ts) — no new schema.
  *
- * Two known approximations, called out again at each call site:
- *  - There's no real device geolocation anywhere in this app yet, so
- *    "current location" is stood in by src/data/mockMap.ts's
- *    `defaultRegion` (the same reference point the Map tab defaults to).
+ * One known approximation, called out again at its call site:
  *  - `tags`/`amenities`/`description` are free-text, not a structured
  *    taxonomy matching the Filter sheet's UI option ids, so
  *    Atmosphere/Amenities/Entertainment matching is a best-effort
  *    keyword substring match (same approach as src/utils/amenityIcon.ts).
+ *
+ * "Current location" (used by the Filter sheet's "Near Current Location"
+ * radius and the Sort sheet's "Distance" option) comes from the caller —
+ * see src/hooks/useCurrentLocation.ts — falling back to
+ * src/data/mockMap.ts's `defaultRegion` (a static London coordinate) if
+ * real GPS isn't available (permission denied, no fix yet, etc.).
  */
 
 import type { Lounge } from '../services/loungeService';
 import { defaultRegion } from '../data/mockMap';
+
+export type LatLng = { latitude: number; longitude: number };
 
 export type SearchFilters = {
   distanceMiles: number;
@@ -117,10 +122,9 @@ function matchesAvailability(lounge: Lounge, selectedIds: string[]): boolean {
   });
 }
 
-function matchesLocation(lounge: Lounge, filters: SearchFilters): boolean {
+function matchesLocation(lounge: Lounge, filters: SearchFilters, currentLocation: LatLng): boolean {
   if (filters.nearCurrentLocation) {
-    // Placeholder "current location" — see file header comment.
-    const distance = haversineDistanceMiles(defaultRegion, lounge.coordinates);
+    const distance = haversineDistanceMiles(currentLocation, lounge.coordinates);
     return distance <= filters.distanceMiles;
   }
   if (filters.cityQuery.trim()) {
@@ -130,11 +134,17 @@ function matchesLocation(lounge: Lounge, filters: SearchFilters): boolean {
 }
 
 /** Applies the full Filter sheet's rules (AND across sections, OR within
- * each section's chips) to a list of lounges. */
-export function applySearchFilters(lounges: Lounge[], filters: SearchFilters): Lounge[] {
+ * each section's chips) to a list of lounges. `currentLocation` defaults
+ * to the mock `defaultRegion` for callers that haven't wired up
+ * useCurrentLocation (or got a null back from it, e.g. permission denied). */
+export function applySearchFilters(
+  lounges: Lounge[],
+  filters: SearchFilters,
+  currentLocation: LatLng = defaultRegion,
+): Lounge[] {
   return lounges.filter(
     lounge =>
-      matchesLocation(lounge, filters) &&
+      matchesLocation(lounge, filters, currentLocation) &&
       matchesAvailability(lounge, filters.availability) &&
       matchesKeywordCategory(lounge, filters.atmosphere) &&
       matchesKeywordCategory(lounge, filters.amenities) &&
@@ -160,17 +170,18 @@ export function isPremiumLounge(lounge: Lounge): boolean {
  * the same array (no reordering) for 'best-match', matching whatever order
  * searchLounges() returned.
  */
-export function sortLounges(lounges: Lounge[], sortId: string): Lounge[] {
+export function sortLounges(
+  lounges: Lounge[],
+  sortId: string,
+  currentLocation: LatLng = defaultRegion,
+): Lounge[] {
   const list = [...lounges];
   switch (sortId) {
     case 'distance':
-      // Placeholder "current location" — see file header comment; sorts by
-      // distance from the app's default region until real device geolocation
-      // is added.
       return list.sort(
         (a, b) =>
-          haversineDistanceMiles(defaultRegion, a.coordinates) -
-          haversineDistanceMiles(defaultRegion, b.coordinates),
+          haversineDistanceMiles(currentLocation, a.coordinates) -
+          haversineDistanceMiles(currentLocation, b.coordinates),
       );
     case 'highest-rated':
       return list.sort((a, b) => b.ratings.overall - a.ratings.overall);

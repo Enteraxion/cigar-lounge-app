@@ -96,6 +96,7 @@ const CITIES = [
   'Las Vegas, NV',
   'Houston, TX',
   'London, UK',
+  'Greenville, SC',
 ];
 
 const CATEGORY = 'cigarbars';

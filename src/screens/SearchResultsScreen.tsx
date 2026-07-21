@@ -79,6 +79,7 @@ import {
   type SearchFilters,
 } from '../utils/loungeSearch';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { useCurrentLocation } from '../hooks/useCurrentLocation';
 
 // Deliberately neutral (no filtering applied) — this is the screen's actual
 // applied-filter state before the user has ever pressed "Show Results" on
@@ -146,6 +147,7 @@ export default function SearchResultsScreen() {
   const [savingResult, setSavingResult] = useState<Lounge | null>(null);
 
   const userId = auth.currentUser?.uid;
+  const { location: currentLocation } = useCurrentLocation();
 
   const runSearch = useCallback(async () => {
     setError(null);
@@ -194,19 +196,21 @@ export default function SearchResultsScreen() {
     if (!results) {
       return results;
     }
-    const filtered = applySearchFilters(results, appliedFilters).filter(
-      lounge => {
-        if (selectedChips.includes('premium') && !isPremiumLounge(lounge)) {
-          return false;
-        }
-        if (selectedChips.includes('open-now') && lounge.status !== 'open') {
-          return false;
-        }
-        return true;
-      },
-    );
-    return sortLounges(filtered, appliedSort);
-  }, [results, appliedFilters, selectedChips, appliedSort]);
+    const filtered = applySearchFilters(
+      results,
+      appliedFilters,
+      currentLocation ?? defaultRegion,
+    ).filter(lounge => {
+      if (selectedChips.includes('premium') && !isPremiumLounge(lounge)) {
+        return false;
+      }
+      if (selectedChips.includes('open-now') && lounge.status !== 'open') {
+        return false;
+      }
+      return true;
+    });
+    return sortLounges(filtered, appliedSort, currentLocation ?? defaultRegion);
+  }, [results, appliedFilters, selectedChips, appliedSort, currentLocation]);
 
   const hasActiveFilters =
     selectedChips.length > 0 ||
@@ -508,6 +512,7 @@ export default function SearchResultsScreen() {
         initialFilters={appliedFilters}
         onApply={setAppliedFilters}
         onClose={() => setFilterVisible(false)}
+        currentLocation={currentLocation ?? undefined}
       />
       {savingResult ? (
         <AddToCollectionSheet

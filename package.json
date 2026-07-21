@@ -13,6 +13,7 @@
     "remove:demo-data": "ts-node --project scripts/tsconfig.json scripts/removeDemoData.ts"
   },
   "dependencies": {
+    "@react-native-community/geolocation": "^3.4.0",
     "@react-native-firebase/app": "^25.1.0",
     "@react-native-firebase/auth": "^25.1.0",
     "@react-native-firebase/firestore": "^25.1.0",

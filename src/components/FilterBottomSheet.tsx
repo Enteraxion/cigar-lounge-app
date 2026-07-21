@@ -50,7 +50,7 @@ import {
   type FilterOption,
 } from '../data/mockFilters';
 import type { Lounge } from '../services/loungeService';
-import { applySearchFilters, type SearchFilters } from '../utils/loungeSearch';
+import { applySearchFilters, type LatLng, type SearchFilters } from '../utils/loungeSearch';
 
 type Props = {
   visible: boolean;
@@ -58,6 +58,10 @@ type Props = {
   initialFilters: SearchFilters;
   onApply: (filters: SearchFilters) => void;
   onClose: () => void;
+  /** Real device location (see useCurrentLocation), used for the "Show N
+   * Results" live count when "Near Current Location" is toggled on.
+   * Defaults to applySearchFilters' own defaultRegion fallback if omitted. */
+  currentLocation?: LatLng;
 };
 
 type SectionId = 'location' | 'availability' | 'atmosphere' | 'amenities' | 'entertainment';
@@ -140,6 +144,7 @@ export default function FilterBottomSheet({
   initialFilters,
   onApply,
   onClose,
+  currentLocation,
 }: Props) {
   const [expandedSections, setExpandedSections] = useState<SectionId[]>(['location']);
   const [distance, setDistance] = useState(initialFilters.distanceMiles);
@@ -188,7 +193,7 @@ export default function FilterBottomSheet({
   // Dataset is a few dozen lounges at most (see loungeService.ts), so
   // recomputing this on every render (as chips are toggled) is cheap
   // enough to skip memoizing.
-  const resultCount = applySearchFilters(results, draftFilters).length;
+  const resultCount = applySearchFilters(results, draftFilters, currentLocation).length;
 
   const handleShowResults = () => {
     onApply(draftFilters);

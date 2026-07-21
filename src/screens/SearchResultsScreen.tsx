@@ -63,6 +63,7 @@ import SortBottomSheet from '../components/SortBottomSheet';
 import FilterBottomSheet from '../components/FilterBottomSheet';
 import AddToCollectionSheet from '../components/AddToCollectionSheet';
 import { searchLounges, type Lounge } from '../services/loungeService';
+import { refreshCityLounges } from '../services/loungeRefreshService';
 import {
   getUserFavoriteIds,
   recordSearch,
@@ -163,6 +164,18 @@ export default function SearchResultsScreen() {
         // Fire-and-forget — this is for SearchScreen's Recent Searches list
         // and shouldn't block or fail rendering the results themselves.
         recordSearch(userId, query).catch(() => {});
+      }
+      if (query.trim()) {
+        // Fire-and-forget live refresh (see loungeRefreshService.ts) — a
+        // no-op until refreshCityLounges is deployed. If it does add new
+        // data for this city, re-run the search once to pick it up.
+        refreshCityLounges(query)
+          .then(refreshed => {
+            if (refreshed) {
+              runSearch();
+            }
+          })
+          .catch(() => {});
       }
     } catch {
       setError("Couldn't load results. Check your connection and try again.");

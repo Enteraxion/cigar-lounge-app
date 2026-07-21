@@ -83,20 +83,77 @@ initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
 // ---------------------------------------------------------------------------
-// Cities to search — same major markets as the existing mock/seed data
-// (New York, Miami, Chicago) plus a few more common ones. Yelp's
-// coverage outside the US/Canada/UK is patchy, so this list leans US.
+// Cities to search. This is a stopgap, hand-picked list (top US metro
+// areas by population, plus London) — it will never be true nationwide
+// coverage since it can only ever include cities someone thought to add
+// ahead of time. Real "any US city" coverage needs the live per-search
+// refresh instead (see functions/src/index.ts's refreshCityLounges,
+// currently undeployed pending a Firebase Blaze plan decision — see the
+// blaze_plan_decision memory / conversation with Julian Brinkley).
 // ---------------------------------------------------------------------------
 
 const CITIES = [
   'New York, NY',
-  'Chicago, IL',
-  'Miami, FL',
   'Los Angeles, CA',
-  'Las Vegas, NV',
+  'Chicago, IL',
   'Houston, TX',
-  'London, UK',
+  'Phoenix, AZ',
+  'Philadelphia, PA',
+  'San Antonio, TX',
+  'San Diego, CA',
+  'Dallas, TX',
+  'Austin, TX',
+  'Jacksonville, FL',
+  'Fort Worth, TX',
+  'San Jose, CA',
+  'Columbus, OH',
+  'Charlotte, NC',
+  'Indianapolis, IN',
+  'San Francisco, CA',
+  'Seattle, WA',
+  'Denver, CO',
+  'Oklahoma City, OK',
+  'Nashville, TN',
+  'Washington, DC',
+  'El Paso, TX',
+  'Las Vegas, NV',
+  'Boston, MA',
+  'Detroit, MI',
+  'Portland, OR',
+  'Memphis, TN',
+  'Louisville, KY',
+  'Baltimore, MD',
+  'Milwaukee, WI',
+  'Albuquerque, NM',
+  'Tucson, AZ',
+  'Fresno, CA',
+  'Sacramento, CA',
+  'Kansas City, MO',
+  'Atlanta, GA',
+  'Miami, FL',
+  'Raleigh, NC',
+  'Omaha, NE',
+  'Colorado Springs, CO',
+  'Long Beach, CA',
+  'Virginia Beach, VA',
+  'Oakland, CA',
+  'Minneapolis, MN',
+  'Tulsa, OK',
+  'Tampa, FL',
+  'New Orleans, LA',
+  'Wichita, KS',
+  'Cleveland, OH',
+  'Bakersfield, CA',
+  'Honolulu, HI',
   'Greenville, SC',
+  'Charleston, SC',
+  'Richmond, VA',
+  'Salt Lake City, UT',
+  'Cincinnati, OH',
+  'Pittsburgh, PA',
+  'St. Louis, MO',
+  'Orlando, FL',
+  'London, UK',
 ];
 
 const CATEGORY = 'cigarbars';

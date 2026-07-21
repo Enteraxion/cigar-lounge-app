@@ -4,17 +4,34 @@
  * Matches design-reference/Search Home Screen.pdf top to bottom: header +
  * search bar, filter chips, recent searches, popular destinations,
  * trending cities, recently viewed, and a featured travel guide banner.
- * The section labels/imagery (see src/data/mockSearch.ts) are still a
- * curated mock list — there's no "trending"/"recent search history"
- * tracking in Firestore yet — but every row is wired to real data once
- * tapped: Recent Searches/Popular Destinations/Trending Cities each run
- * a real searchLounges() query via SearchResultsScreen, and Recently
- * Viewed Lounges links straight to LoungeDetailScreen by real lounge id.
- * Featured Travel Guide stays non-interactive (no destination-guide
- * content modeled anywhere yet).
+ *
+ * Recent Searches, Popular Destinations, Trending Cities, and Recently
+ * Viewed are all real now — refetched on focus (useFocusEffect) so
+ * running a search or viewing a lounge elsewhere shows up here
+ * immediately on return:
+ *  - Recent Searches: userActionsService.getRecentSearches — see
+ *    SearchResultsScreen's recordSearch() call for where each entry gets
+ *    written, and clearSearchHistory for "Clear All".
+ *  - Popular Destinations / Trending Cities: loungeService's
+ *    getPopularDestinations/getTrendingCities, ranked by real lounge
+ *    density per city (see LoungeDocument.city, only populated on
+ *    Yelp-imported lounges).
+ *  - Recently Viewed: userActionsService.getRecentlyViewedLounges (same
+ *    view-tracking SearchSuggestionsScreen's Recently Visited uses).
+ *
+ * Filter chips (Nearby/Open Now/Premium/Whiskey) now run a real
+ * SearchResultsScreen query too — see pressFilterChip below and
+ * SearchStackParamList's initialQuickFilterIds/initialFilters params,
+ * which seed SearchResultsScreen's existing (already-real) selectedChips/
+ * appliedFilters state.
+ *
+ * Still mock/non-functional, deliberately not touched here: Featured
+ * Travel Guide has no backing content model anywhere in the app (would
+ * mean writing actual destination-guide content, a product/content task,
+ * not a data-wiring one) — stays "Coming Soon".
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -27,7 +44,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowRight, History, Mic, Search as SearchIcon } from 'lucide-react-native';
 import { theme } from '../theme';
@@ -35,20 +52,99 @@ import SectionHeader from '../components/SectionHeader';
 import FilterChip from '../components/FilterChip';
 import CompactLoungeCard from '../components/CompactLoungeCard';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { featuredTravelGuide, filterChips } from '../data/mockSearch';
 import {
-  featuredTravelGuide,
-  filterChips,
-  popularDestinations,
-  recentSearches,
-  recentlyViewedLounges,
-  trendingCities,
-} from '../data/mockSearch';
+  getPopularDestinations,
+  getTrendingCities,
+  type Lounge,
+  type PopularDestination,
+  type TrendingCity,
+} from '../services/loungeService';
+import {
+  clearSearchHistory,
+  getRecentlyViewedLounges,
+  getRecentSearches,
+  type SearchHistoryEntry,
+} from '../services/userActionsService';
+import { auth } from '../services/firebaseAuth';
 
 type SearchNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
+
+/** "Today" / "Yesterday" / a short date, for a recent search's subtitle. */
+function relativeDayLabel(date: Date): string {
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(date)) / (24 * 60 * 60 * 1000));
+  if (dayDiff === 0) return 'Today';
+  if (dayDiff === 1) return 'Yesterday';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 export default function SearchScreen() {
   const navigation = useNavigation<SearchNavigationProp>();
   const [selectedChip, setSelectedChip] = useState('nearby');
+  const [recentSearches, setRecentSearches] = useState<SearchHistoryEntry[]>([]);
+  const [popularDestinations, setPopularDestinations] = useState<PopularDestination[]>([]);
+  const [trendingCities, setTrendingCities] = useState<TrendingCity[]>([]);
+  const [recentlyViewedLounges, setRecentlyViewedLounges] = useState<Lounge[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getPopularDestinations()
+        .then(setPopularDestinations)
+        .catch(() => {});
+      getTrendingCities()
+        .then(setTrendingCities)
+        .catch(() => {});
+
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        return;
+      }
+      getRecentSearches(userId, 5)
+        .then(setRecentSearches)
+        .catch(() => {});
+      getRecentlyViewedLounges(userId, 10)
+        .then(setRecentlyViewedLounges)
+        .catch(() => {});
+    }, []),
+  );
+
+  const clearRecentSearches = () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      return;
+    }
+    clearSearchHistory(userId)
+      .then(() => setRecentSearches([]))
+      .catch(() => Alert.alert('Something went wrong', 'Could not clear search history.'));
+  };
+
+  /**
+   * Filter chips run a real SearchResultsScreen query pre-filtered to
+   * match: Nearby -> distance-from-current-location, Open Now/Premium ->
+   * the same quick filter chips SearchResultsScreen already has, Whiskey
+   * -> the Filter sheet's "Whiskey Tastings" entertainment category
+   * (see src/utils/loungeSearch.ts's keywordForLabel — matches lounges
+   * whose tags/amenities/description mention whiskey).
+   */
+  const pressFilterChip = (chipId: string) => {
+    setSelectedChip(chipId);
+    switch (chipId) {
+      case 'nearby':
+        navigation.navigate('SearchResults', { initialFilters: { nearCurrentLocation: true } });
+        break;
+      case 'open-now':
+        navigation.navigate('SearchResults', { initialQuickFilterIds: ['open-now'] });
+        break;
+      case 'premium':
+        navigation.navigate('SearchResults', { initialQuickFilterIds: ['premium'] });
+        break;
+      case 'whiskey':
+        navigation.navigate('SearchResults', { initialFilters: { entertainment: ['Whiskey Tastings'] } });
+        break;
+    }
+  };
 
   const openVoiceSearch = () => {
     // VoiceSearch is a root-level modal (see AppNavigator) reachable from
@@ -87,115 +183,116 @@ export default function SearchScreen() {
             <FilterChip
               label={item.label}
               selected={selectedChip === item.id}
-              onPress={() => setSelectedChip(item.id)}
+              onPress={() => pressFilterChip(item.id)}
             />
           )}
         />
 
         {/* ---------------- Recent Searches ---------------- */}
-        <View style={styles.section}>
-          <SectionHeader
-            title="Recent Searches"
-            actionLabel="Clear All"
-            onActionPress={() =>
-              Alert.alert(
-                'Coming Soon',
-                'Search history isn\'t tracked yet, so there\'s nothing to clear.',
-              )
-            }
-          />
-          <View style={{ gap: theme.spacing.md }}>
-            {recentSearches.map(item => (
-              <Pressable
-                key={item.id}
-                style={styles.recentRow}
-                onPress={() => navigation.navigate('SearchResults', { query: item.term })}
-              >
-                <View style={styles.recentIcon}>
-                  <History size={16} color={theme.colors.secondarySilver} />
-                </View>
-                <View style={styles.recentDetails}>
-                  <Text style={styles.recentTerm} numberOfLines={1}>
-                    {item.term}
-                  </Text>
-                  <Text style={styles.recentSubtitle}>{item.subtitle}</Text>
-                </View>
-              </Pressable>
-            ))}
+        {recentSearches.length > 0 ? (
+          <View style={styles.section}>
+            <SectionHeader title="Recent Searches" actionLabel="Clear All" onActionPress={clearRecentSearches} />
+            <View style={{ gap: theme.spacing.md }}>
+              {recentSearches.map(item => (
+                <Pressable
+                  key={item.id}
+                  style={styles.recentRow}
+                  onPress={() => navigation.navigate('SearchResults', { query: item.term })}
+                >
+                  <View style={styles.recentIcon}>
+                    <History size={16} color={theme.colors.secondarySilver} />
+                  </View>
+                  <View style={styles.recentDetails}>
+                    <Text style={styles.recentTerm} numberOfLines={1}>
+                      {item.term}
+                    </Text>
+                    <Text style={styles.recentSubtitle}>
+                      {relativeDayLabel(item.searchedAt.toDate())}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {/* ---------------- Popular Destinations ---------------- */}
-        <View style={styles.section}>
-          <SectionHeader title="Popular Destinations" />
-          <FlatList
-            data={popularDestinations}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
-            renderItem={({ item }) => (
-              <Pressable
-                style={styles.destinationCard}
-                onPress={() => navigation.navigate('SearchResults', { query: item.city })}
-              >
-                <Image
-                  source={{ uri: item.imageUri }}
-                  style={styles.destinationImage}
-                  resizeMode="cover"
-                />
-                <LinearGradient
-                  colors={['transparent', 'rgba(5, 10, 24, 0.85)']}
-                  style={styles.destinationGradient}
-                  pointerEvents="none"
-                />
-                <Text style={styles.destinationName}>{item.city}</Text>
-              </Pressable>
-            )}
-          />
-        </View>
+        {popularDestinations.length > 0 ? (
+          <View style={styles.section}>
+            <SectionHeader title="Popular Destinations" />
+            <FlatList
+              data={popularDestinations}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.destinationCard}
+                  onPress={() => navigation.navigate('SearchResults', { query: item.city })}
+                >
+                  <Image
+                    source={{ uri: item.imageUri }}
+                    style={styles.destinationImage}
+                    resizeMode="cover"
+                  />
+                  <LinearGradient
+                    colors={['transparent', 'rgba(5, 10, 24, 0.85)']}
+                    style={styles.destinationGradient}
+                    pointerEvents="none"
+                  />
+                  <Text style={styles.destinationName}>{item.city}</Text>
+                </Pressable>
+              )}
+            />
+          </View>
+        ) : null}
 
         {/* ---------------- Trending Cities ---------------- */}
-        <View style={styles.section}>
-          <SectionHeader title="Trending Cities" />
-          <View style={styles.trendingCard}>
-            {trendingCities.map(item => (
-              <Pressable
-                key={item.id}
-                style={styles.trendingRow}
-                onPress={() => navigation.navigate('SearchResults', { query: item.name })}
-              >
-                <Text style={styles.trendingRank}>{item.rank}</Text>
-                <Text style={styles.trendingName}>{item.name}</Text>
-              </Pressable>
-            ))}
+        {trendingCities.length > 0 ? (
+          <View style={styles.section}>
+            <SectionHeader title="Trending Cities" />
+            <View style={styles.trendingCard}>
+              {trendingCities.map(item => (
+                <Pressable
+                  key={item.id}
+                  style={styles.trendingRow}
+                  onPress={() => navigation.navigate('SearchResults', { query: item.name })}
+                >
+                  <Text style={styles.trendingRank}>{item.rank}</Text>
+                  <Text style={styles.trendingName}>{item.name}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {/* ---------------- Recently Viewed ---------------- */}
-        <View style={styles.section}>
-          <SectionHeader title="Recently Viewed" />
-          <FlatList
-            data={recentlyViewedLounges}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => navigation.navigate('LoungeDetail', { loungeId: item.id })}
-              >
-                <CompactLoungeCard
-                  image={{ uri: item.imageUri }}
-                  name={item.name}
-                  location={item.location}
-                  tags={item.tags}
-                  rating={item.rating}
-                />
-              </Pressable>
-            )}
-          />
-        </View>
+        {recentlyViewedLounges.length > 0 ? (
+          <View style={styles.section}>
+            <SectionHeader title="Recently Viewed" />
+            <FlatList
+              data={recentlyViewedLounges}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => navigation.navigate('LoungeDetail', { loungeId: item.id })}
+                >
+                  <CompactLoungeCard
+                    image={{ uri: item.images[0] }}
+                    name={item.name}
+                    location={item.address}
+                    tags={item.tags.slice(0, 2)}
+                    rating={item.ratings.overall}
+                  />
+                </Pressable>
+              )}
+            />
+          </View>
+        ) : null}
 
         {/* ---------------- Featured Travel Guide ---------------- */}
         <View style={[styles.section, styles.lastSection]}>

@@ -1,0 +1,241 @@
+/**
+ * EditListingScreen
+ *
+ * Reached from LoungeDetailScreen's "Edit Listing" button, shown only
+ * to the member who claimed this lounge (lounge.ownerId === signed-in
+ * uid — see ClaimListingScreen/ownerService.ts). Editable fields:
+ * description, hours, price range, and amenities (comma-separated free
+ * text, matching how amenities are already stored/searched elsewhere —
+ * see src/utils/loungeSearch.ts's keyword-matching approach). Humidor
+ * items/photos aren't editable here yet — kept to the fields an owner
+ * most needs to correct first (Yelp-imported lounges start with
+ * "Hours not yet available" and no description).
+ */
+
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ChevronLeft } from 'lucide-react-native';
+import { theme } from '../theme';
+import { getLoungeById } from '../services/loungeService';
+import { updateLoungeDetails } from '../services/ownerService';
+import { auth } from '../services/firebaseAuth';
+import type { SearchStackParamList } from '../navigation/SearchNavigator';
+
+type EditListingNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
+type EditListingRouteProp = RouteProp<SearchStackParamList, 'EditListing'>;
+
+export default function EditListingScreen() {
+  const navigation = useNavigation<EditListingNavigationProp>();
+  const route = useRoute<EditListingRouteProp>();
+  const loungeId = route.params.loungeId;
+  const userId = auth.currentUser?.uid;
+
+  const [loading, setLoading] = useState(true);
+  const [description, setDescription] = useState('');
+  const [hours, setHours] = useState('');
+  const [priceRange, setPriceRange] = useState('');
+  const [amenitiesText, setAmenitiesText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    getLoungeById(loungeId).then(lounge => {
+      if (lounge) {
+        setDescription(lounge.description);
+        setHours(lounge.hours);
+        setPriceRange(lounge.priceRange);
+        setAmenitiesText(lounge.amenities.join(', '));
+      }
+      setLoading(false);
+    });
+  }, [loungeId]);
+
+  const save = async () => {
+    if (!userId) return;
+    setSubmitting(true);
+    try {
+      await updateLoungeDetails(loungeId, userId, {
+        description,
+        hours,
+        priceRange,
+        amenities: amenitiesText
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean),
+      });
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert(
+        "Couldn't save changes",
+        error instanceof Error ? error.message : 'Check your connection and try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+          <ChevronLeft size={20} color={theme.colors.white} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Edit Listing</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {loading ? (
+        <View style={styles.stateBox}>
+          <ActivityIndicator color={theme.colors.secondarySilver} />
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Description</Text>
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Tell customers about your business"
+              placeholderTextColor={theme.colors.mutedGray}
+              style={[styles.textInput, styles.multilineInput]}
+              multiline
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Hours</Text>
+            <TextInput
+              value={hours}
+              onChangeText={setHours}
+              placeholder="e.g. Mon-Sat 11am-11pm"
+              placeholderTextColor={theme.colors.mutedGray}
+              style={styles.textInput}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Price Range</Text>
+            <TextInput
+              value={priceRange}
+              onChangeText={setPriceRange}
+              placeholder="e.g. $$$"
+              placeholderTextColor={theme.colors.mutedGray}
+              style={styles.textInput}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Amenities</Text>
+            <TextInput
+              value={amenitiesText}
+              onChangeText={setAmenitiesText}
+              placeholder="e.g. Full Bar, Private Rooms, Valet Parking"
+              placeholderTextColor={theme.colors.mutedGray}
+              style={styles.textInput}
+            />
+            <Text style={styles.fieldHint}>Separate each amenity with a comma.</Text>
+          </View>
+
+          <Pressable
+            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+            onPress={save}
+            disabled={submitting}
+          >
+            <Text style={styles.submitButtonText}>{submitting ? 'Saving...' : 'Save Changes'}</Text>
+          </Pressable>
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.radius.full,
+    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 17,
+    color: theme.colors.white,
+  },
+  headerSpacer: {
+    width: 32,
+  },
+  stateBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.xl,
+  },
+  field: {
+    gap: theme.spacing.sm,
+  },
+  fieldLabel: {
+    ...theme.typography.caption,
+    fontSize: 11,
+    color: theme.colors.mutedGray,
+  },
+  fieldHint: {
+    ...theme.typography.caption,
+    fontSize: 11,
+    color: theme.colors.mutedGray,
+  },
+  textInput: {
+    ...theme.typography.body,
+    height: 50,
+    fontSize: 14,
+    color: theme.colors.white,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surfaceNavy,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.15)',
+  },
+  multilineInput: {
+    height: 100,
+    paddingTop: theme.spacing.sm,
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.white,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 15,
+    color: theme.colors.primaryNavy,
+  },
+});

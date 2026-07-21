@@ -15,6 +15,7 @@ import TravelTimelineScreen from '../screens/TravelTimelineScreen';
 import AchievementsScreen from '../screens/AchievementsScreen';
 import AISettingsScreen from '../screens/AISettingsScreen';
 import AIFeedbackScreen from '../screens/AIFeedbackScreen';
+import MyReviewsScreen from '../screens/MyReviewsScreen';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -24,6 +25,7 @@ export type ProfileStackParamList = {
   Achievements: undefined;
   AISettings: undefined;
   AIFeedback: undefined;
+  MyReviews: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -38,6 +40,7 @@ export default function ProfileNavigator() {
       <Stack.Screen name="Achievements" component={AchievementsScreen} />
       <Stack.Screen name="AISettings" component={AISettingsScreen} />
       <Stack.Screen name="AIFeedback" component={AIFeedbackScreen} />
+      <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
     </Stack.Navigator>
   );
 }

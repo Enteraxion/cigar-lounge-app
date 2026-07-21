@@ -39,6 +39,7 @@ import {
   MessageCircle,
   Pencil,
   Share2,
+  ShieldCheck,
   Star,
   ThumbsUp,
   Trash2,
@@ -50,7 +51,7 @@ import AddToCollectionSheet from '../components/AddToCollectionSheet';
 import FavoriteButton from '../components/FavoriteButton';
 import { getAmenityIcon } from '../utils/amenityIcon';
 import { getLoungeById, getReviewsForLounge, type Lounge, type Review } from '../services/loungeService';
-import { deleteReview, isFavorited } from '../services/userActionsService';
+import { deleteReview, isFavorited, recordLoungeView } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 
@@ -102,6 +103,10 @@ export default function LoungeDetailScreen() {
       setFavorited(favoritedResult);
       if (!loungeResult) {
         setError("This lounge couldn't be found.");
+      } else if (userId) {
+        // Fire-and-forget — recording the view is for SearchSuggestionsScreen's
+        // Recently Visited list and shouldn't block or fail this screen.
+        recordLoungeView(userId, loungeId).catch(() => {});
       }
     } catch {
       setError("Couldn't load this lounge. Check your connection and try again.");
@@ -267,6 +272,25 @@ export default function LoungeDetailScreen() {
             <Text style={styles.reserveButtonText}>Reserve a Table</Text>
             <CalendarCheck size={18} color={theme.colors.primaryNavy} />
           </Pressable>
+
+          {/* ---------------- Claim / Edit Listing ---------------- */}
+          {userId && lounge.ownerId === userId ? (
+            <Pressable
+              style={styles.claimButton}
+              onPress={() => navigation.navigate('EditListing', { loungeId })}
+            >
+              <ShieldCheck size={16} color={theme.colors.accentGold} />
+              <Text style={styles.claimButtonText}>You manage this listing · Edit</Text>
+            </Pressable>
+          ) : !lounge.ownerId ? (
+            <Pressable
+              style={styles.claimButton}
+              onPress={() => navigation.navigate('ClaimListing', { loungeId })}
+            >
+              <ShieldCheck size={16} color={theme.colors.secondarySilver} />
+              <Text style={styles.claimButtonText}>Claim this business</Text>
+            </Pressable>
+          ) : null}
 
           {/* ---------------- The Experience ---------------- */}
           <View style={styles.section}>
@@ -437,7 +461,7 @@ export default function LoungeDetailScreen() {
                 </View>
               </Pressable>
             ) : (
-              <Text style={styles.description}>No reviews yet — be the first to write one.</Text>
+              <Text style={styles.description}>No written reviews yet — be the first!</Text>
             )}
           </View>
         </View>
@@ -610,6 +634,21 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
     color: theme.colors.primaryNavy,
+  },
+  claimButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    height: 44,
+    borderRadius: theme.radius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.25)',
+  },
+  claimButtonText: {
+    ...theme.typography.medium,
+    fontSize: 13,
+    color: theme.colors.secondarySilver,
   },
 
   // ---- Sections ----

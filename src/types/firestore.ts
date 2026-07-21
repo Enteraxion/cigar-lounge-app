@@ -10,6 +10,8 @@
  *   lounges/{loungeId}/reviews/{reviewId}
  *   users/{userId}
  *   users/{userId}/favorites/{loungeId}
+ *   users/{userId}/recentlyViewed/{loungeId}
+ *   users/{userId}/searchHistory/{termSlug}
  *   users/{userId}/collections/{collectionId}
  *   users/{userId}/notifications/{notificationId}
  *
@@ -101,6 +103,27 @@ export type LoungeDocument = {
    * seeded/older lounge docs predate this field.
    */
   favoritedByUserIds?: string[];
+  /**
+   * "City, State"-style label, only populated by scripts/importYelpLounges.ts
+   * (from Yelp's structured location.city/location.state fields) — powers
+   * loungeService.getDistinctCities() for SearchSuggestionsScreen's Cities
+   * list. Omitted on the hand-authored seedFirestore.ts demo lounges, whose
+   * free-text `address` field (e.g. "City Center", "Near You") isn't
+   * reliable to parse a real city out of.
+   */
+  city?: string;
+  /**
+   * Set once a business owner claims this listing (see
+   * src/services/ownerService.ts's claimLounge) — auto-approved (no
+   * manual review step exists yet), first claim wins. `ownerId` gates
+   * edit access in updateLoungeDetails; presence of `ownerId` alone
+   * means "claimed," regardless of whether contact fields are filled.
+   */
+  ownerId?: string;
+  ownerName?: string;
+  ownerContactEmail?: string;
+  ownerContactPhone?: string;
+  claimedAt?: Timestamp;
 };
 
 // ---------------------------------------------------------------------------
@@ -192,6 +215,34 @@ export type UserDocument = {
  */
 export type FavoriteDocument = {
   addedAt: Timestamp;
+};
+
+// ---------------------------------------------------------------------------
+// users/{userId}/recentlyViewed/{loungeId}
+// ---------------------------------------------------------------------------
+
+/**
+ * Same shape/rationale as FavoriteDocument — existence of the doc IS the
+ * view record, re-set (not re-created) on every visit so `viewedAt`
+ * always reflects the most recent view. Powers SearchSuggestionsScreen's
+ * Recently Visited list.
+ */
+export type RecentlyViewedDocument = {
+  viewedAt: Timestamp;
+};
+
+// ---------------------------------------------------------------------------
+// users/{userId}/searchHistory/{termSlug}
+// ---------------------------------------------------------------------------
+
+/**
+ * Powers SearchScreen's Recent Searches list. Doc id is a slug of `term`
+ * (see userActionsService.recordSearch) so re-running the same search
+ * bumps `searchedAt` instead of creating duplicate history entries.
+ */
+export type SearchHistoryDocument = {
+  term: string;
+  searchedAt: Timestamp;
 };
 
 // ---------------------------------------------------------------------------

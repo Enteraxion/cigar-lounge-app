@@ -22,6 +22,7 @@ import {
   getDocs,
   query,
   orderBy,
+  limit,
   where,
   setDoc,
   deleteDoc,
@@ -37,6 +38,8 @@ import type {
   FavoriteDocument,
   LoungeDocument,
   NotificationDocument,
+  RecentlyViewedDocument,
+  SearchHistoryDocument,
   ReviewCategoryRatings,
   ReviewDocument,
   UserDocument,
@@ -95,6 +98,74 @@ export async function getUserFavorites(userId: string): Promise<Lounge[]> {
 export async function getUserFavoriteIds(userId: string): Promise<string[]> {
   const snapshot = await getDocs(collection(db, 'users', userId, 'favorites'));
   return snapshot.docs.map(d => d.id);
+}
+
+// ---------------------------------------------------------------------------
+// Recently viewed — users/{userId}/recentlyViewed/{loungeId}
+// ---------------------------------------------------------------------------
+
+/**
+ * Records/refreshes a lounge view for SearchSuggestionsScreen's Recently
+ * Visited list. Called from LoungeDetailScreen on load — `.set()` (not
+ * `.add()`) so revisiting a lounge just bumps its `viewedAt` rather than
+ * creating duplicate history entries.
+ */
+export async function recordLoungeView(userId: string, loungeId: string): Promise<void> {
+  const doc_: RecentlyViewedDocument = { viewedAt: Timestamp.now() };
+  await setDoc(doc(db, 'users', userId, 'recentlyViewed', loungeId), doc_);
+}
+
+/** Fetches the member's most recently viewed lounges, most recent first. */
+export async function getRecentlyViewedLounges(userId: string, limitCount = 10): Promise<Lounge[]> {
+  const recentQuery = query(
+    collection(db, 'users', userId, 'recentlyViewed'),
+    orderBy('viewedAt', 'desc'),
+    limit(limitCount),
+  );
+  const snapshot = await getDocs(recentQuery);
+  return getLoungesByIds(snapshot.docs.map(d => d.id));
+}
+
+// ---------------------------------------------------------------------------
+// Search history — users/{userId}/searchHistory/{termSlug}
+// ---------------------------------------------------------------------------
+
+export type SearchHistoryEntry = SearchHistoryDocument & { id: string };
+
+/** Doc id for a search term — re-searching the same term re-sets the same doc (bumps searchedAt) instead of duplicating it. */
+function slugifyTerm(term: string): string {
+  return term
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Records a real search run for SearchScreen's Recent Searches list. No-op for a blank term (that means "browse all", not a real search). */
+export async function recordSearch(userId: string, term: string): Promise<void> {
+  const trimmed = term.trim();
+  if (!trimmed) {
+    return;
+  }
+  const entry: SearchHistoryDocument = { term: trimmed, searchedAt: Timestamp.now() };
+  await setDoc(doc(db, 'users', userId, 'searchHistory', slugifyTerm(trimmed)), entry);
+}
+
+/** Fetches the member's most recent search terms, most recent first. */
+export async function getRecentSearches(userId: string, limitCount = 10): Promise<SearchHistoryEntry[]> {
+  const historyQuery = query(
+    collection(db, 'users', userId, 'searchHistory'),
+    orderBy('searchedAt', 'desc'),
+    limit(limitCount),
+  );
+  const snapshot = await getDocs(historyQuery);
+  return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as SearchHistoryDocument) }));
+}
+
+/** Deletes all of the member's search history — "Clear All" on SearchScreen. */
+export async function clearSearchHistory(userId: string): Promise<void> {
+  const snapshot = await getDocs(collection(db, 'users', userId, 'searchHistory'));
+  await Promise.all(snapshot.docs.map(d => deleteDoc(d.ref)));
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +445,29 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     photosUploaded,
     collectionsCount: collections.length,
   };
+}
+
+export type UserReviewEntry = ReviewDocument & { id: string; loungeId: string };
+
+/**
+ * Every review this user has written, across all lounges — for
+ * ProfileScreen's Reviews/Photos stat tiles (MyReviewsScreen). Same
+ * collectionGroup query as getUserStats, but returning full review docs
+ * (plus the parent lounge's id, read off the doc ref) instead of just a
+ * count. Sorted client-side rather than via `orderBy` in the query to
+ * avoid needing a second composite Firestore index beyond the one
+ * getUserStats already documents.
+ */
+export async function getUserReviews(userId: string): Promise<UserReviewEntry[]> {
+  const snapshot = await getDocs(
+    query(collectionGroup(db, 'reviews'), where('userId', '==', userId)),
+  );
+  const reviews = snapshot.docs.map(d => ({
+    id: d.id,
+    loungeId: d.ref.parent.parent?.id ?? '',
+    ...(d.data() as ReviewDocument),
+  }));
+  return reviews.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
 }
 
 // ---------------------------------------------------------------------------

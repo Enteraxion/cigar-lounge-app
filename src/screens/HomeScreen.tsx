@@ -3,12 +3,14 @@
  *
  * Matches design-reference/Home Screen.pdf top to bottom: header, featured
  * lounge hero, nearby lounges, cigar of the week, trending now, member
- * events, and a floating action button. Featured/Nearby/Trending Now now
+ * events, and a floating action button. Featured/Nearby/Trending Now all
  * read from Firestore via src/services/loungeService.ts — see that file
- * and src/types/firestore.ts for the schema. "Nearby" and "Trending" are
- * simple slices of the same fetched list, not real geolocation/trending
- * logic (that's a later phase, once we have real distance/view-count
- * data to sort by).
+ * and src/types/firestore.ts for the schema. Featured is highest-rated;
+ * Trending is most-reviewed; Nearby is sorted by real distance from the
+ * app's placeholder "current location" (src/utils/loungeSearch.ts's
+ * haversineDistanceMiles + src/data/mockMap.ts's defaultRegion — the same
+ * stand-in Search/Map use, since there's no real device geolocation
+ * anywhere in this app yet).
  *
  * TODO(firestore): Cigar of the Week and Member Events are still local
  * mock data (src/data/mockHome.ts) — neither is in the Firestore schema
@@ -52,6 +54,8 @@ import { auth } from '../services/firebaseAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { haversineDistanceMiles } from '../utils/loungeSearch';
+import { defaultRegion } from '../data/mockMap';
 // TODO(firestore): Cigar of the Week / Member Events aren't modeled in
 // Firestore yet — see header comment above.
 import { cigarOfWeek, memberEvents } from '../data/mockHome';
@@ -101,8 +105,18 @@ export default function HomeScreen() {
     ? [...lounges].sort((a, b) => b.ratings.overall - a.ratings.overall)[0]
     : null;
 
+  // Sorted by distance from the app's placeholder "current location" (see
+  // src/utils/loungeSearch.ts's file header — no real device geolocation
+  // anywhere in this app yet), same reference point Search/Map use.
   const nearbyLounges = lounges
-    ? lounges.filter(l => l.id !== featuredLounge?.id).slice(0, NEARBY_COUNT)
+    ? [...lounges]
+        .filter(l => l.id !== featuredLounge?.id)
+        .sort(
+          (a, b) =>
+            haversineDistanceMiles(defaultRegion, a.coordinates) -
+            haversineDistanceMiles(defaultRegion, b.coordinates),
+        )
+        .slice(0, NEARBY_COUNT)
     : [];
 
   const trendingLounges = lounges

@@ -19,7 +19,10 @@
  * Reviews/Photos/Favorites/Collections instead — all four real, via
  * userActionsService.ts's getUserStats() for the signed-in user (see
  * that function's doc comment for the collectionGroup query behind
- * Reviews/Photos). Everything else on this screen (Achievements,
+ * Reviews/Photos), and all four tiles are tappable (STAT_ACTIONS below):
+ * Reviews/Photos open MyReviewsScreen, Favorites/Collections cross-navigate
+ * into the Saved tab's FavoritesHome/CollectionsGrid. Everything else on
+ * this screen (Achievements,
  * Favorite Cigars, Travel History, Recent Activity) is still local mock
  * data — those are separate, larger features with no real data source
  * yet (no check-in/travel-history/cigar-rating-aggregation tracking).
@@ -180,6 +183,22 @@ export default function ProfileScreen() {
     });
   };
 
+  const openFavorites = () => {
+    (tabNavigation.navigate as (name: string, params?: object) => void)('Saved', {
+      screen: 'FavoritesHome',
+    });
+  };
+
+  // Reviews and Photos both route to MyReviewsScreen — photos aren't a
+  // separate collection, they're attached to reviews, so there's no
+  // distinct "my photos" destination to send that tile to instead.
+  const STAT_ACTIONS: Record<string, () => void> = {
+    Reviews: () => navigation.navigate('MyReviews'),
+    Photos: () => navigation.navigate('MyReviews'),
+    Favorites: openFavorites,
+    Collections: openCollections,
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -221,10 +240,14 @@ export default function ProfileScreen() {
         {/* ---------------- Stats ---------------- */}
         <View style={styles.statRow}>
           {profileStatCards(stats).map(stat => (
-            <View key={stat.label} style={styles.statCard}>
+            <Pressable
+              key={stat.label}
+              style={styles.statCard}
+              onPress={STAT_ACTIONS[stat.label]}
+            >
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
 

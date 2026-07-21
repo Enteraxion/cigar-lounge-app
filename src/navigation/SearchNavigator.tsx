@@ -23,7 +23,11 @@ import UploadPhotosScreen from '../screens/UploadPhotosScreen';
 import ReviewSubmittedScreen from '../screens/ReviewSubmittedScreen';
 import RatingsBreakdownScreen from '../screens/RatingsBreakdownScreen';
 import CreateCollectionScreen from '../screens/CreateCollectionScreen';
+import RecentlyViewedScreen from '../screens/RecentlyViewedScreen';
+import ClaimListingScreen from '../screens/ClaimListingScreen';
+import EditListingScreen from '../screens/EditListingScreen';
 import type { ReviewCategoryRatings } from '../types/firestore';
+import type { SearchFilters } from '../utils/loungeSearch';
 
 /**
  * Fields needed to prefill WriteReviewScreen for an edit — a subset of
@@ -43,7 +47,15 @@ export type WriteReviewInitialData = {
 export type SearchStackParamList = {
   SearchHome: undefined;
   LiveSearchSuggestions: undefined;
-  SearchResults: { query?: string } | undefined;
+  SearchResults:
+    | {
+        query?: string;
+        /** Pre-selects SearchResultsScreen's quick filter chips (e.g. 'premium', 'open-now') — see SearchScreen's filter chips. */
+        initialQuickFilterIds?: string[];
+        /** Merged over defaultSearchFilters — see SearchScreen's filter chips ('Nearby' -> nearCurrentLocation, 'Whiskey' -> entertainment). */
+        initialFilters?: Partial<SearchFilters>;
+      }
+    | undefined;
   LoungeDetail: { loungeId: string };
   LoungeReviews: { loungeId: string };
   WriteReview:
@@ -59,6 +71,9 @@ export type SearchStackParamList = {
   ReviewSubmitted: { loungeId?: string } | undefined;
   RatingsBreakdown: undefined;
   CreateCollection: undefined;
+  RecentlyViewed: undefined;
+  ClaimListing: { loungeId: string };
+  EditListing: { loungeId: string };
 };
 
 const Stack = createNativeStackNavigator<SearchStackParamList>();
@@ -76,6 +91,9 @@ export default function SearchNavigator() {
       <Stack.Screen name="ReviewSubmitted" component={ReviewSubmittedScreen} />
       <Stack.Screen name="RatingsBreakdown" component={RatingsBreakdownScreen} />
       <Stack.Screen name="CreateCollection" component={CreateCollectionScreen} />
+      <Stack.Screen name="RecentlyViewed" component={RecentlyViewedScreen} />
+      <Stack.Screen name="ClaimListing" component={ClaimListingScreen} />
+      <Stack.Screen name="EditListing" component={EditListingScreen} />
     </Stack.Navigator>
   );
 }

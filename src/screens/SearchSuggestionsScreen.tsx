@@ -6,15 +6,25 @@
  * as the query changes, Recently Visited / Cities / Lounges / Cigar Brands
  * each filter down to substring matches, with the matched portion of each
  * result styled in accentGold. Icon + text only, no imagery, per design.
+ *
+ * Recently Visited, Cities, and Lounges are real data
+ * (userActionsService.getRecentlyViewedLounges, loungeService.getDistinctCities,
+ * loungeService.getTopRatedLounges — all fetched once on mount). Recently
+ * Visited caps at 5 here with a "View All" row to RecentlyViewedScreen if
+ * there are more. Cigar Brands is still curated mock data
+ * (src/data/mockSuggestions.ts) — no backing "top brands" query exists yet.
+ * The whole list is scrollable (ScrollView), since real data can run
+ * longer than the original mock-data-sized screen ever needed to handle.
  */
 
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ChevronLeft,
+  ChevronRight,
   Cigarette,
   ExternalLink,
   History,
@@ -24,14 +34,18 @@ import {
   X,
 } from 'lucide-react-native';
 import { theme } from '../theme';
+import { cigarBrandSuggestions, type CigarBrandSuggestion, type RecentlyVisited } from '../data/mockSuggestions';
 import {
-  cigarBrandSuggestions,
-  citySuggestions,
-  loungeSuggestions,
-  recentlyVisited,
-  type CigarBrandSuggestion,
-} from '../data/mockSuggestions';
+  getDistinctCities,
+  getTopRatedLounges,
+  type CitySuggestion,
+  type Lounge,
+} from '../services/loungeService';
+import { getRecentlyViewedLounges } from '../services/userActionsService';
+import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+
+const RECENT_VISIBLE_LIMIT = 5;
 
 type SuggestionsNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -119,6 +133,31 @@ function BrandAvatar({ item }: { item: CigarBrandSuggestion }) {
 export default function SearchSuggestionsScreen() {
   const navigation = useNavigation<SuggestionsNavigationProp>();
   const [query, setQuery] = useState('');
+  const [recentlyVisited, setRecentlyVisited] = useState<RecentlyVisited[]>([]);
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
+  const [topLounges, setTopLounges] = useState<Lounge[]>([]);
+
+  useEffect(() => {
+    getDistinctCities()
+      .then(setCitySuggestions)
+      .catch(() => {});
+
+    getTopRatedLounges()
+      .then(setTopLounges)
+      .catch(() => {});
+
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      return;
+    }
+    getRecentlyViewedLounges(userId, 20)
+      .then(lounges =>
+        setRecentlyVisited(
+          lounges.map(lounge => ({ id: lounge.id, name: lounge.name, subtitle: lounge.address })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
 
   const goToResults = (name: string) => {
     navigation.navigate('SearchResults', { query: name });
@@ -126,15 +165,15 @@ export default function SearchSuggestionsScreen() {
 
   const filteredRecent = useMemo(
     () => recentlyVisited.filter(item => matches(item.name, query)),
-    [query],
+    [query, recentlyVisited],
   );
   const filteredCities = useMemo(
     () => citySuggestions.filter(item => matches(item.name, query)),
-    [query],
+    [query, citySuggestions],
   );
   const filteredLounges = useMemo(
-    () => loungeSuggestions.filter(item => matches(item.name, query)),
-    [query],
+    () => topLounges.filter(item => matches(item.name, query)),
+    [query, topLounges],
   );
   const filteredBrands = useMemo(
     () => cigarBrandSuggestions.filter(item => matches(item.name, query)),
@@ -169,7 +208,7 @@ export default function SearchSuggestionsScreen() {
         </View>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
         {/* ---------------- Search this query ---------------- */}
         {/* Always available, regardless of whether the query matches the
             small local suggestion lists below — those are mock/curated
@@ -189,7 +228,7 @@ export default function SearchSuggestionsScreen() {
         {filteredRecent.length > 0 ? (
           <View style={styles.section}>
             <SectionLabel>Recently Visited</SectionLabel>
-            {filteredRecent.map(item => (
+            {filteredRecent.slice(0, RECENT_VISIBLE_LIMIT).map(item => (
               <SuggestionRow
                 key={item.id}
                 icon={<History size={16} color={theme.colors.secondarySilver} />}
@@ -197,9 +236,18 @@ export default function SearchSuggestionsScreen() {
                 subtitle={item.subtitle}
                 query={query}
                 right={<ExternalLink size={16} color={theme.colors.mutedGray} />}
-                onPress={() => goToResults(item.name)}
+                onPress={() => navigation.navigate('LoungeDetail', { loungeId: item.id })}
               />
             ))}
+            {filteredRecent.length > RECENT_VISIBLE_LIMIT ? (
+              <SuggestionRow
+                icon={<History size={16} color={theme.colors.accentGold} />}
+                name="View All Recently Viewed"
+                query=""
+                right={<ChevronRight size={16} color={theme.colors.mutedGray} />}
+                onPress={() => navigation.navigate('RecentlyViewed')}
+              />
+            ) : null}
           </View>
         ) : null}
 
@@ -228,9 +276,9 @@ export default function SearchSuggestionsScreen() {
                 key={item.id}
                 icon={<Sofa size={16} color={theme.colors.secondarySilver} />}
                 name={item.name}
-                subtitle={item.subtitle}
+                subtitle={item.address}
                 query={query}
-                onPress={() => goToResults(item.name)}
+                onPress={() => navigation.navigate('LoungeDetail', { loungeId: item.id })}
               />
             ))}
           </View>
@@ -256,7 +304,7 @@ export default function SearchSuggestionsScreen() {
             ))}
           </View>
         ) : null}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -303,7 +351,11 @@ const styles = StyleSheet.create({
   },
 
   content: {
+    flex: 1,
+  },
+  contentInner: {
     paddingHorizontal: theme.spacing.lg,
+    paddingBottom: 140,
     gap: theme.spacing.lg,
   },
   section: {

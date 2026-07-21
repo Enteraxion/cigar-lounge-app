@@ -25,9 +25,22 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, PROVIDER_DEFAULT, type Region } from 'react-native-maps';
+import MapView, {
+  Marker,
+  PROVIDER_DEFAULT,
+  type Region,
+} from 'react-native-maps';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -50,7 +63,10 @@ import SortBottomSheet from '../components/SortBottomSheet';
 import FilterBottomSheet from '../components/FilterBottomSheet';
 import AddToCollectionSheet from '../components/AddToCollectionSheet';
 import { searchLounges, type Lounge } from '../services/loungeService';
-import { getUserFavoriteIds } from '../services/userActionsService';
+import {
+  getUserFavoriteIds,
+  recordSearch,
+} from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import { quickFilterChips } from '../data/mockSearchResults';
 import { defaultSortOptionId } from '../data/mockSort';
@@ -102,7 +118,8 @@ function regionForResults(results: Lounge[]): Region {
   };
 }
 
-type SearchResultsNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
+type SearchResultsNavigationProp =
+  NativeStackNavigationProp<SearchStackParamList>;
 type SearchResultsRouteProp = RouteProp<SearchStackParamList, 'SearchResults'>;
 
 export default function SearchResultsScreen() {
@@ -115,12 +132,17 @@ export default function SearchResultsScreen() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-  const [selectedChips, setSelectedChips] = useState<string[]>([]);
+  const [selectedChips, setSelectedChips] = useState<string[]>(
+    route.params?.initialQuickFilterIds ?? [],
+  );
   const [sortVisible, setSortVisible] = useState(false);
   const [pendingSort, setPendingSort] = useState(defaultSortOptionId);
   const [appliedSort, setAppliedSort] = useState(defaultSortOptionId);
   const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(defaultSearchFilters);
+  const [appliedFilters, setAppliedFilters] = useState<SearchFilters>({
+    ...defaultSearchFilters,
+    ...route.params?.initialFilters,
+  });
   const [savingResult, setSavingResult] = useState<Lounge | null>(null);
 
   const userId = auth.currentUser?.uid;
@@ -135,6 +157,11 @@ export default function SearchResultsScreen() {
       ]);
       setResults(found);
       setFavoriteIds(new Set(favoritedIds));
+      if (userId && query.trim()) {
+        // Fire-and-forget — this is for SearchScreen's Recent Searches list
+        // and shouldn't block or fail rendering the results themselves.
+        recordSearch(userId, query).catch(() => {});
+      }
     } catch {
       setError("Couldn't load results. Check your connection and try again.");
     }
@@ -167,15 +194,17 @@ export default function SearchResultsScreen() {
     if (!results) {
       return results;
     }
-    const filtered = applySearchFilters(results, appliedFilters).filter(lounge => {
-      if (selectedChips.includes('premium') && !isPremiumLounge(lounge)) {
-        return false;
-      }
-      if (selectedChips.includes('open-now') && lounge.status !== 'open') {
-        return false;
-      }
-      return true;
-    });
+    const filtered = applySearchFilters(results, appliedFilters).filter(
+      lounge => {
+        if (selectedChips.includes('premium') && !isPremiumLounge(lounge)) {
+          return false;
+        }
+        if (selectedChips.includes('open-now') && lounge.status !== 'open') {
+          return false;
+        }
+        return true;
+      },
+    );
     return sortLounges(filtered, appliedSort);
   }, [results, appliedFilters, selectedChips, appliedSort]);
 
@@ -212,35 +241,60 @@ export default function SearchResultsScreen() {
           <ArrowUpDown size={15} color={theme.colors.white} />
           <Text style={styles.toolbarButtonText}>Sort</Text>
         </Pressable>
-        <Pressable style={styles.toolbarButton} onPress={() => setFilterVisible(true)}>
+        <Pressable
+          style={styles.toolbarButton}
+          onPress={() => setFilterVisible(true)}
+        >
           <SlidersHorizontal size={15} color={theme.colors.white} />
           <Text style={styles.toolbarButtonText}>Filter</Text>
         </Pressable>
 
         <View style={styles.toggleGroup}>
           <Pressable
-            style={[styles.toggleOption, viewMode === 'list' && styles.toggleOptionActive]}
+            style={[
+              styles.toggleOption,
+              viewMode === 'list' && styles.toggleOptionActive,
+            ]}
             onPress={() => setViewMode('list')}
           >
             <List
               size={14}
-              color={viewMode === 'list' ? theme.colors.primaryNavy : theme.colors.secondarySilver}
+              color={
+                viewMode === 'list'
+                  ? theme.colors.primaryNavy
+                  : theme.colors.secondarySilver
+              }
             />
             <Text
-              style={[styles.toggleText, viewMode === 'list' && styles.toggleTextActive]}
+              style={[
+                styles.toggleText,
+                viewMode === 'list' && styles.toggleTextActive,
+              ]}
             >
               List
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.toggleOption, viewMode === 'map' && styles.toggleOptionActive]}
+            style={[
+              styles.toggleOption,
+              viewMode === 'map' && styles.toggleOptionActive,
+            ]}
             onPress={() => setViewMode('map')}
           >
             <MapIcon
               size={14}
-              color={viewMode === 'map' ? theme.colors.primaryNavy : theme.colors.secondarySilver}
+              color={
+                viewMode === 'map'
+                  ? theme.colors.primaryNavy
+                  : theme.colors.secondarySilver
+              }
             />
-            <Text style={[styles.toggleText, viewMode === 'map' && styles.toggleTextActive]}>
+            <Text
+              style={[
+                styles.toggleText,
+                viewMode === 'map' && styles.toggleTextActive,
+              ]}
+            >
               Map
             </Text>
           </Pressable>
@@ -252,9 +306,15 @@ export default function SearchResultsScreen() {
       </Text>
 
       {/* ---------------- Quick Filter Chips ---------------- */}
+      {/* style={{flexGrow: 0}} is required here — a horizontal ScrollView
+          with no explicit style otherwise still stretches to fill the
+          remaining *vertical* flex space in this column layout (a common
+          RN footgun), which was stealing about half the screen from the
+          results list/map below it. */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.chipScroll}
         contentContainerStyle={styles.chipRow}
       >
         {quickFilterChips.map(chip => (
@@ -268,8 +328,126 @@ export default function SearchResultsScreen() {
       </ScrollView>
 
       {/* ---------------- Results ---------------- */}
-      {viewMode === 'list' ? (
-        error ? (
+      {/* Wrapped in an explicit flex:1 View so MapView (below) can fill it
+          with StyleSheet.absoluteFill — same fix MapScreen.tsx uses;
+          a native MapView given plain flex:1 directly doesn't reliably
+          measure its own height as a flex sibling here (it rendered at a
+          collapsed intrinsic size instead of filling the remaining
+          screen), so it needs an absolute fill against an already-sized
+          parent instead. */}
+      <View style={styles.resultsContainer}>
+        {viewMode === 'list' ? (
+          error ? (
+            <View style={styles.stateBox}>
+              <Text style={styles.errorText}>{error}</Text>
+              <Pressable style={styles.retryButton} onPress={runSearch}>
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </Pressable>
+            </View>
+          ) : displayResults === null ? (
+            <View style={styles.stateBox}>
+              <ActivityIndicator color={theme.colors.secondarySilver} />
+            </View>
+          ) : displayResults.length === 0 ? (
+            <ScrollView contentContainerStyle={styles.emptyContent}>
+              <View style={styles.emptyIconWrap}>
+                <SearchX size={40} color={theme.colors.secondarySilver} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {hasActiveFilters
+                  ? 'No lounges match your current filters.'
+                  : `No lounges matched "${query}".`}
+              </Text>
+              <Text style={styles.emptyDescription}>
+                We couldn't find any spots matching your selection. Try
+                adjusting your preferences.
+              </Text>
+
+              {hasActiveFilters ? (
+                <>
+                  <View style={styles.suggestionsBox}>
+                    <Text style={styles.suggestionsLabel}>SUGGESTIONS</Text>
+                    <View style={styles.suggestionRow}>
+                      <View style={styles.suggestionIcon}>
+                        <ArrowLeftRight
+                          size={16}
+                          color={theme.colors.secondarySilver}
+                        />
+                      </View>
+                      <Text style={styles.suggestionText}>
+                        Expand search distance
+                      </Text>
+                    </View>
+                    <View style={styles.suggestionRow}>
+                      <View style={styles.suggestionIcon}>
+                        <SlidersHorizontal
+                          size={16}
+                          color={theme.colors.secondarySilver}
+                        />
+                      </View>
+                      <Text style={styles.suggestionText}>
+                        Remove one or more filters
+                      </Text>
+                    </View>
+                    <View style={styles.suggestionRow}>
+                      <View style={styles.suggestionIcon}>
+                        <Building2
+                          size={16}
+                          color={theme.colors.secondarySilver}
+                        />
+                      </View>
+                      <Text style={styles.suggestionText}>
+                        Browse nearby cities
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={clearFilters}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      Clear All Filters
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
+
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => setViewMode('map')}
+              >
+                <Text style={styles.secondaryButtonText}>Open Map</Text>
+              </Pressable>
+            </ScrollView>
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.resultsList}
+              showsVerticalScrollIndicator={false}
+            >
+              {displayResults.map(result => (
+                <SearchResultCard
+                  key={result.id}
+                  result={result}
+                  userId={userId}
+                  favorited={favoriteIds.has(result.id)}
+                  onPressDetails={() =>
+                    navigation.navigate('LoungeDetail', { loungeId: result.id })
+                  }
+                  onPressDirections={() => {
+                    const { lat, lng } = result.coordinates;
+                    const url =
+                      Platform.OS === 'ios'
+                        ? `https://maps.apple.com/?daddr=${lat},${lng}`
+                        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                    Linking.openURL(url);
+                  }}
+                  onPressSave={() => setSavingResult(result)}
+                />
+              ))}
+            </ScrollView>
+          )
+        ) : error ? (
           <View style={styles.stateBox}>
             <Text style={styles.errorText}>{error}</Text>
             <Pressable style={styles.retryButton} onPress={runSearch}>
@@ -280,117 +458,42 @@ export default function SearchResultsScreen() {
           <View style={styles.stateBox}>
             <ActivityIndicator color={theme.colors.secondarySilver} />
           </View>
-        ) : displayResults.length === 0 ? (
-          <ScrollView contentContainerStyle={styles.emptyContent}>
-            <View style={styles.emptyIconWrap}>
-              <SearchX size={40} color={theme.colors.secondarySilver} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {hasActiveFilters ? 'No lounges match your current filters.' : `No lounges matched "${query}".`}
-            </Text>
-            <Text style={styles.emptyDescription}>
-              We couldn't find any spots matching your selection. Try adjusting your
-              preferences.
-            </Text>
-
-            {hasActiveFilters ? (
-              <>
-                <View style={styles.suggestionsBox}>
-                  <Text style={styles.suggestionsLabel}>SUGGESTIONS</Text>
-                  <View style={styles.suggestionRow}>
-                    <View style={styles.suggestionIcon}>
-                      <ArrowLeftRight size={16} color={theme.colors.secondarySilver} />
-                    </View>
-                    <Text style={styles.suggestionText}>Expand search distance</Text>
-                  </View>
-                  <View style={styles.suggestionRow}>
-                    <View style={styles.suggestionIcon}>
-                      <SlidersHorizontal size={16} color={theme.colors.secondarySilver} />
-                    </View>
-                    <Text style={styles.suggestionText}>Remove one or more filters</Text>
-                  </View>
-                  <View style={styles.suggestionRow}>
-                    <View style={styles.suggestionIcon}>
-                      <Building2 size={16} color={theme.colors.secondarySilver} />
-                    </View>
-                    <Text style={styles.suggestionText}>Browse nearby cities</Text>
-                  </View>
-                </View>
-
-                <Pressable style={styles.primaryButton} onPress={clearFilters}>
-                  <Text style={styles.primaryButtonText}>Clear All Filters</Text>
-                </Pressable>
-              </>
-            ) : null}
-
-            <Pressable style={styles.secondaryButton} onPress={() => setViewMode('map')}>
-              <Text style={styles.secondaryButtonText}>Open Map</Text>
-            </Pressable>
-          </ScrollView>
+        ) : Platform.OS === 'android' ? (
+          // TODO(android-maps): same gap as MapScreen.tsx — no Google Maps
+          // API key set up on Android yet. SimplifiedMapView plots the same
+          // real results and navigates to LoungeDetail on tap, matching the
+          // real MapView's Marker onCalloutPress below. See MapScreen.tsx's
+          // comment for the full context.
+          <SimplifiedMapView
+            lounges={displayResults}
+            onPressLounge={lounge =>
+              navigation.navigate('LoungeDetail', { loungeId: lounge.id })
+            }
+          />
         ) : (
-          <ScrollView
-            contentContainerStyle={styles.resultsList}
-            showsVerticalScrollIndicator={false}
+          <MapView
+            style={StyleSheet.absoluteFill}
+            provider={PROVIDER_DEFAULT}
+            userInterfaceStyle="dark"
+            region={regionForResults(displayResults)}
           >
             {displayResults.map(result => (
-              <SearchResultCard
+              <Marker
                 key={result.id}
-                result={result}
-                userId={userId}
-                favorited={favoriteIds.has(result.id)}
-                onPressDetails={() => navigation.navigate('LoungeDetail', { loungeId: result.id })}
-                onPressDirections={() => {
-                  const { lat, lng } = result.coordinates;
-                  const url =
-                    Platform.OS === 'ios'
-                      ? `https://maps.apple.com/?daddr=${lat},${lng}`
-                      : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-                  Linking.openURL(url);
+                coordinate={{
+                  latitude: result.coordinates.lat,
+                  longitude: result.coordinates.lng,
                 }}
-                onPressSave={() => setSavingResult(result)}
+                title={result.name}
+                description={result.address}
+                onCalloutPress={() =>
+                  navigation.navigate('LoungeDetail', { loungeId: result.id })
+                }
               />
             ))}
-          </ScrollView>
-        )
-      ) : error ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={runSearch}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </Pressable>
-        </View>
-      ) : displayResults === null ? (
-        <View style={styles.stateBox}>
-          <ActivityIndicator color={theme.colors.secondarySilver} />
-        </View>
-      ) : Platform.OS === 'android' ? (
-        // TODO(android-maps): same gap as MapScreen.tsx — no Google Maps
-        // API key set up on Android yet. SimplifiedMapView plots the same
-        // real results and navigates to LoungeDetail on tap, matching the
-        // real MapView's Marker onCalloutPress below. See MapScreen.tsx's
-        // comment for the full context.
-        <SimplifiedMapView
-          lounges={displayResults}
-          onPressLounge={lounge => navigation.navigate('LoungeDetail', { loungeId: lounge.id })}
-        />
-      ) : (
-        <MapView
-          style={styles.map}
-          provider={PROVIDER_DEFAULT}
-          userInterfaceStyle="dark"
-          region={regionForResults(displayResults)}
-        >
-          {displayResults.map(result => (
-            <Marker
-              key={result.id}
-              coordinate={{ latitude: result.coordinates.lat, longitude: result.coordinates.lng }}
-              title={result.name}
-              description={result.address}
-              onCalloutPress={() => navigation.navigate('LoungeDetail', { loungeId: result.id })}
-            />
-          ))}
-        </MapView>
-      )}
+          </MapView>
+        )}
+      </View>
 
       <SortBottomSheet
         visible={sortVisible}
@@ -518,6 +621,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
   },
+  chipScroll: {
+    flexGrow: 0,
+  },
   chipRow: {
     gap: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
@@ -531,8 +637,8 @@ const styles = StyleSheet.create({
     gap: theme.spacing.lg,
   },
 
-  // ---- Map ----
-  map: {
+  // ---- Results (list or map) ----
+  resultsContainer: {
     flex: 1,
   },
   // ---- Loading / error / empty state ----

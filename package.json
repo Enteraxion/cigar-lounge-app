@@ -8,7 +8,9 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "seed:firestore": "ts-node --project scripts/tsconfig.json scripts/seedFirestore.ts"
+    "seed:firestore": "ts-node --project scripts/tsconfig.json scripts/seedFirestore.ts",
+    "import:lounges": "ts-node --project scripts/tsconfig.json scripts/importYelpLounges.ts",
+    "remove:demo-data": "ts-node --project scripts/tsconfig.json scripts/removeDemoData.ts"
   },
   "dependencies": {
     "@react-native-firebase/app": "^25.1.0",

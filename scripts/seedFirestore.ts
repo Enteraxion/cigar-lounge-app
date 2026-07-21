@@ -56,7 +56,7 @@ import { initializeApp, cert, type ServiceAccount } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 import { featuredLounge, nearbyLounges, trendingLounges, currentUser } from '../src/data/mockHome';
-import { recentlyViewedLounges } from '../src/data/mockSearch';
+import { whiskeyBars, rooftopBars, loungeInteriors } from '../src/data/mockImages';
 import { searchResults } from '../src/data/mockSearchResults';
 import { loungeDetail } from '../src/data/mockLoungeDetail';
 import { favoriteLounges } from '../src/data/mockFavorites';
@@ -400,11 +400,11 @@ const LOUNGES: LoungeSeed[] = [
     coordinates: { lat: 51.5098, lng: -0.1438 },
     hours: 'Open now',
     status: 'open',
-    images: [recentlyViewedLounges[0].imageUri],
+    images: [whiskeyBars[1]],
     amenities: ['Whiskey', 'Private Rooms'],
-    tags: recentlyViewedLounges[0].tags,
+    tags: ['Whiskey', 'Private'],
     priceRange: '$$$$',
-    ratings: ratings(recentlyViewedLounges[0].rating),
+    ratings: ratings(4.9),
     reviewCount: 67,
     humidorItems: [],
   },
@@ -416,11 +416,11 @@ const LOUNGES: LoungeSeed[] = [
     coordinates: { lat: 51.5065, lng: -0.1505 },
     hours: 'Open now',
     status: 'open',
-    images: [recentlyViewedLounges[1].imageUri],
+    images: [rooftopBars[0]],
     amenities: ['Rooftop', 'Live Music'],
-    tags: recentlyViewedLounges[1].tags,
+    tags: ['Rooftop', 'Live Music'],
     priceRange: '$$$',
-    ratings: ratings(recentlyViewedLounges[1].rating),
+    ratings: ratings(4.7),
     reviewCount: 52,
     humidorItems: [],
   },
@@ -432,11 +432,11 @@ const LOUNGES: LoungeSeed[] = [
     coordinates: { lat: 41.8781, lng: -87.6298 },
     hours: 'Open now',
     status: 'open',
-    images: [recentlyViewedLounges[2].imageUri],
+    images: [loungeInteriors[1]],
     amenities: ['Humidor', 'Bar'],
-    tags: recentlyViewedLounges[2].tags,
+    tags: ['Humidor', 'Bar'],
     priceRange: '$$',
-    ratings: ratings(recentlyViewedLounges[2].rating),
+    ratings: ratings(4.5),
     reviewCount: 33,
     humidorItems: [],
   },

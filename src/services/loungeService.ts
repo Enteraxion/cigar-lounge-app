@@ -84,6 +84,95 @@ export async function searchLounges(searchQuery: string): Promise<Lounge[]> {
   });
 }
 
+export type CitySuggestion = { id: string; name: string };
+
+type CityHighlight = { id: string; name: string; count: number; imageUri?: string };
+
+/**
+ * Distinct `city` values across all lounges (only populated on
+ * Yelp-imported lounges — see LoungeDocument.city), ranked by how many
+ * lounges are in each city (most-covered first) and paired with a real
+ * lounge photo from that city where one exists. Shared source for
+ * getDistinctCities/getPopularDestinations/getTrendingCities below so
+ * they all rank cities the same way instead of three separate counts.
+ */
+async function getCityHighlights(): Promise<CityHighlight[]> {
+  const lounges = await getAllLounges();
+  const byCity = new Map<string, { count: number; imageUri?: string }>();
+  for (const lounge of lounges) {
+    if (!lounge.city) {
+      continue;
+    }
+    const existing = byCity.get(lounge.city);
+    byCity.set(lounge.city, {
+      count: (existing?.count ?? 0) + 1,
+      imageUri: existing?.imageUri ?? lounge.images[0],
+    });
+  }
+
+  return Array.from(byCity.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([city, data]) => ({
+      id: city.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      name: city,
+      count: data.count,
+      imageUri: data.imageUri,
+    }));
+}
+
+/**
+ * For SearchSuggestionsScreen's Cities list. Caps at 10 since that's a
+ * suggestions dropdown, not a full directory.
+ */
+export async function getDistinctCities(): Promise<CitySuggestion[]> {
+  const highlights = await getCityHighlights();
+  return highlights.slice(0, 10).map(({ id, name }) => ({ id, name }));
+}
+
+export type PopularDestination = { id: string; city: string; imageUri: string };
+
+/**
+ * For SearchScreen's Popular Destinations rail — only cities that have at
+ * least one real lounge photo to show, since this section is image-led.
+ */
+export async function getPopularDestinations(limitCount = 4): Promise<PopularDestination[]> {
+  const highlights = await getCityHighlights();
+  return highlights
+    .filter((highlight): highlight is CityHighlight & { imageUri: string } => !!highlight.imageUri)
+    .slice(0, limitCount)
+    .map(highlight => ({ id: highlight.id, city: highlight.name, imageUri: highlight.imageUri }));
+}
+
+export type TrendingCity = { id: string; rank: string; name: string };
+
+/**
+ * For SearchScreen's Trending Cities list — the next-most-covered cities
+ * after whichever ones Popular Destinations already surfaced, so the two
+ * sections don't just repeat each other.
+ */
+export async function getTrendingCities(limitCount = 4): Promise<TrendingCity[]> {
+  const highlights = await getCityHighlights();
+  const popularIds = new Set((await getPopularDestinations()).map(destination => destination.id));
+  return highlights
+    .filter(highlight => !popularIds.has(highlight.id))
+    .slice(0, limitCount)
+    .map((highlight, index) => ({
+      id: highlight.id,
+      rank: String(index + 1).padStart(2, '0'),
+      name: highlight.name,
+    }));
+}
+
+/**
+ * Top-rated lounges by `ratings.overall`, for SearchSuggestionsScreen's
+ * Lounges list — there's no separate "featured lounges" concept yet, so
+ * highest-rated is the stand-in for "what to suggest."
+ */
+export async function getTopRatedLounges(limitCount = 10): Promise<Lounge[]> {
+  const lounges = await getAllLounges();
+  return lounges.sort((a, b) => b.ratings.overall - a.ratings.overall).slice(0, limitCount);
+}
+
 /** Fetches the `reviews` subcollection for a lounge, newest first. */
 export async function getReviewsForLounge(loungeId: string): Promise<Review[]> {
   const reviewsQuery = query(

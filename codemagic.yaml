@@ -31,26 +31,26 @@ workflows:
           xcode-project use-profiles
       - name: Set build number
         script: |
-          if ! [[ "$CM_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "CM_BUILD_NUMBER is not numeric (got: '$CM_BUILD_NUMBER')." >&2
-            echo "Check for a custom environment variable in Codemagic named CM_BUILD_NUMBER or CURRENT_PROJECT_VERSION that is overriding the built-in one." >&2
+          if ! [[ "$PROJECT_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "PROJECT_BUILD_NUMBER is not numeric (got: '$PROJECT_BUILD_NUMBER')." >&2
+            echo "Check for a custom environment variable in Codemagic named PROJECT_BUILD_NUMBER or CURRENT_PROJECT_VERSION that is overriding the built-in one." >&2
             exit 1
           fi
           cd ios
-          agvtool new-version -all "$CM_BUILD_NUMBER" || \
-            sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $CM_BUILD_NUMBER;/g" \
+          agvtool new-version -all "$PROJECT_BUILD_NUMBER" || \
+            sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/g" \
               CigarLoungeApp.xcodeproj/project.pbxproj
           # Force-correct in case something upstream in the Codemagic environment
           # is exporting a stray CURRENT_PROJECT_VERSION (seen as "YES") that
           # persists across steps and overrides the project file's value.
-          export CURRENT_PROJECT_VERSION="$CM_BUILD_NUMBER"
-          echo "export CURRENT_PROJECT_VERSION=$CM_BUILD_NUMBER" >> $CM_ENV
+          export CURRENT_PROJECT_VERSION="$PROJECT_BUILD_NUMBER"
+          echo "export CURRENT_PROJECT_VERSION=$PROJECT_BUILD_NUMBER" >> $CM_ENV
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags "CURRENT_PROJECT_VERSION=$CM_BUILD_NUMBER"
+            --archive-flags "CURRENT_PROJECT_VERSION=$PROJECT_BUILD_NUMBER"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log

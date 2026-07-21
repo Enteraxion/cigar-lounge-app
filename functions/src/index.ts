@@ -11,8 +11,9 @@
  * per-city logic re-run automatically instead of by hand.
  *
  * Rate-limited per city via `cityRefreshes/{citySlug}` — a city already
- * refreshed within the last 24h is skipped, so a burst of searches for
- * the same city doesn't re-hit Yelp on every keystroke.
+ * refreshed within the last 30 days is skipped, so repeat searches for
+ * the same city don't re-hit Yelp when the data's still fresh (shop
+ * details don't change often enough to need daily re-pulls).
  *
  * DEPLOY:
  *   firebase functions:secrets:set YELP_API_KEY   (one-time, or when it changes)
@@ -29,7 +30,7 @@ const db = getFirestore();
 
 const yelpApiKey = defineSecret('YELP_API_KEY');
 
-const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
 const CATEGORY = 'cigarbars';
 const PAGE_SIZE = 50;
 const MAX_RESULTS = 200;

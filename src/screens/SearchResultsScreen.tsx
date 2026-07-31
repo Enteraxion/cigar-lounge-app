@@ -9,6 +9,20 @@
  * the substring-match implementation; the map view plots each result's
  * real `coordinates` field, same as the main Map tab.
  *
+ * When the query is a real US city name (checked against the bundled
+ * dataset in src/utils/cityAutocomplete.ts — see isKnownUsCityName), the
+ * search also awaits a live per-city Yelp refresh (see
+ * services/loungeRefreshService.ts / functions/src/index.ts's
+ * refreshCityLounges, now deployed) before settling on a final result
+ * set — so a city that's never been searched before still gets pulled in
+ * on the first try instead of showing empty and quietly repopulating.
+ * refreshCityLounges rate-limits itself per city (30-day cache), so this
+ * only adds real wait time the first time a given city is searched.
+ * Lounge-name/brand searches (e.g. "Davidoff") skip this entirely —
+ * they were never going to be a real city, so calling it would just
+ * waste a paid Yelp call and needlessly delay real Firestore matches
+ * that already exist from showing up.
+ *
  * Sort and Filter are both real now (see src/utils/loungeSearch.ts):
  * `results` is filtered (Filter sheet's SearchFilters + the quick filter
  * chips row, AND'd together) and then sorted (Sort sheet's selected
@@ -26,7 +40,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Linking,
   Platform,
   Pressable,
@@ -57,6 +70,7 @@ import {
 } from 'lucide-react-native';
 import { theme } from '../theme';
 import FilterChip from '../components/FilterChip';
+import SearchLoadingSkeleton from '../components/SearchLoadingSkeleton';
 import SearchResultCard from '../components/SearchResultCard';
 import SimplifiedMapView from '../components/SimplifiedMapView';
 import SortBottomSheet from '../components/SortBottomSheet';
@@ -64,6 +78,7 @@ import FilterBottomSheet from '../components/FilterBottomSheet';
 import AddToCollectionSheet from '../components/AddToCollectionSheet';
 import { searchLounges, type Lounge } from '../services/loungeService';
 import { refreshCityLounges } from '../services/loungeRefreshService';
+import { isKnownUsCityName } from '../utils/cityAutocomplete';
 import {
   getUserFavoriteIds,
   recordSearch,
@@ -154,28 +169,27 @@ export default function SearchResultsScreen() {
     setError(null);
     setResults(null);
     try {
-      const [found, favoritedIds] = await Promise.all([
+      const [initialFound, favoritedIds, refreshed] = await Promise.all([
         searchLounges(query),
         userId ? getUserFavoriteIds(userId) : Promise.resolve<string[]>([]),
+        // Awaited (not fire-and-forget) so a city no one has searched
+        // before still gets a real shot at showing results on the first
+        // try, instead of flashing "no lounges found" and quietly
+        // repopulating a moment later. refreshCityLounges (see
+        // loungeRefreshService.ts) checks its own 30-day per-city cache
+        // first, so repeat searches stay fast — this only adds real
+        // wait time the first time a city is searched. Only fires for
+        // queries that are actually a real city name — see this file's
+        // header comment for why lounge/brand-name searches skip it.
+        isKnownUsCityName(query) ? refreshCityLounges(query) : Promise.resolve(false),
       ]);
+      const found = refreshed ? await searchLounges(query) : initialFound;
       setResults(found);
       setFavoriteIds(new Set(favoritedIds));
       if (userId && query.trim()) {
         // Fire-and-forget — this is for SearchScreen's Recent Searches list
         // and shouldn't block or fail rendering the results themselves.
         recordSearch(userId, query).catch(() => {});
-      }
-      if (query.trim()) {
-        // Fire-and-forget live refresh (see loungeRefreshService.ts) — a
-        // no-op until refreshCityLounges is deployed. If it does add new
-        // data for this city, re-run the search once to pick it up.
-        refreshCityLounges(query)
-          .then(refreshed => {
-            if (refreshed) {
-              runSearch();
-            }
-          })
-          .catch(() => {});
       }
     } catch {
       setError("Couldn't load results. Check your connection and try again.");
@@ -362,9 +376,9 @@ export default function SearchResultsScreen() {
               </Pressable>
             </View>
           ) : displayResults === null ? (
-            <View style={styles.stateBox}>
-              <ActivityIndicator color={theme.colors.secondarySilver} />
-            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <SearchLoadingSkeleton />
+            </ScrollView>
           ) : displayResults.length === 0 ? (
             <ScrollView contentContainerStyle={styles.emptyContent}>
               <View style={styles.emptyIconWrap}>
@@ -472,9 +486,9 @@ export default function SearchResultsScreen() {
             </Pressable>
           </View>
         ) : displayResults === null ? (
-          <View style={styles.stateBox}>
-            <ActivityIndicator color={theme.colors.secondarySilver} />
-          </View>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <SearchLoadingSkeleton />
+          </ScrollView>
         ) : Platform.OS === 'android' ? (
           // TODO(android-maps): same gap as MapScreen.tsx — no Google Maps
           // API key set up on Android yet. SimplifiedMapView plots the same
@@ -526,6 +540,7 @@ export default function SearchResultsScreen() {
         onApply={setAppliedFilters}
         onClose={() => setFilterVisible(false)}
         currentLocation={currentLocation ?? undefined}
+        userId={userId}
       />
       {savingResult ? (
         <AddToCollectionSheet

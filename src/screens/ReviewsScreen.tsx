@@ -20,7 +20,7 @@
  * screen for the original implementation this was matched against.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -40,6 +40,7 @@ import FilterReviewsSheet from '../components/FilterReviewsSheet';
 import { getReviewsForLounge, type Review } from '../services/loungeService';
 import { deleteReview, toggleReviewHelpful } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
+import { applyReviewFilters, defaultReviewFilters, type ReviewFilters } from '../utils/reviewFilters';
 import type { ReviewCategoryRatings } from '../types/firestore';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 
@@ -233,6 +234,8 @@ export default function ReviewsScreen() {
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filterVisible, setFilterVisible] = useState(false);
+  const [appliedReviewFilters, setAppliedReviewFilters] =
+    useState<ReviewFilters>(defaultReviewFilters);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
@@ -297,8 +300,17 @@ export default function ReviewsScreen() {
     ]);
   };
 
+  // Summary card always reflects every review for the lounge, regardless
+  // of the member's own sort/filter choice below — same convention as
+  // most review UIs (the filter narrows the list, not the lounge's
+  // overall rating).
   const summary = computeSummary(reviews ?? []);
   const distributionTopToBottom = [...summary.distribution].reverse();
+
+  const displayReviews = useMemo(
+    () => applyReviewFilters(reviews ?? [], appliedReviewFilters),
+    [reviews, appliedReviewFilters],
+  );
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -366,9 +378,11 @@ export default function ReviewsScreen() {
           {/* ---------------- Review List ---------------- */}
           {reviews.length === 0 ? (
             <Text style={styles.emptyText}>No reviews yet — be the first to write one.</Text>
+          ) : displayReviews.length === 0 ? (
+            <Text style={styles.emptyText}>No reviews match the current filter.</Text>
           ) : (
             <View style={styles.reviewList}>
-              {reviews.map(review => (
+              {displayReviews.map(review => (
                 <ReviewCard
                   key={review.id}
                   review={review}
@@ -391,7 +405,13 @@ export default function ReviewsScreen() {
         <Text style={styles.writeReviewButtonText}>Write Review</Text>
       </Pressable>
 
-      <FilterReviewsSheet visible={filterVisible} onClose={() => setFilterVisible(false)} />
+      <FilterReviewsSheet
+        visible={filterVisible}
+        reviews={reviews ?? []}
+        initialFilters={appliedReviewFilters}
+        onApply={setAppliedReviewFilters}
+        onClose={() => setFilterVisible(false)}
+      />
     </SafeAreaView>
   );
 }

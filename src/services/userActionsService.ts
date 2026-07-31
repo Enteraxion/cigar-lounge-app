@@ -39,6 +39,8 @@ import type {
   LoungeDocument,
   NotificationDocument,
   RecentlyViewedDocument,
+  SavedFilterCriteria,
+  SavedFilterDocument,
   SearchHistoryDocument,
   ReviewCategoryRatings,
   ReviewDocument,
@@ -314,6 +316,35 @@ export async function toggleReviewHelpful(
       // Notifications are best-effort — the helpful vote itself already saved.
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Saved Filters — users/{userId}/savedFilters/{filterId}
+// ---------------------------------------------------------------------------
+
+export type SavedFilter = SavedFilterDocument & { id: string };
+
+/** Creates a new saved-filter preset, returning its new id. */
+export async function saveSearchFilter(
+  userId: string,
+  name: string,
+  criteria: SavedFilterCriteria,
+): Promise<string> {
+  const data: SavedFilterDocument = { name, criteria, createdAt: Timestamp.now() };
+  const ref = await addDoc(collection(db, 'users', userId, 'savedFilters'), data);
+  return ref.id;
+}
+
+/** Fetches every saved-filter preset `userId` has created, newest first. */
+export async function getSavedSearchFilters(userId: string): Promise<SavedFilter[]> {
+  const snapshot = await getDocs(
+    query(collection(db, 'users', userId, 'savedFilters'), orderBy('createdAt', 'desc')),
+  );
+  return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as SavedFilterDocument) }));
+}
+
+export async function deleteSavedSearchFilter(userId: string, filterId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId, 'savedFilters', filterId));
 }
 
 // ---------------------------------------------------------------------------

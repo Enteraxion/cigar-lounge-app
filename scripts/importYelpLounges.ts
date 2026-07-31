@@ -4,27 +4,32 @@
  * Firestore's `lounges` collection, using the same schema/admin-init
  * pattern as seedFirestore.ts.
  *
- * Yelp over Google Places: Yelp Fusion is free (no billing/credit card
- * required, just a developer signup) and has a dedicated "Cigar Bars"
- * category, which is a better match for this app than a generic Places
- * text search.
+ * Yelp over Google Places: Yelp Fusion has a dedicated "Cigar Bars"
+ * category (plus `hookah_bars`, since real cigar lounges often get
+ * miscategorized there), a better match for this app than a generic
+ * Places text search. Note: Yelp moved Fusion to paid-only access in
+ * 2024 (a 30-day free trial, then billing) — it's no longer the
+ * no-billing option it originally was.
  *
  * ---------------------------------------------------------------------
  * SETUP:
  *
  *   1. Same `serviceAccountKey.json` as seedFirestore.ts (see that
  *      file's header for how to generate one).
- *   2. Sign up at https://www.yelp.com/developers, create an app under
- *      "Manage App" to get an API key (this is instant, free, no
- *      billing/card needed).
+ *   2. Sign up at https://docs.developer.yelp.com, create an app to get
+ *      an API key (Yelp Fusion is paid — see note above).
  *   3. Set it as an env var:
  *        YELP_API_KEY=xxxxx npm run import:lounges
  *
  * WHAT THIS DOES NOT DO (yet — deliberately out of scope for this pass):
  *   - Full operating hours (Yelp's search endpoint doesn't return them;
  *     would need a separate Business Details call per result).
- *   - Photos beyond Yelp's single `image_url` thumbnail — full photo
- *     sets need a separate paid Yelp endpoint.
+ *   - More than one photo per business — Yelp's Business Details
+ *     endpoint technically has a `photos` field, but standard Fusion API
+ *     access gets it back empty regardless of the business (verified
+ *     live); Yelp restricts multi-photo display to partners with a
+ *     separate display license. `image_url` from Business Search is the
+ *     only photo available to us.
  *   - Humidor inventory / custom rating categories — Yelp has no
  *     concept of these; they stay empty until a shop owner claims and
  *     fills in their listing (a separate, not-yet-built feature).
@@ -156,7 +161,10 @@ const CITIES = [
   'London, UK',
 ];
 
-const CATEGORY = 'cigarbars';
+// Matches functions/src/index.ts's refreshCityLounges — Yelp's own
+// `cigarbars` category is narrow, and a lot of real cigar lounges
+// (especially in smaller cities) get listed under `hookah_bars` instead.
+const CATEGORY = 'cigarbars,hookah_bars';
 const PAGE_SIZE = 50; // Yelp's max per request
 const MAX_PER_CITY = 200; // Yelp caps total offset+limit at 1000; this keeps us well under it per city
 
@@ -217,6 +225,15 @@ async function fetchAllResultsForCity(city: string): Promise<YelpBusiness[]> {
   return all;
 }
 
+// NOTE: Yelp's Business Details endpoint (one extra API call per
+// business) does technically return a `photos` array, but for standard
+// Fusion API access it comes back empty regardless of the business —
+// Yelp restricts multi-photo display to partners with a separate display
+// license (see their API Terms of Use / Display Requirements). Verified
+// live against a 1,147-review business and got `"photos": []`, so this
+// isn't worth an extra paid API call per business — `image_url` from
+// Business Search remains the only photo we can actually get.
+
 // ---------------------------------------------------------------------------
 // Map a Yelp business onto our LoungeDocument shape
 // ---------------------------------------------------------------------------
@@ -244,6 +261,7 @@ function ratingsFromYelp(rating: number | undefined): LoungeRatings {
 }
 
 function toLoungeDocument(business: YelpBusiness, now: Timestamp): LoungeDocument {
+  const images = business.image_url ? [business.image_url] : [];
   return {
     name: business.name,
     description: '',
@@ -251,7 +269,7 @@ function toLoungeDocument(business: YelpBusiness, now: Timestamp): LoungeDocumen
     coordinates: { lat: business.coordinates.latitude, lng: business.coordinates.longitude },
     hours: 'Hours not yet available',
     status: business.is_closed ? 'closed' : 'open',
-    images: business.image_url ? [business.image_url] : [],
+    images,
     amenities: [],
     tags: ['imported-from-yelp'],
     priceRange: business.price ?? '',

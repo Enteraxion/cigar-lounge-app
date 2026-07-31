@@ -41,17 +41,19 @@ export default function MainNavigator() {
         tabBarShowLabel: true,
         tabBarActiveTintColor: theme.colors.accentGold,
         tabBarInactiveTintColor: theme.colors.mutedGray,
+        // Matches design-reference/Home Screen.pdf (and every other
+        // full-screen mockup that shows the nav bar in context): a plain,
+        // flush, full-width bottom bar — not the floating rounded "pill"
+        // this used to be, which doesn't appear in any of the screen
+        // designs and was reading as barely-margined/edge-to-edge on
+        // real devices instead of the intentional look it was going for.
         tabBarStyle: {
-          position: 'absolute',
-          left: theme.spacing.md,
-          right: theme.spacing.md,
-          bottom: theme.spacing.md,
           height: 64,
-          borderRadius: theme.radius.xl,
           backgroundColor: theme.colors.surfaceNavy,
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(192, 192, 192, 0.12)',
           paddingTop: theme.spacing.sm,
-          ...theme.shadows.deep,
+          paddingHorizontal: theme.spacing.sm,
         },
         tabBarLabelStyle: {
           fontFamily: theme.fontFamily.semibold,

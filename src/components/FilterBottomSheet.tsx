@@ -13,9 +13,17 @@
  * `results` that would match the current draft, computed via
  * src/utils/loungeSearch.ts's applySearchFilters (same rules the screen
  * uses once applied) rather than a fake estimate.
+ *
+ * Save Filter is real (users/{userId}/savedFilters — see
+ * userActionsService.ts), not the "Coming Soon" stub it used to be:
+ * naming and saving a preset persists the current draft to Firestore,
+ * saved presets render as a horizontal chip row (tap to apply, long-press
+ * or the trash icon to delete), and everything's scoped to the signed-in
+ * member via the `userId` prop — omitted/signed-out shows a sign-in
+ * prompt instead of silently doing nothing.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -36,6 +44,7 @@ import {
   Music,
   Search as SearchIcon,
   Sparkles,
+  Trash2,
   X,
 } from 'lucide-react-native';
 import { theme } from '../theme';
@@ -50,6 +59,12 @@ import {
   type FilterOption,
 } from '../data/mockFilters';
 import type { Lounge } from '../services/loungeService';
+import {
+  deleteSavedSearchFilter,
+  getSavedSearchFilters,
+  saveSearchFilter,
+  type SavedFilter,
+} from '../services/userActionsService';
 import { applySearchFilters, type LatLng, type SearchFilters } from '../utils/loungeSearch';
 
 type Props = {
@@ -62,6 +77,11 @@ type Props = {
    * Results" live count when "Near Current Location" is toggled on.
    * Defaults to applySearchFilters' own defaultRegion fallback if omitted. */
   currentLocation?: LatLng;
+  /** Real Firestore-backed Saved Filters (see userActionsService.ts) are
+   * scoped to the signed-in member — omit/undefined when signed out,
+   * which disables Save Filter with a sign-in prompt instead of hiding
+   * it outright. */
+  userId?: string;
 };
 
 type SectionId = 'location' | 'availability' | 'atmosphere' | 'amenities' | 'entertainment';
@@ -145,6 +165,7 @@ export default function FilterBottomSheet({
   onApply,
   onClose,
   currentLocation,
+  userId,
 }: Props) {
   const [expandedSections, setExpandedSections] = useState<SectionId[]>(['location']);
   const [distance, setDistance] = useState(initialFilters.distanceMiles);
@@ -162,6 +183,26 @@ export default function FilterBottomSheet({
   const [selectedEntertainment, setSelectedEntertainment] = useState<string[]>(
     initialFilters.entertainment,
   );
+
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [namingFilter, setNamingFilter] = useState(false);
+  const [newFilterName, setNewFilterName] = useState('');
+
+  const loadSavedFilters = () => {
+    if (!userId) {
+      return;
+    }
+    getSavedSearchFilters(userId)
+      .then(setSavedFilters)
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (visible) {
+      loadSavedFilters();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, userId]);
 
   const toggleSection = (id: SectionId) => {
     setExpandedSections(prev =>
@@ -201,7 +242,51 @@ export default function FilterBottomSheet({
   };
 
   const handleSaveFilter = () => {
-    Alert.alert('Coming Soon', "Saved filters aren't available yet.");
+    if (!userId) {
+      Alert.alert('Sign In Required', 'Sign in to save filters for later.');
+      return;
+    }
+    setNewFilterName('');
+    setNamingFilter(true);
+  };
+
+  const confirmSaveFilter = () => {
+    if (!userId) {
+      return;
+    }
+    const name = newFilterName.trim() || 'Untitled Filter';
+    saveSearchFilter(userId, name, draftFilters)
+      .then(loadSavedFilters)
+      .catch(() => Alert.alert("Couldn't save filter", 'Check your connection and try again.'));
+    setNamingFilter(false);
+  };
+
+  const applySavedFilter = (saved: SavedFilter) => {
+    setDistance(saved.criteria.distanceMiles);
+    setNearCurrentLocation(saved.criteria.nearCurrentLocation);
+    setCityQuery(saved.criteria.cityQuery);
+    setSelectedAvailability(saved.criteria.availability);
+    setSelectedAtmosphere(saved.criteria.atmosphere);
+    setSelectedAmenities(saved.criteria.amenities);
+    setSelectedEntertainment(saved.criteria.entertainment);
+  };
+
+  const handleDeleteSavedFilter = (saved: SavedFilter) => {
+    if (!userId) {
+      return;
+    }
+    Alert.alert('Delete Saved Filter', `Remove "${saved.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteSavedSearchFilter(userId, saved.id)
+            .then(loadSavedFilters)
+            .catch(() => Alert.alert("Couldn't delete filter", 'Check your connection and try again.'));
+        },
+      },
+    ]);
   };
 
   return (
@@ -223,11 +308,57 @@ export default function FilterBottomSheet({
             </Pressable>
           </View>
         </View>
-        <View style={styles.saveRow}>
-          <Pressable onPress={handleSaveFilter} hitSlop={8}>
-            <Text style={styles.saveLink}>Save Filter</Text>
-          </Pressable>
-        </View>
+        {namingFilter ? (
+          <View style={styles.namingRow}>
+            <TextInput
+              value={newFilterName}
+              onChangeText={setNewFilterName}
+              placeholder="Name this filter"
+              placeholderTextColor={theme.colors.mutedGray}
+              style={styles.namingInput}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={confirmSaveFilter}
+            />
+            <Pressable onPress={confirmSaveFilter} hitSlop={8}>
+              <Text style={styles.saveLink}>Save</Text>
+            </Pressable>
+            <Pressable onPress={() => setNamingFilter(false)} hitSlop={8}>
+              <Text style={styles.resetLink}>Cancel</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.saveRow}>
+            <Pressable onPress={handleSaveFilter} hitSlop={8}>
+              <Text style={styles.saveLink}>Save Filter</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {savedFilters.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.savedFilterScroll}
+            contentContainerStyle={styles.savedFilterRow}
+          >
+            {savedFilters.map(saved => (
+              <Pressable
+                key={saved.id}
+                style={styles.savedFilterChip}
+                onPress={() => applySavedFilter(saved)}
+                onLongPress={() => handleDeleteSavedFilter(saved)}
+              >
+                <Text style={styles.savedFilterChipText} numberOfLines={1}>
+                  {saved.name}
+                </Text>
+                <Pressable hitSlop={8} onPress={() => handleDeleteSavedFilter(saved)}>
+                  <Trash2 size={12} color={theme.colors.mutedGray} />
+                </Pressable>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
 
         <ScrollView
           style={styles.scroll}
@@ -435,6 +566,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.secondarySilver,
     textDecorationLine: 'underline',
+  },
+
+  // ---- Save Filter naming row ----
+  namingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+  },
+  namingInput: {
+    ...theme.typography.body,
+    flex: 1,
+    height: 36,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.radius.small,
+    backgroundColor: 'rgba(5, 10, 24, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.2)',
+    fontSize: 13,
+    color: theme.colors.white,
+  },
+
+  // ---- Saved filter chips ----
+  savedFilterScroll: {
+    flexGrow: 0,
+    marginTop: theme.spacing.md,
+  },
+  savedFilterRow: {
+    gap: theme.spacing.sm,
+  },
+  savedFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    height: 36,
+    borderRadius: theme.radius.full,
+    backgroundColor: 'rgba(5, 10, 24, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.25)',
+  },
+  savedFilterChipText: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    color: theme.colors.secondarySilver,
+    maxWidth: 120,
   },
 
   // ---- Scroll body ----

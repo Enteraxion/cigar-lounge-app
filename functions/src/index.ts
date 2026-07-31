@@ -31,7 +31,12 @@ const db = getFirestore();
 const yelpApiKey = defineSecret('YELP_API_KEY');
 
 const REFRESH_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
-const CATEGORY = 'cigarbars';
+// Yelp's own `cigarbars` category is narrow — a lot of real cigar
+// lounges (especially in smaller cities) get listed under `hookah_bars`
+// instead. Searching both (Yelp treats a comma-separated categories
+// list as OR) catches more real venues without pulling in unrelated
+// nightlife categories like plain `bars`/`lounges`.
+const CATEGORY = 'cigarbars,hookah_bars';
 const PAGE_SIZE = 50;
 const MAX_RESULTS = 200;
 
@@ -93,6 +98,15 @@ async function fetchAllResults(apiKey: string, location: string): Promise<YelpBu
   return all;
 }
 
+// NOTE: Yelp's Business Details endpoint (one extra API call per
+// business) does technically return a `photos` array, but for standard
+// Fusion API access it comes back empty regardless of the business —
+// Yelp restricts multi-photo display to partners with a separate display
+// license (see their API Terms of Use / Display Requirements). Verified
+// live against a 1,147-review business and got `"photos": []`, so this
+// isn't worth an extra paid API call per business — `image_url` from
+// Business Search remains the only photo we can actually get.
+
 // ---------------------------------------------------------------------------
 // Mapping onto the app's LoungeDocument shape (see src/types/firestore.ts —
 // duplicated here rather than imported, since Firebase only deploys this
@@ -117,6 +131,7 @@ function ratingsFromYelp(rating: number | undefined) {
 }
 
 function toLoungeDocument(business: YelpBusiness, now: Timestamp) {
+  const images = business.image_url ? [business.image_url] : [];
   return {
     name: business.name,
     description: '',
@@ -124,7 +139,7 @@ function toLoungeDocument(business: YelpBusiness, now: Timestamp) {
     coordinates: { lat: business.coordinates.latitude, lng: business.coordinates.longitude },
     hours: 'Hours not yet available',
     status: business.is_closed ? 'closed' : 'open',
-    images: business.image_url ? [business.image_url] : [],
+    images,
     amenities: [],
     tags: ['imported-from-yelp'],
     priceRange: business.price ?? '',

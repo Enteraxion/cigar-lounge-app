@@ -246,6 +246,33 @@ export type SearchHistoryDocument = {
 };
 
 // ---------------------------------------------------------------------------
+// users/{userId}/savedFilters/{filterId}
+// ---------------------------------------------------------------------------
+
+/**
+ * Mirrors src/utils/loungeSearch.ts's `SearchFilters` shape (duplicated
+ * rather than imported, same reasoning as the rest of this file being
+ * self-contained) — a snapshot of FilterBottomSheet's draft state at the
+ * moment the member saved it, re-applied verbatim when they pick this
+ * preset again.
+ */
+export type SavedFilterCriteria = {
+  distanceMiles: number;
+  nearCurrentLocation: boolean;
+  cityQuery: string;
+  availability: string[];
+  atmosphere: string[];
+  amenities: string[];
+  entertainment: string[];
+};
+
+export type SavedFilterDocument = {
+  name: string;
+  criteria: SavedFilterCriteria;
+  createdAt: Timestamp;
+};
+
+// ---------------------------------------------------------------------------
 // users/{userId}/collections/{collectionId}
 // ---------------------------------------------------------------------------
 

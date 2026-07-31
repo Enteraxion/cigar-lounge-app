@@ -2,29 +2,42 @@
  * FilterReviewsSheet
  *
  * Matches the bottom half of design-reference/Ratings Breakdown & Filter
- * Reviews.pdf: a bottom sheet with Sort By / Verified Visitors / Reviewer
- * Type / Star Rating filters and a sticky "Show Results" footer. Built
- * with RN's built-in Modal — same pattern as FilterBottomSheet and
- * SortBottomSheet. All selection state is local; the result count is a
- * fake estimate that shrinks as more filters are selected, not a real
- * query against the dataset.
+ * Reviews.pdf: a bottom sheet with Sort By / Star Rating filters and a
+ * sticky "Show Results" footer. Built with RN's built-in Modal — same
+ * pattern as FilterBottomSheet and SortBottomSheet.
+ *
+ * Sort and Star Rating are both real (see src/utils/reviewFilters.ts),
+ * computed against the lounge's actual fetched reviews, and reported
+ * back to ReviewsScreen via `onApply` — same lift-up draft-state pattern
+ * FilterBottomSheet uses. The design's "Verified Visitors" toggle and
+ * "Reviewer Type" chips were dropped: neither has any backing field on
+ * ReviewDocument (no visit-verification system, no reviewer-type
+ * concept exists anywhere in the schema), so they could only ever have
+ * been decorative — keeping them would just trade one placeholder for
+ * another.
  */
 
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import { CircleCheck } from 'lucide-react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../theme';
+import type { Review } from '../services/loungeService';
+import {
+  applyReviewFilters,
+  defaultReviewFilters,
+  REVIEW_SORT_OPTIONS,
+  type ReviewFilters,
+  type ReviewSortOption,
+} from '../utils/reviewFilters';
 
 type Props = {
   visible: boolean;
+  reviews: Review[];
+  initialFilters: ReviewFilters;
+  onApply: (filters: ReviewFilters) => void;
   onClose: () => void;
 };
 
-const SORT_OPTIONS = ['Most Helpful', 'Newest', 'Highest Rated'];
-const REVIEWER_TYPES = ['Business', 'Locals', 'Travelers'];
 const STAR_RATINGS = [5, 4, 3, 2, 1];
-
-const BASE_RESULT_COUNT = 184;
 
 function PillChip({
   label,
@@ -59,27 +72,33 @@ function StarChip({
       onPress={onPress}
       style={[styles.chip, styles.starChip, selected && styles.starChipSelected]}
     >
-      <Text style={[styles.chipText, selected && styles.starChipTextSelected]}>{stars}★</Text>
+      <Text style={[styles.chipText, selected && styles.starChipTextSelected]}>{stars}★+</Text>
     </Pressable>
   );
 }
 
-export default function FilterReviewsSheet({ visible, onClose }: Props) {
-  const [sortBy, setSortBy] = useState('Most Helpful');
-  const [verifiedOnly, setVerifiedOnly] = useState(true);
-  const [reviewerType, setReviewerType] = useState<string | null>('Locals');
-  const [starRating, setStarRating] = useState<number | null>(5);
+export default function FilterReviewsSheet({
+  visible,
+  reviews,
+  initialFilters,
+  onApply,
+  onClose,
+}: Props) {
+  const [sortBy, setSortBy] = useState<ReviewSortOption>(initialFilters.sortBy);
+  const [minStars, setMinStars] = useState<number | null>(initialFilters.minStars);
 
   const clearAll = () => {
-    setSortBy('Most Helpful');
-    setVerifiedOnly(false);
-    setReviewerType(null);
-    setStarRating(null);
+    setSortBy(defaultReviewFilters.sortBy);
+    setMinStars(defaultReviewFilters.minStars);
   };
 
-  const activeFilterCount =
-    (verifiedOnly ? 1 : 0) + (reviewerType ? 1 : 0) + (starRating ? 1 : 0);
-  const resultCount = Math.max(1, BASE_RESULT_COUNT - activeFilterCount * 20);
+  const draftFilters: ReviewFilters = { sortBy, minStars };
+  const resultCount = applyReviewFilters(reviews, draftFilters).length;
+
+  const handleShowResults = () => {
+    onApply(draftFilters);
+    onClose();
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -98,7 +117,7 @@ export default function FilterReviewsSheet({ visible, onClose }: Props) {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Sort By</Text>
           <View style={styles.chipRow}>
-            {SORT_OPTIONS.map(option => (
+            {REVIEW_SORT_OPTIONS.map(option => (
               <PillChip
                 key={option}
                 label={option}
@@ -109,51 +128,22 @@ export default function FilterReviewsSheet({ visible, onClose }: Props) {
           </View>
         </View>
 
-        {/* ---------------- Verified Visitors ---------------- */}
-        <View style={styles.verifiedRow}>
-          <View style={styles.verifiedLabelRow}>
-            <CircleCheck size={18} color={theme.colors.success} />
-            <Text style={styles.verifiedLabel}>Verified Visitors only</Text>
-          </View>
-          <Switch
-            value={verifiedOnly}
-            onValueChange={setVerifiedOnly}
-            trackColor={{ false: theme.colors.surfaceNavy, true: theme.colors.success }}
-            thumbColor={theme.colors.white}
-          />
-        </View>
-
-        {/* ---------------- Reviewer Type ---------------- */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Reviewer Type</Text>
-          <View style={styles.chipRow}>
-            {REVIEWER_TYPES.map(type => (
-              <PillChip
-                key={type}
-                label={type}
-                selected={reviewerType === type}
-                onPress={() => setReviewerType(prev => (prev === type ? null : type))}
-              />
-            ))}
-          </View>
-        </View>
-
         {/* ---------------- Star Rating ---------------- */}
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Star Rating</Text>
+          <Text style={styles.fieldLabel}>Minimum Star Rating</Text>
           <View style={styles.chipRow}>
             {STAR_RATINGS.map(stars => (
               <StarChip
                 key={stars}
                 stars={stars}
-                selected={starRating === stars}
-                onPress={() => setStarRating(prev => (prev === stars ? null : stars))}
+                selected={minStars === stars}
+                onPress={() => setMinStars(prev => (prev === stars ? null : stars))}
               />
             ))}
           </View>
         </View>
 
-        <Pressable style={styles.showResultsButton} onPress={onClose}>
+        <Pressable style={styles.showResultsButton} onPress={handleShowResults}>
           <Text style={styles.showResultsButtonText}>Show Results ({resultCount})</Text>
         </Pressable>
       </View>
@@ -261,27 +251,6 @@ const styles = StyleSheet.create({
   starChipTextSelected: {
     fontFamily: theme.fontFamily.semibold,
     color: theme.colors.accentGold,
-  },
-
-  // ---- Verified visitors toggle ----
-  verifiedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderRadius: theme.radius.large,
-    backgroundColor: 'rgba(5, 10, 24, 0.4)',
-  },
-  verifiedLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  verifiedLabel: {
-    ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
-    fontSize: 14,
-    color: theme.colors.white,
   },
 
   // ---- Footer ----

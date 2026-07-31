@@ -5,6 +5,16 @@
  * Location distance, AI Settings' Max Travel Distance). Built with
  * PanResponder — no bottom-sheet/slider library in this project.
  * Promoted here from FilterBottomSheet on its second use.
+ *
+ * Uses `pageX` (absolute screen coordinate) minus the track's own
+ * measured screen position, rather than `locationX` — with the New
+ * Architecture enabled (see ios/.../Info.plist RCTNewArchEnabled),
+ * `locationX` is reported relative to whichever nested child view is
+ * directly under the finger (the thumb overlay, the track, etc.), not
+ * consistently relative to this outer PanResponder view, which is what
+ * made the slider appear stuck: touches on the thumb itself never
+ * reached the expected coordinate space. Absolute screen coordinates
+ * sidestep that entirely.
  */
 
 import React, { useRef, useState } from 'react';
@@ -22,13 +32,22 @@ type Props = {
 
 export default function DistanceSlider({ value, min = 1, max = 100, onChange }: Props) {
   const [trackWidth, setTrackWidth] = useState(0);
+  const trackScreenX = useRef(0);
+  const containerRef = useRef<View>(null);
   const percent = (value - min) / (max - min);
 
-  const updateFromX = (x: number) => {
+  const measureTrack = () => {
+    containerRef.current?.measureInWindow((x, _y, width) => {
+      trackScreenX.current = x;
+      setTrackWidth(width);
+    });
+  };
+
+  const updateFromPageX = (pageX: number) => {
     if (!trackWidth) {
       return;
     }
-    const clamped = Math.min(Math.max(x, 0), trackWidth);
+    const clamped = Math.min(Math.max(pageX - trackScreenX.current, 0), trackWidth);
     const ratio = clamped / trackWidth;
     onChange(Math.round(min + ratio * (max - min)));
   };
@@ -37,16 +56,17 @@ export default function DistanceSlider({ value, min = 1, max = 100, onChange }: 
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: evt => updateFromX(evt.nativeEvent.locationX),
-      onPanResponderMove: evt => updateFromX(evt.nativeEvent.locationX),
+      onPanResponderGrant: evt => updateFromPageX(evt.nativeEvent.pageX),
+      onPanResponderMove: evt => updateFromPageX(evt.nativeEvent.pageX),
     }),
   ).current;
 
   return (
     <View
+      ref={containerRef}
       style={styles.touchArea}
       hitSlop={{ top: 12, bottom: 12 }}
-      onLayout={event => setTrackWidth(event.nativeEvent.layout.width)}
+      onLayout={measureTrack}
       {...panResponder.panHandlers}
     >
       <View style={styles.track}>

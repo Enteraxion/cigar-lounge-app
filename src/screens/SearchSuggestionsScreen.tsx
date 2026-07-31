@@ -43,6 +43,7 @@ import {
 } from '../services/loungeService';
 import { getRecentlyViewedLounges } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
+import { searchUsCities } from '../utils/cityAutocomplete';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 
 const RECENT_VISIBLE_LIMIT = 5;
@@ -167,10 +168,19 @@ export default function SearchSuggestionsScreen() {
     () => recentlyVisited.filter(item => matches(item.name, query)),
     [query, recentlyVisited],
   );
-  const filteredCities = useMemo(
-    () => citySuggestions.filter(item => matches(item.name, query)),
-    [query, citySuggestions],
-  );
+  // With no query typed, show the top real (already-imported) cities as a
+  // default/"popular" list. Once the member starts typing, switch to the
+  // bundled US cities dataset (src/utils/cityAutocomplete.ts) instead —
+  // it covers ~19,800 real cities, not just the handful already in
+  // Firestore, so "New" finds "New Orleans" even if we've never imported
+  // it yet (searching it then triggers the real Yelp refresh, same as
+  // any other search).
+  const filteredCities = useMemo(() => {
+    if (!query.trim()) {
+      return citySuggestions;
+    }
+    return searchUsCities(query);
+  }, [query, citySuggestions]);
   const filteredLounges = useMemo(
     () => topLounges.filter(item => matches(item.name, query)),
     [query, topLounges],

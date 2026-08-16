@@ -7,15 +7,14 @@
  * read from Firestore via src/services/loungeService.ts — see that file
  * and src/types/firestore.ts for the schema. Featured is highest-rated;
  * Trending is most-reviewed; Nearby is sorted by real distance from the
- * app's placeholder "current location" (src/utils/loungeSearch.ts's
- * haversineDistanceMiles + src/data/mockMap.ts's defaultRegion — the same
- * stand-in Search/Map use, since there's no real device geolocation
- * anywhere in this app yet).
+ * member's actual position (src/hooks/useCurrentLocation.ts), falling
+ * back to their profile home city and only then to a static coordinate —
+ * and the section subtitle says which of the three it used, so "Nearby"
+ * is never a claim the app can't back up.
  *
- * TODO(firestore): Cigar of the Week and Member Events are still local
- * mock data (src/data/mockHome.ts) — neither is in the Firestore schema
- * yet. The header greeting (avatar/name) is the real signed-in user via
- * src/hooks/useUserProfile.ts.
+ * Cigar of the Week is real (src/data/cigars.ts) and Member Events are
+ * real owner-posted events (eventService). The header greeting is the
+ * real signed-in user via src/hooks/useUserProfile.ts.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -59,6 +58,7 @@ import { haversineDistanceMiles } from '../utils/loungeSearch';
 import { displayTags } from '../utils/displayTags';
 import { defaultRegion } from '../data/mockMap';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
+import { findCityCoordinates } from '../utils/cityAutocomplete';
 import { cigarOfTheWeek } from '../data/cigars';
 import {
   getUpcomingEventsAcrossLounges,
@@ -155,13 +155,31 @@ export default function HomeScreen() {
   // src/hooks/useCurrentLocation.ts), falling back to defaultRegion if
   // permission was denied or no fix is available yet — same reference
   // point Search/Map use.
+  // Where "nearby" is measured from, in order of how much we trust it:
+  // the device's real fix, else the home city on the member's profile,
+  // else the app's static stand-in.
+  //
+  // That middle step matters. Without it, a member whose location is off
+  // or unavailable got lounges near defaultRegion — a fixed coordinate in
+  // London — presented as "Nearby Lounges", with nothing on screen saying
+  // the app didn't actually know where they were. Sorting US lounges by
+  // distance from London is not a neutral fallback; it's a wrong answer
+  // delivered confidently.
+  const homeCoordinates = profile?.homeCity ? findCityCoordinates(profile.homeCity) : null;
+  const nearbyOrigin =
+    currentLocation ??
+    (homeCoordinates
+      ? { latitude: homeCoordinates.lat, longitude: homeCoordinates.lng }
+      : defaultRegion);
+  const nearbyIsReal = currentLocation !== null || homeCoordinates !== null;
+
   const nearbyLounges = lounges
     ? [...lounges]
         .filter(l => l.id !== featuredLounge?.id)
         .sort(
           (a, b) =>
-            haversineDistanceMiles(currentLocation ?? defaultRegion, a.coordinates) -
-            haversineDistanceMiles(currentLocation ?? defaultRegion, b.coordinates),
+            haversineDistanceMiles(nearbyOrigin, a.coordinates) -
+            haversineDistanceMiles(nearbyOrigin, b.coordinates),
         )
         .slice(0, NEARBY_COUNT)
     : [];
@@ -284,7 +302,15 @@ export default function HomeScreen() {
                 // location", which was doubly wrong — nothing filtered to 5
                 // miles, and "View All" hands SearchResults a 25-mile radius
                 // (defaultDistanceMiles), so the two disagreed.
-                subtitle="Closest to your location"
+                // Says which origin it actually used, so "Nearby" is never
+                // a claim the app can't back up.
+                subtitle={
+                  currentLocation
+                    ? 'Closest to your location'
+                    : nearbyIsReal
+                      ? `Closest to ${profile?.homeCity}`
+                      : 'Turn on location to see lounges near you'
+                }
                 actionLabel="View All"
                 onActionPress={() =>
                   (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {

@@ -36,6 +36,7 @@
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
+import Anthropic from '@anthropic-ai/sdk';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
@@ -596,5 +597,189 @@ export const sendReservationEmail = onCall(
     });
 
     return { sent: true };
+  },
+);
+
+// ---------------------------------------------------------------------------
+// askConcierge — the AI Concierge, grounded in this app's real lounge data
+//
+// The Concierge was the largest mock surface left in the app: every reply,
+// suggestion chip and "result" was a hardcoded string in
+// src/data/mockConcierge.ts, identical for every member and unrelated to any
+// lounge actually in the database.
+//
+// It lives in a Cloud Function rather than the app for one non-negotiable
+// reason: an Anthropic API key shipped in a React Native bundle is a
+// published API key. The key never leaves the server.
+//
+// Grounding, not free association: the function retrieves real candidate
+// lounges from Firestore first and asks Claude to recommend *from that list
+// only*, returning the ids it picked. So a recommendation is always a real
+// lounge the member can tap through to, and the model cannot invent a venue.
+// That is also why this uses a structured output rather than parsing prose.
+// ---------------------------------------------------------------------------
+
+const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+
+/** How many real lounges to offer the model to choose between. */
+const CONCIERGE_CANDIDATES = 40;
+/** Generous, because thinking and the reply share this budget on Opus 5. */
+const CONCIERGE_MAX_TOKENS = 8000;
+
+const CONCIERGE_SYSTEM = `You are the concierge for The Reserve, an app for discovering cigar lounges.
+
+You help members find a lounge to visit. You are knowledgeable about cigars,
+spirits and lounge etiquette, and you talk like a well-informed host — warm,
+direct, never salesy.
+
+Rules you must follow:
+- Recommend ONLY lounges from the CANDIDATE LOUNGES list in the user message.
+  Never invent a lounge, an address, an opening time or a rating. If none of
+  the candidates fit what the member asked for, say so plainly and suggest
+  what to search for instead.
+- Put the ids of any lounges you recommend in loungeIds, most relevant first,
+  at most three. Leave it empty when you aren't recommending a specific venue.
+- Do not repeat the lounge's address, hours or rating in your reply — the app
+  renders those on the card. Say why this lounge suits what they asked.
+- Keep replies to a few sentences. This is a chat, not a brochure.
+- For questions that aren't about finding a lounge (cigar pairings, how to
+  cut and light, etiquette), just answer them well and leave loungeIds empty.`;
+
+const CONCIERGE_SCHEMA = {
+  type: 'object',
+  properties: {
+    reply: {
+      type: 'string',
+      description: 'The concierge’s reply to the member, a few sentences.',
+    },
+    loungeIds: {
+      type: 'array',
+      description: 'Ids of recommended lounges, most relevant first. May be empty.',
+      items: { type: 'string' },
+    },
+  },
+  required: ['reply', 'loungeIds'],
+  additionalProperties: false,
+} as const;
+
+type ConciergeTurn = { role: 'user' | 'assistant'; text: string };
+
+/**
+ * Compact one-line-per-lounge catalog. Deliberately small: the model needs
+ * enough to choose well, and every extra field is tokens on every turn.
+ */
+function buildCandidateCatalog(
+  docs: FirebaseFirestore.QueryDocumentSnapshot[],
+): string {
+  return docs
+    .map(doc => {
+      const lounge = doc.data();
+      const tags = (lounge.tags ?? [])
+        .filter((tag: string) => !tag.startsWith('imported-from-'))
+        .slice(0, 4)
+        .join(', ');
+      const rating = lounge.ratings?.overall ? `${lounge.ratings.overall}/5` : 'unrated';
+      return [
+        `id=${doc.id}`,
+        `name=${lounge.name}`,
+        lounge.city ? `city=${lounge.city}` : null,
+        `rating=${rating}`,
+        lounge.priceRange ? `price=${lounge.priceRange}` : null,
+        tags ? `tags=${tags}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+    })
+    .join('\n');
+}
+
+export const askConcierge = onCall(
+  { secrets: [anthropicApiKey], timeoutSeconds: 120 },
+  async request => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to use the concierge.');
+    }
+
+    const turns = (request.data?.messages ?? []) as ConciergeTurn[];
+    const city = typeof request.data?.city === 'string' ? request.data.city.trim() : '';
+    if (!Array.isArray(turns) || turns.length === 0) {
+      throw new HttpsError('invalid-argument', 'messages is required.');
+    }
+
+    // Prefer lounges in the member's city; fall back to the highest-rated
+    // overall so the concierge still has real venues to work with when we
+    // don't know where they are.
+    let snapshot: FirebaseFirestore.QuerySnapshot | null = null;
+    if (city) {
+      snapshot = await db
+        .collection('lounges')
+        .where('city', '==', city)
+        .limit(CONCIERGE_CANDIDATES)
+        .get();
+    }
+    if (!snapshot || snapshot.empty) {
+      snapshot = await db
+        .collection('lounges')
+        .orderBy('ratings.overall', 'desc')
+        .limit(CONCIERGE_CANDIDATES)
+        .get();
+    }
+
+    const catalog = buildCandidateCatalog(snapshot.docs);
+    const knownIds = new Set(snapshot.docs.map(doc => doc.id));
+
+    const history = turns.slice(-10).map(turn => ({
+      role: turn.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+      content: turn.text,
+    }));
+
+    // The catalog rides on the latest user turn rather than the system
+    // prompt: it changes with the member's city, and the system prompt is
+    // the stable, cacheable part of every request.
+    const last = history[history.length - 1];
+    last.content = `CANDIDATE LOUNGES${city ? ` (near ${city})` : ''}:\n${catalog}\n\nMEMBER:\n${last.content}`;
+
+    const anthropic = new Anthropic({ apiKey: anthropicApiKey.value() });
+
+    let message;
+    try {
+      message = await anthropic.messages.create({
+        model: 'claude-opus-5',
+        max_tokens: CONCIERGE_MAX_TOKENS,
+        // Low effort: this is a latency-sensitive chat, not a reasoning
+        // task, and Opus 5 is strong at low effort. Thinking stays on
+        // (the default) — disabling it can leak <thinking> tags into the
+        // visible reply, which is the one thing a chat UI can't tolerate.
+        output_config: { effort: 'low', format: { type: 'json_schema', schema: CONCIERGE_SCHEMA } },
+        system: [{ type: 'text', text: CONCIERGE_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: history,
+      });
+    } catch (error) {
+      logger.error('Concierge request failed', { error: String(error) });
+      throw new HttpsError('internal', "The concierge couldn't answer just now.");
+    }
+
+    if (message.stop_reason === 'refusal') {
+      return { reply: "I can't help with that one. Ask me about lounges, cigars or pairings.", loungeIds: [] };
+    }
+
+    const text = message.content.find(block => block.type === 'text');
+    if (!text || text.type !== 'text') {
+      throw new HttpsError('internal', "The concierge couldn't answer just now.");
+    }
+
+    let parsed: { reply?: string; loungeIds?: string[] };
+    try {
+      parsed = JSON.parse(text.text);
+    } catch {
+      logger.error('Concierge returned unparseable output');
+      throw new HttpsError('internal', "The concierge couldn't answer just now.");
+    }
+
+    // Drop any id that isn't one we offered — belt and braces against a
+    // recommendation the member could tap and land nowhere.
+    const loungeIds = (parsed.loungeIds ?? []).filter(id => knownIds.has(id)).slice(0, 3);
+
+    return { reply: parsed.reply ?? '', loungeIds };
   },
 );

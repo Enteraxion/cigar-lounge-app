@@ -48,16 +48,56 @@ import {
 import { theme } from '../theme';
 import {
   conciergeUser,
-  findRecommendationForQuery,
   loadingStatusMessages,
   noResultsSuggestions,
-  sampleConversation,
   type CompactSuggestion,
-  type ConversationMessage,
   type RecommendationCard,
 } from '../data/mockConcierge';
-import { useLoungeNameLookup } from '../hooks/useLoungeNameLookup';
+import { askConcierge, type ConciergeTurn } from '../services/conciergeService';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { displayTags } from '../utils/displayTags';
+import type { Lounge } from '../services/loungeService';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
+
+/**
+ * Defined here rather than imported from mockConcierge because a real
+ * reply often has no lounge attached at all — the member asked how to cut
+ * a cigar, not where to smoke one — which the mock shape couldn't express.
+ */
+type ConversationMessage =
+  | { id: string; role: 'user'; text: string; timestamp: string }
+  | {
+      id: string;
+      role: 'ai';
+      text: string;
+      recommendation: RecommendationCard | null;
+      moreSuggestion?: CompactSuggestion;
+    }
+  | { id: string; role: 'ai-no-results'; query: string };
+
+/** Real lounge → the card this screen already knows how to render. */
+function toRecommendationCard(lounge: Lounge): RecommendationCard {
+  return {
+    id: lounge.id,
+    name: lounge.name,
+    location: lounge.city ?? lounge.address,
+    // Distance needs a device fix this screen doesn't have; the card hides
+    // the row when it's empty rather than printing an invented number.
+    distance: '',
+    rating: lounge.ratings.overall,
+    image: lounge.images[0],
+    tags: displayTags(lounge.tags).slice(0, 3),
+  };
+}
+
+function toCompactSuggestion(lounge: Lounge): CompactSuggestion {
+  return {
+    id: lounge.id,
+    name: lounge.name,
+    subtitle: lounge.city ?? lounge.address,
+    image: lounge.images[0],
+  };
+}
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 type ConciergeConversationRouteProp = RouteProp<ConciergeStackParamList, 'ConciergeConversation'>;
@@ -141,7 +181,7 @@ function RecommendationCardView({
           <Text style={styles.recName} numberOfLines={1}>
             {card.name}
           </Text>
-          <Text style={styles.recDistance}>{card.distance}</Text>
+          {card.distance ? <Text style={styles.recDistance}>{card.distance}</Text> : null}
         </View>
         <View style={styles.recLocationRow}>
           <MapPin size={12} color={theme.colors.mutedGray} />
@@ -243,12 +283,12 @@ function NoResultsCard({
 export default function ConciergeConversationScreen() {
   const navigation = useNavigation<ConciergeNavigationProp>();
   const route = useRoute<ConciergeConversationRouteProp>();
-  const [messages, setMessages] = useState<ConversationMessage[]>(sampleConversation);
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
   const handledInitialQuery = useRef(false);
-  const { findRealLoungeId } = useLoungeNameLookup();
+  const { profile } = useUserProfile();
 
   const sendMessage = (text: string) => {
     const trimmed = text.trim();
@@ -265,20 +305,35 @@ export default function ConciergeConversationScreen() {
     setInputText('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      const result = findRecommendationForQuery(trimmed);
-      const aiMessage: ConversationMessage = result
-        ? {
-            id: `ai-${messages.length}-${trimmed.slice(0, 8)}`,
-            role: 'ai',
-            text: result.text,
-            recommendation: result.recommendation,
-            moreSuggestion: result.moreSuggestion,
-          }
-        : { id: `ai-${messages.length}-${trimmed.slice(0, 8)}`, role: 'ai-no-results', query: trimmed };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1800);
+    // The whole conversation goes back each turn — the concierge is
+    // stateless server-side, so this is what gives it memory of what the
+    // member already said.
+    const turns: ConciergeTurn[] = [...messages, userMessage]
+      .filter((m): m is Extract<ConversationMessage, { role: 'user' | 'ai' }> =>
+        m.role === 'user' || m.role === 'ai',
+      )
+      .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }));
+
+    const key = `ai-${messages.length}-${trimmed.slice(0, 8)}`;
+    askConcierge(turns, profile?.homeCity)
+      .then(({ reply, lounges }) => {
+        setMessages(prev => [
+          ...prev,
+          lounges.length > 0
+            ? {
+                id: key,
+                role: 'ai',
+                text: reply,
+                recommendation: toRecommendationCard(lounges[0]),
+                moreSuggestion: lounges[1] ? toCompactSuggestion(lounges[1]) : undefined,
+              }
+            : { id: key, role: 'ai', text: reply, recommendation: null },
+        ]);
+      })
+      .catch(() => {
+        setMessages(prev => [...prev, { id: key, role: 'ai-no-results', query: trimmed }]);
+      })
+      .finally(() => setIsLoading(false));
   };
 
   useEffect(() => {
@@ -296,11 +351,11 @@ export default function ConciergeConversationScreen() {
   // found" LoungeDetail, best-effort match the card's name against real
   // lounges (see useLoungeNameLookup) and only navigate when it resolves.
   const openLoungeDetails = (card: RecommendationCard) => {
-    const realLoungeId = findRealLoungeId(card.name);
-    if (!realLoungeId) {
-      Alert.alert('Not Available', "This lounge isn't in our directory yet.");
-      return;
-    }
+    // card.id is a real Firestore lounge id now — the concierge only ever
+    // recommends from lounges the function pulled out of the database, so
+    // the old best-effort name match (useLoungeNameLookup, needed while the
+    // recommendations were invented) isn't required any more.
+    const realLoungeId = card.id;
     // Cross-boundary navigation from this root-level modal stack into
     // Main's Search tab stack's LoungeDetail screen. RootStackParamList
     // doesn't model nested-stack params, so a plain typed call can't
@@ -381,17 +436,22 @@ export default function ConciergeConversationScreen() {
               );
             }
 
+            // A reply with no lounge attached is normal, not a failure —
+            // "how do I cut a torpedo?" has an answer and no venue.
+            const card = message.recommendation;
             return (
               <View key={message.id} style={styles.aiBlock}>
                 <View style={styles.aiTextCard}>
                   <Text style={styles.aiText}>{message.text}</Text>
                 </View>
-                <RecommendationCardView
-                  card={message.recommendation}
-                  favorited={favoritedIds.has(message.recommendation.id)}
-                  onToggleFavorite={() => toggleFavorite(message.recommendation.id)}
-                  onViewDetails={() => openLoungeDetails(message.recommendation)}
-                />
+                {card ? (
+                  <RecommendationCardView
+                    card={card}
+                    favorited={favoritedIds.has(card.id)}
+                    onToggleFavorite={() => toggleFavorite(card.id)}
+                    onViewDetails={() => openLoungeDetails(card)}
+                  />
+                ) : null}
                 {message.moreSuggestion ? (
                   <CompactSuggestionRow suggestion={message.moreSuggestion} />
                 ) : null}

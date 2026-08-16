@@ -48,12 +48,7 @@ import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
 import { auth } from '../services/firebaseAuth';
 import { getUserFavorites } from '../services/userActionsService';
 import type { Lounge } from '../services/loungeService';
-import {
-  activePlan,
-  destinations,
-  nextStopHighlight,
-  type WishlistDestination,
-} from '../data/mockWishlist';
+import { buildWishlist, type WishlistDestination } from '../utils/wishlist';
 import { getPassport } from '../services/passportService';
 import type { Visit } from '../utils/passport';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
@@ -115,6 +110,10 @@ export default function TravelWishlistScreen() {
   // invented trips ("New York Business Trip", "London Weekend Break")
   // that every member saw identically.
   const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
+  // Destinations, the plan summary and the next-stop highlight are all
+  // derived from the member's own saved lounges — see src/utils/wishlist.ts.
+  const wishlist = buildWishlist(savedLounges ?? [], recentVisits);
+  const { activePlan, destinations, nextStopHighlight } = wishlist;
 
   const load = useCallback(async () => {
     if (!userId) {
@@ -192,7 +191,15 @@ export default function TravelWishlistScreen() {
 
         {/* ---------------- Active Plan Hero ---------------- */}
         <View style={styles.heroCard}>
-          <Image source={{ uri: activePlan.heroImage }} style={styles.heroImage} resizeMode="cover" />
+          {activePlan.heroImage ? (
+            <Image
+              source={{ uri: activePlan.heroImage }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.heroImage} />
+          )}
           <LinearGradient
             colors={['transparent', 'rgba(5, 10, 24, 0.9)']}
             style={styles.heroGradient}
@@ -229,9 +236,16 @@ export default function TravelWishlistScreen() {
         </View>
 
         {/* ---------------- Next Stop Highlight ---------------- */}
+        {/* Hidden entirely when every saved lounge has been visited —
+            there is no honest "next stop" to show, and an empty card
+            would be worse than no card. */}
+        {nextStopHighlight ? (
         <View style={styles.section}>
           <SectionHeader title="Next Stop Highlight" />
-          <View style={styles.highlightCard}>
+          <Pressable
+            style={styles.highlightCard}
+            onPress={() => openLounge(nextStopHighlight.loungeId)}
+          >
             <Text style={styles.highlightLabel}>{nextStopHighlight.label}</Text>
             <Text style={styles.highlightName}>{nextStopHighlight.loungeName}</Text>
 
@@ -260,8 +274,9 @@ export default function TravelWishlistScreen() {
                 </View>
               </View>
             </View>
-          </View>
+          </Pressable>
         </View>
+        ) : null}
 
         {/* ---------------- All Saved Lounges ---------------- */}
         <View style={styles.section}>

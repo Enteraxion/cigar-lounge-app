@@ -52,11 +52,13 @@ import SectionHeader from '../components/SectionHeader';
 import FilterChip from '../components/FilterChip';
 import CompactLoungeCard from '../components/CompactLoungeCard';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
-import { featuredTravelGuide, filterChips } from '../data/mockSearch';
+import { filterChips } from '../data/mockSearch';
 import {
   getPopularDestinations,
   getTrendingCities,
   type Lounge,
+  getFeaturedCityGuide,
+  type FeaturedCityGuide,
   type PopularDestination,
   type TrendingCity,
 } from '../services/loungeService';
@@ -86,6 +88,7 @@ export default function SearchScreen() {
   const [selectedChip, setSelectedChip] = useState('nearby');
   const [recentSearches, setRecentSearches] = useState<SearchHistoryEntry[]>([]);
   const [popularDestinations, setPopularDestinations] = useState<PopularDestination[]>([]);
+  const [featuredGuide, setFeaturedGuide] = useState<FeaturedCityGuide | null>(null);
   const [trendingCities, setTrendingCities] = useState<TrendingCity[]>([]);
   const [recentlyViewedLounges, setRecentlyViewedLounges] = useState<Lounge[]>([]);
 
@@ -96,6 +99,9 @@ export default function SearchScreen() {
         .catch(() => {});
       getTrendingCities()
         .then(setTrendingCities)
+        .catch(() => {});
+      getFeaturedCityGuide()
+        .then(setFeaturedGuide)
         .catch(() => {});
 
       const userId = auth.currentUser?.uid;
@@ -296,10 +302,13 @@ export default function SearchScreen() {
         ) : null}
 
         {/* ---------------- Featured Travel Guide ---------------- */}
+        {/* Hidden when no city qualifies — a guide we can't honour is
+            worse than no guide. */}
+        {featuredGuide ? (
         <View style={[styles.section, styles.lastSection]}>
           <View style={styles.guideCard}>
             <Image
-              source={{ uri: featuredTravelGuide.imageUri }}
+              source={{ uri: featuredGuide.imageUri }}
               style={styles.guideImage}
               resizeMode="cover"
             />
@@ -310,19 +319,29 @@ export default function SearchScreen() {
               pointerEvents="none"
             />
             <View style={styles.guideBody}>
-              <Text style={styles.guideLabel}>{featuredTravelGuide.label}</Text>
-              <Text style={styles.guideHeadline}>{featuredTravelGuide.headline}</Text>
-              <Text style={styles.guideDescription}>{featuredTravelGuide.description}</Text>
+              <Text style={styles.guideLabel}>Featured Travel Guide</Text>
+              <Text style={styles.guideHeadline}>
+                Traveling to {featuredGuide.city.split(',')[0]}?
+              </Text>
+              <Text style={styles.guideDescription}>
+                {featuredGuide.loungeCount.toLocaleString()} lounges in our directory, from
+                neighbourhood humidors to rooftop bars.
+              </Text>
               <Pressable
                 style={styles.guideButton}
-                onPress={() => Alert.alert('Coming Soon', 'Travel guides are not available yet.')}
+                onPress={() =>
+                  navigation.navigate('SearchResults', { query: featuredGuide.city })
+                }
               >
-                <Text style={styles.guideButtonText}>{featuredTravelGuide.ctaLabel}</Text>
+                <Text style={styles.guideButtonText}>
+                  Explore {featuredGuide.city.split(',')[0]}
+                </Text>
                 <ArrowRight size={16} color={theme.colors.primaryNavy} />
               </Pressable>
             </View>
           </View>
         </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -143,6 +143,33 @@ export async function getPopularDestinations(limitCount = 4): Promise<PopularDes
     .map(highlight => ({ id: highlight.id, city: highlight.name, imageUri: highlight.imageUri }));
 }
 
+export type FeaturedCityGuide = {
+  city: string;
+  loungeCount: number;
+  imageUri: string;
+};
+
+/**
+ * SearchScreen's "Featured Travel Guide" card. Was a fixed "Traveling to
+ * Nashville?" headline with an invented description and a Coming Soon
+ * button, shown to every member whether or not the app had a single
+ * lounge in Nashville.
+ *
+ * A guide we can actually honour is one for a city we actually cover, so
+ * this is simply the best-covered city with a photo — the same city
+ * ranking every other section on the screen uses. The card's button then
+ * runs a real search for it. Returns null when no city qualifies rather
+ * than inventing one.
+ */
+export async function getFeaturedCityGuide(): Promise<FeaturedCityGuide | null> {
+  const highlights = await getCityHighlights();
+  const featured = highlights.find(highlight => !!highlight.imageUri);
+  if (!featured || !featured.imageUri) {
+    return null;
+  }
+  return { city: featured.name, loungeCount: featured.count, imageUri: featured.imageUri };
+}
+
 export type TrendingCity = { id: string; rank: string; name: string };
 
 /**

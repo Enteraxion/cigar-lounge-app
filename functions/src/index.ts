@@ -63,6 +63,85 @@ const MAX_RESULTS = 200;
 const MATCH_DISTANCE_MILES = 0.2;
 
 // ---------------------------------------------------------------------------
+// Relevance filtering
+//
+// A survey of the 8,285 imported lounges (2026-08-16) found ~1% that
+// aren't cigar venues at all — a sandwich shop, a Dollar General, a few
+// coffee chains. Small, but they're the first thing a member notices.
+//
+// The filters below deliberately use each API's own structured category
+// data, never the business name. Name matching looks tempting and is a
+// trap: the imported set includes Casa de Montecristo, Carnegie Club,
+// Cortez Room and Tinder Box — all real, well-known cigar venues with no
+// "cigar" anywhere in the name. Any regex broad enough to catch "Dollar
+// General" also deletes those.
+// ---------------------------------------------------------------------------
+
+/** Yelp category aliases that indicate a genuine tobacco/cigar venue. */
+const YELP_ALLOWED_CATEGORIES = new Set([
+  'cigarbars',
+  'hookah_bars',
+  'tobaccoshops',
+  'smokeshop',
+  'smokeshops',
+  'vapeshops',
+  'lounges',
+]);
+
+/**
+ * Yelp's category filter is an OR over the searched aliases, but results
+ * still come back carrying their real categories — a business Yelp lists
+ * primarily as `sandwiches` can surface on a `cigarbars` search. Checking
+ * what Yelp actually calls the business drops those.
+ *
+ * Businesses with no categories at all are kept: absent data is not
+ * evidence against, and Yelp only reached our results via a cigar/hookah
+ * category search in the first place.
+ */
+function isRelevantYelpBusiness(business: YelpBusiness): boolean {
+  if (!business.categories || business.categories.length === 0) {
+    return true;
+  }
+  return business.categories.some(category => YELP_ALLOWED_CATEGORIES.has(category.alias));
+}
+
+/**
+ * Google primary types that are unambiguously a different kind of
+ * business. Deliberately excludes `bar`, `night_club` and `liquor_store`
+ * — plenty of real cigar lounges are primarily bars, and rejecting those
+ * would lose more than it saves.
+ */
+const GOOGLE_REJECTED_TYPES = new Set([
+  'restaurant', 'sandwich_shop', 'pizza_restaurant', 'fast_food_restaurant',
+  'hamburger_restaurant', 'mexican_restaurant', 'chinese_restaurant',
+  'coffee_shop', 'cafe', 'bakery', 'ice_cream_shop', 'meal_takeaway', 'meal_delivery',
+  'barber_shop', 'beauty_salon', 'hair_salon', 'nail_salon', 'spa',
+  'grocery_store', 'supermarket', 'convenience_store', 'department_store', 'discount_store',
+  'gas_station', 'car_repair', 'car_wash', 'car_dealer',
+  'hotel', 'motel', 'lodging', 'casino',
+  'gym', 'fitness_center', 'bank', 'atm',
+  'pharmacy', 'drugstore', 'dentist', 'doctor', 'hospital',
+  'church', 'school', 'university',
+]);
+
+/** Name signal used ONLY to rescue a venue the type filter would reject. */
+const CIGAR_NAME_SIGNAL = /cigar|tobacco|humidor|hookah|shisha|stogie|smoke|puff/i;
+
+/**
+ * Rejects a Google result only when both signals agree it's unrelated —
+ * an unambiguous non-lounge primary type AND nothing cigar-ish in the
+ * name. Requiring both is what keeps real venues like "High End Cigars &
+ * Cafe" (primary type `cafe`) and "King Corona Cigars Bar And Cafe" in,
+ * while still dropping "7 Brew Coffee" and "Dollar General".
+ */
+function isRelevantGooglePlace(place: GooglePlace): boolean {
+  if (!place.primaryType || !GOOGLE_REJECTED_TYPES.has(place.primaryType)) {
+    return true;
+  }
+  return CIGAR_NAME_SIGNAL.test(place.displayName?.text ?? '');
+}
+
+// ---------------------------------------------------------------------------
 // Yelp Fusion Business Search — same shape as scripts/importYelpLounges.ts
 // ---------------------------------------------------------------------------
 
@@ -76,6 +155,7 @@ type YelpBusiness = {
   coordinates: { latitude: number; longitude: number };
   location: { display_address: string[]; city?: string; state?: string };
   image_url?: string;
+  categories?: { alias: string; title: string }[];
 };
 
 type YelpSearchResponse = {
@@ -141,6 +221,7 @@ type GooglePlace = {
   location?: { latitude: number; longitude: number };
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   photos?: { name: string }[];
+  primaryType?: string;
 };
 
 type GoogleSearchResponse = {
@@ -155,7 +236,7 @@ async function fetchGooglePlaces(apiKey: string, location: string): Promise<Goog
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
       'X-Goog-FieldMask':
-        'places.id,places.displayName,places.formattedAddress,places.location,places.regularOpeningHours',
+        'places.id,places.displayName,places.formattedAddress,places.location,places.regularOpeningHours,places.primaryType',
     },
     body: JSON.stringify({
       textQuery: `cigar lounge in ${location}`,
@@ -304,15 +385,21 @@ export const refreshCityLounges = onCall(
         return [];
       }),
     ]);
+    // Drop results that each API's own categories say aren't cigar venues,
+    // before any matching or writing happens.
+    const relevantBusinesses = businesses.filter(isRelevantYelpBusiness);
+    const relevantGooglePlaces = googlePlaces.filter(isRelevantGooglePlace);
     logger.info('Fetched source results', {
       city,
       yelpCount: businesses.length,
       googleCount: googlePlaces.length,
+      yelpRejected: businesses.length - relevantBusinesses.length,
+      googleRejected: googlePlaces.length - relevantGooglePlaces.length,
     });
 
     // Index Google results by normalized name for matching against Yelp.
     const googleByName = new Map<string, GooglePlace[]>();
-    for (const place of googlePlaces) {
+    for (const place of relevantGooglePlaces) {
       const key = normalizeName(place.displayName?.text ?? '');
       const bucket = googleByName.get(key) ?? [];
       bucket.push(place);
@@ -323,7 +410,7 @@ export const refreshCityLounges = onCall(
     const batch = db.batch();
     const matchedGoogleIds = new Set<string>();
 
-    for (const business of businesses) {
+    for (const business of relevantBusinesses) {
       const candidates = googleByName.get(normalizeName(business.name)) ?? [];
       const match = candidates.find(
         candidate =>
@@ -345,7 +432,7 @@ export const refreshCityLounges = onCall(
     }
 
     // Google-only businesses (no Yelp match) — new venues Yelp doesn't cover.
-    for (const place of googlePlaces) {
+    for (const place of relevantGooglePlaces) {
       if (matchedGoogleIds.has(place.id) || !place.location) {
         continue;
       }
@@ -359,16 +446,18 @@ export const refreshCityLounges = onCall(
 
     logger.info('Merge complete', {
       city,
-      yelpCount: businesses.length,
-      googleCount: googlePlaces.length,
+      yelpCount: relevantBusinesses.length,
+      googleCount: relevantGooglePlaces.length,
       matchedCount: matchedGoogleIds.size,
-      googleOnlyAdded: googlePlaces.filter(p => !matchedGoogleIds.has(p.id)).length,
+      googleOnlyAdded: relevantGooglePlaces.filter(p => !matchedGoogleIds.has(p.id)).length,
     });
 
     return {
       refreshed: true,
       city,
-      count: businesses.length + googlePlaces.filter(p => !matchedGoogleIds.has(p.id)).length,
+      count:
+        relevantBusinesses.length +
+        relevantGooglePlaces.filter(p => !matchedGoogleIds.has(p.id)).length,
     };
   },
 );

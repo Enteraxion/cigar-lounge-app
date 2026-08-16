@@ -25,7 +25,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import {
   Check,
@@ -48,6 +48,7 @@ import SimplifiedMapView from '../components/SimplifiedMapView';
 import { conciergeSuggestion, defaultRegion, mapFilterChips, weatherWidget } from '../data/mockMap';
 import { getAllLounges, type Lounge } from '../services/loungeService';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
+import { tabBarClearance } from '../utils/tabBarLayout';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { loungeImageUri } from '../utils/loungeImage';
 
@@ -81,6 +82,10 @@ function MapPin({
 
 export default function MapScreen() {
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
+  // Keeps the info card clear of the floating tab bar on every device —
+  // see src/utils/tabBarLayout.ts for why this isn't a fixed number.
+  const insets = useSafeAreaInsets();
+  const infoCardStyle = [styles.infoCard, { bottom: tabBarClearance(insets.bottom) }];
   const mapRef = useRef<MapView>(null);
   const { location } = useCurrentLocation();
   const initialRegion = location
@@ -293,18 +298,18 @@ export default function MapScreen() {
 
       {/* ---------------- Bottom info card ---------------- */}
       {lounges === null && !error ? (
-        <View style={styles.infoCard}>
+        <View style={infoCardStyle}>
           <ActivityIndicator color={theme.colors.secondarySilver} />
         </View>
       ) : error ? (
-        <View style={styles.infoCard}>
+        <View style={infoCardStyle}>
           <Text style={styles.infoRatingRow}>{error}</Text>
           <Pressable style={styles.viewDetailsButton} onPress={loadLounges}>
             <Text style={styles.viewDetailsText}>Try Again</Text>
           </Pressable>
         </View>
       ) : selectedLounge ? (
-        <View style={styles.infoCard}>
+        <View style={infoCardStyle}>
           <View style={styles.infoTopRow}>
             <Image source={{ uri: loungeImageUri(selectedLounge) }} style={styles.infoImage} />
             <View style={styles.infoTextGroup}>
@@ -502,7 +507,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: theme.spacing.md,
     right: theme.spacing.md,
-    bottom: 96,
+    // bottom is applied at render from the safe-area inset — see
+    // tabBarClearance; a literal value here collides with the tab bar
+    // on devices with a home indicator.
     padding: theme.spacing.md,
     borderRadius: theme.radius.xl,
     backgroundColor: theme.colors.surfaceNavy,

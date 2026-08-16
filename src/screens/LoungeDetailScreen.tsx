@@ -34,7 +34,7 @@ import {
   Bookmark,
   CalendarCheck,
   ChevronLeft,
-  Clock,
+  Cigarette,
   MapPin,
   MessageCircle,
   Pencil,
@@ -45,12 +45,14 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme } from '../theme';
+import HoursCard from '../components/HoursCard';
 import AmenityCard from '../components/AmenityCard';
 import ProgressRatingBar from '../components/ProgressRatingBar';
 import AddToCollectionSheet from '../components/AddToCollectionSheet';
 import FavoriteButton from '../components/FavoriteButton';
 import { getAmenityIcon } from '../utils/amenityIcon';
 import { getLoungeById, getReviewsForLounge, type Lounge, type Review } from '../services/loungeService';
+import { getUpcomingEvents, type LoungeEvent } from '../services/eventService';
 import { deleteReview, isFavorited, recordLoungeView } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
@@ -76,6 +78,7 @@ export default function LoungeDetailScreen() {
 
   const [lounge, setLounge] = useState<Lounge | null | undefined>(undefined);
   const [latestReview, setLatestReview] = useState<Review | null>(null);
+  const [events, setEvents] = useState<LoungeEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [favorited, setFavorited] = useState<boolean | null>(null);
 
@@ -93,14 +96,18 @@ export default function LoungeDetailScreen() {
     setError(null);
     setLounge(undefined);
     try {
-      const [loungeResult, reviews, favoritedResult] = await Promise.all([
+      const [loungeResult, reviews, favoritedResult, upcomingEvents] = await Promise.all([
         getLoungeById(loungeId),
         getReviewsForLounge(loungeId),
         userId ? isFavorited(userId, loungeId) : Promise.resolve(false),
+        // Best-effort — most lounges have no events, and a lounge that's
+        // never had one shouldn't fail to load over it.
+        getUpcomingEvents(loungeId).catch(() => []),
       ]);
       setLounge(loungeResult);
       setLatestReview(reviews[0] ?? null);
       setFavorited(favoritedResult);
+      setEvents(upcomingEvents);
       if (!loungeResult) {
         setError("This lounge couldn't be found.");
       } else if (userId) {
@@ -267,7 +274,7 @@ export default function LoungeDetailScreen() {
           {/* ---------------- Reserve Button ---------------- */}
           <Pressable
             style={styles.reserveButton}
-            onPress={() => Alert.alert('Coming Soon', 'Table reservations are not available yet.')}
+            onPress={() => navigation.navigate('ReserveTable', { loungeId, loungeName: lounge.name })}
           >
             <Text style={styles.reserveButtonText}>Reserve a Table</Text>
             <CalendarCheck size={18} color={theme.colors.primaryNavy} />
@@ -282,7 +289,12 @@ export default function LoungeDetailScreen() {
               <ShieldCheck size={16} color={theme.colors.accentGold} />
               <Text style={styles.claimButtonText}>You manage this listing · Edit</Text>
             </Pressable>
-          ) : !lounge.ownerId ? (
+          ) : lounge.claimStatus === 'pending' && lounge.claimantUserId === userId ? (
+            <View style={[styles.claimButton, styles.claimButtonPending]}>
+              <ShieldCheck size={16} color={theme.colors.mutedGray} />
+              <Text style={styles.claimButtonText}>Your claim is under review</Text>
+            </View>
+          ) : !lounge.ownerId && lounge.claimStatus !== 'pending' ? (
             <Pressable
               style={styles.claimButton}
               onPress={() => navigation.navigate('ClaimListing', { loungeId })}
@@ -290,22 +302,27 @@ export default function LoungeDetailScreen() {
               <ShieldCheck size={16} color={theme.colors.secondarySilver} />
               <Text style={styles.claimButtonText}>Claim this business</Text>
             </Pressable>
-          ) : null}
+          ) : (
+            // Owned by someone else, or claimed by another member. This
+            // used to render nothing at all, which read as a bug: a member
+            // had no way to tell why some lounges offer "Claim this
+            // business" and others silently don't. Saying it outright also
+            // makes a verified listing look like a mark of quality rather
+            // than an unexplained gap.
+            <View style={[styles.claimButton, styles.claimButtonPending]}>
+              <ShieldCheck size={16} color={theme.colors.mutedGray} />
+              <Text style={styles.claimButtonText}>
+                {lounge.ownerId ? 'Verified listing · managed by the owner' : 'Claim under review'}
+              </Text>
+            </View>
+          )}
 
           {/* ---------------- The Experience ---------------- */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>The Experience</Text>
             <Text style={styles.description}>{lounge.description}</Text>
 
-            <View style={styles.statusRow}>
-              <Clock size={16} color={theme.colors.secondarySilver} />
-              <View style={styles.statusTextGroup}>
-                <Text style={styles.statusLabel}>
-                  {lounge.status === 'open' ? 'Open' : 'Closed'}
-                </Text>
-                <Text style={styles.statusValue}>{lounge.hours}</Text>
-              </View>
-            </View>
+            <HoursCard hours={lounge.hours} status={lounge.status} />
           </View>
 
           {/* ---------------- Amenities ---------------- */}
@@ -327,6 +344,42 @@ export default function LoungeDetailScreen() {
             </View>
           ) : null}
 
+          {/* ---------------- Upcoming Events ---------------- */}
+          {/* Owner-posted from the Owner Portal (see eventService.ts) —
+              hidden entirely when a lounge has none, which is most of them,
+              rather than showing an empty section on every listing. */}
+          {events.length > 0 ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionLabel}>Upcoming Events</Text>
+              </View>
+              <View style={styles.eventList}>
+                {events.map(event => (
+                  <View key={event.id} style={styles.eventCard}>
+                    <View style={styles.eventIconBox}>
+                      <CalendarCheck size={18} color={theme.colors.accentGold} />
+                    </View>
+                    <View style={styles.eventTextGroup}>
+                      <Text style={styles.eventTitle}>{event.title}</Text>
+                      <Text style={styles.eventDate}>
+                        {event.startsAt.toDate().toLocaleString(undefined, {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                      {event.description ? (
+                        <Text style={styles.eventDescription}>{event.description}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
           {/* ---------------- Humidor Highlights ---------------- */}
           {lounge.humidorItems.length > 0 ? (
             <View style={styles.section}>
@@ -341,11 +394,20 @@ export default function LoungeDetailScreen() {
                 {lounge.humidorItems.map(item => (
                   <View key={item.name} style={styles.humidorCard}>
                     <View style={styles.humidorImageWrapper}>
-                      <Image
-                        source={{ uri: item.image }}
-                        style={styles.humidorImage}
-                        resizeMode="cover"
-                      />
+                      {/* Photo is optional when an owner enters inventory from
+                          the Owner Portal, so fall back to an icon rather than
+                          an empty box. */}
+                      {item.image ? (
+                        <Image
+                          source={{ uri: item.image }}
+                          style={styles.humidorImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.humidorImage, styles.humidorImagePlaceholder]}>
+                          <Cigarette size={22} color={theme.colors.mutedGray} />
+                        </View>
+                      )}
                       <View
                         style={[
                           styles.stockBadge,
@@ -645,6 +707,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(192, 192, 192, 0.25)',
   },
+  claimButtonPending: {
+    opacity: 0.6,
+  },
   claimButtonText: {
     ...theme.typography.medium,
     fontSize: 13,
@@ -687,31 +752,6 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
   },
 
-  // ---- Status / hours ----
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
-    borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
-  },
-  statusTextGroup: {
-    flex: 1,
-    gap: 2,
-  },
-  statusLabel: {
-    ...theme.typography.caption,
-    fontSize: 10,
-    color: theme.colors.mutedGray,
-  },
-  statusValue: {
-    ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
-    fontSize: 14,
-    color: theme.colors.white,
-  },
   // ---- Amenities ----
   amenityGrid: {
     flexDirection: 'row',
@@ -727,6 +767,49 @@ const styles = StyleSheet.create({
     width: 150,
     gap: 2,
   },
+  // ---- Upcoming Events ----
+  eventList: {
+    gap: theme.spacing.sm,
+  },
+  eventCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.md,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surfaceNavy,
+  },
+  eventIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.medium,
+    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventTextGroup: {
+    flex: 1,
+    gap: 2,
+  },
+  eventTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 15,
+    color: theme.colors.white,
+  },
+  eventDate: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    color: theme.colors.accentGold,
+  },
+  eventDescription: {
+    ...theme.typography.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: theme.colors.secondarySilver,
+    marginTop: 2,
+  },
+
   humidorImageWrapper: {
     position: 'relative',
     aspectRatio: 1,
@@ -737,6 +820,10 @@ const styles = StyleSheet.create({
   },
   humidorImage: {
     ...StyleSheet.absoluteFill,
+  },
+  humidorImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stockBadge: {
     position: 'absolute',

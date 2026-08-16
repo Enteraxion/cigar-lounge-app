@@ -369,7 +369,7 @@ export default function ReviewsScreen() {
 
           <Pressable
             style={styles.breakdownLink}
-            onPress={() => navigation.navigate('RatingsBreakdown')}
+            onPress={() => loungeId && navigation.navigate('RatingsBreakdown', { loungeId })}
             hitSlop={8}
           >
             <Text style={styles.breakdownLinkText}>See Full Ratings Breakdown</Text>

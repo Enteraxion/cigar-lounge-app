@@ -4,12 +4,15 @@
  * Matches the bottom half of design-reference/Photo Upload & Review
  * Submitted.pdf: a full-screen takeover shown after submitting a review —
  * checkmark hero image, XP/badge stat cards, and actions back into the
- * app. No header or tab bar; the bottom tab bar is explicitly hidden
- * while this screen is focused since it's a modal-style moment, not a
- * regular tab destination.
+ * app. No header or tab bar — the bottom tab bar hides while this screen
+ * (or ClaimSubmitted/ReservationConfirmed) is focused, computed
+ * declaratively in MainNavigator.tsx from the focused route name rather
+ * than this screen calling setOptions itself (see that file's header
+ * comment for why the old per-screen approach could leave the tab bar
+ * broken after returning).
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -27,12 +30,6 @@ export default function ReviewSubmittedScreen() {
   const navigation = useNavigation<ReviewSubmittedNavigationProp>();
   const route = useRoute<ReviewSubmittedRouteProp>();
   const loungeId = route.params?.loungeId;
-
-  useEffect(() => {
-    const parent = navigation.getParent();
-    parent?.setOptions({ tabBarStyle: { display: 'none' } });
-    return () => parent?.setOptions({ tabBarStyle: undefined });
-  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.screen}>

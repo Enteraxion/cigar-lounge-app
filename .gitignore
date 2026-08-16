@@ -80,6 +80,10 @@ android/app/google-services.json
 ios/CigarLoungeApp/GoogleService-Info.plist
 .scripts-build/
 
+# Firebase CLI deploy cache — regenerated on every `firebase deploy`,
+# machine-local, and a guaranteed conflict if two people ever commit it
+.firebase/
+
 # Yarn
 .yarn/*
 !.yarn/patches

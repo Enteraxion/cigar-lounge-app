@@ -1,110 +1,132 @@
 /**
  * TravelTimelineScreen
  *
- * Matches design-reference/Travel Timeline & Achievements.pdf (top
- * half): header, chronologically grouped visit entries — a rich card
- * (favorite badge, tags, quote, photo thumbnails) for recent visits, and
- * a compact row for older ones. Reached via "View Timeline" on
- * PassportScreen. Mock data only (see src/data/mockPassport.ts) — no
- * backend wired up yet.
+ * Matches design-reference/Travel Timeline & Achievements.pdf (top half):
+ * header, then chronologically grouped visit entries.
+ *
+ * Real, built from the member's own visit history — see
+ * src/utils/passport.ts for why a review counts as a visit (its
+ * `visitDate` is a first-hand, user-picked date). This replaced a fixed
+ * list of invented trips to lounges in Rome and Mayfair that every member
+ * saw identically.
+ *
+ * The per-entry tags are the two facts actually derivable from a visit:
+ * distance from the member's home city, and the rating they gave. The
+ * mock's "14°C" and "Business Trip" tags are gone — there's no weather
+ * data anywhere in this app and no concept of a visit type, so neither
+ * could ever have been real.
  */
 
-import React from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Calendar, ChevronLeft, MapPin, Navigation, Thermometer, UserCheck } from 'lucide-react-native';
+import { ChevronLeft, MapPin, Navigation, Star } from 'lucide-react-native';
 import { theme } from '../theme';
-import { timelineGroups, type TimelineEntry } from '../data/mockPassport';
+import { auth } from '../services/firebaseAuth';
+import { getPassport } from '../services/passportService';
+import { groupVisitsByRecency, type TimelineGroup, type Visit } from '../utils/passport';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import type { MainTabParamList } from '../navigation/MainNavigator';
 
 type TravelTimelineNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
-function TimelineCard({ entry }: { entry: TimelineEntry }) {
-  const showBanner = !entry.quote && entry.photos?.length === 1;
+function VisitCard({ visit, onPress }: { visit: Visit; onPress: () => void }) {
+  const showBanner = !visit.reviewText && visit.photos.length === 1;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHeaderRow}>
-        <Text style={styles.cardName} numberOfLines={1}>
-          {entry.loungeName}
-        </Text>
-        {entry.favorite ? (
-          <View style={styles.favoriteBadge}>
-            <Text style={styles.favoriteBadgeText}>Favorite</Text>
-          </View>
-        ) : null}
-      </View>
+    <Pressable style={styles.card} onPress={onPress}>
+      <Text style={styles.cardName} numberOfLines={1}>
+        {visit.loungeName}
+      </Text>
+
       <View style={styles.cardLocationRow}>
         <MapPin size={12} color={theme.colors.mutedGray} />
-        <Text style={styles.cardLocation}>{entry.location}</Text>
+        <Text style={styles.cardLocation} numberOfLines={1}>
+          {visit.city ?? visit.address}
+        </Text>
       </View>
 
-      {entry.distance || entry.temperature || entry.visitType ? (
-        <View style={styles.tagRow}>
-          {entry.distance ? (
-            <View style={styles.tag}>
-              <Navigation size={11} color={theme.colors.secondarySilver} />
-              <Text style={styles.tagText}>{entry.distance}</Text>
-            </View>
-          ) : null}
-          {entry.temperature ? (
-            <View style={styles.tag}>
-              <Thermometer size={11} color={theme.colors.secondarySilver} />
-              <Text style={styles.tagText}>{entry.temperature}</Text>
-            </View>
-          ) : null}
-          {entry.visitType ? (
-            <View style={styles.tag}>
-              <UserCheck size={11} color={theme.colors.secondarySilver} />
-              <Text style={styles.tagText}>{entry.visitType}</Text>
-            </View>
-          ) : null}
+      <View style={styles.tagRow}>
+        {visit.distanceFromHomeMiles !== null ? (
+          <View style={styles.tag}>
+            <Navigation size={11} color={theme.colors.secondarySilver} />
+            <Text style={styles.tagText}>
+              {Math.round(visit.distanceFromHomeMiles).toLocaleString()} mi
+            </Text>
+          </View>
+        ) : null}
+        <View style={styles.tag}>
+          <Star size={11} color={theme.colors.accentGold} fill={theme.colors.accentGold} />
+          <Text style={styles.tagText}>{visit.rating.toFixed(1)}</Text>
         </View>
+      </View>
+
+      {visit.reviewText ? (
+        <Text style={styles.quote} numberOfLines={3}>
+          “{visit.reviewText}”
+        </Text>
       ) : null}
 
-      {entry.quote ? <Text style={styles.quote}>{entry.quote}</Text> : null}
-
-      {showBanner && entry.photos ? (
-        <Image source={{ uri: entry.photos[0] }} style={styles.bannerPhoto} />
-      ) : entry.photos && entry.photos.length > 0 ? (
+      {showBanner ? (
+        <Image source={{ uri: visit.photos[0] }} style={styles.bannerPhoto} />
+      ) : visit.photos.length > 0 ? (
         <View style={styles.photoRow}>
-          {entry.photos.map((uri, index) => (
+          {visit.photos.slice(0, 3).map((uri, index) => (
             <Image key={index} source={{ uri }} style={styles.photoThumb} />
           ))}
-          {entry.overflowCount ? (
+          {visit.photos.length > 3 ? (
             <View style={styles.photoOverflow}>
-              <Text style={styles.photoOverflowText}>+{entry.overflowCount}</Text>
+              <Text style={styles.photoOverflowText}>+{visit.photos.length - 3}</Text>
             </View>
           ) : null}
         </View>
       ) : null}
-    </View>
-  );
-}
-
-function TimelineCompactRow({ entry }: { entry: TimelineEntry }) {
-  return (
-    <View style={styles.compactRow}>
-      {entry.photos?.[0] ? (
-        <Image source={{ uri: entry.photos[0] }} style={styles.compactThumb} />
-      ) : null}
-      <View style={styles.compactTextGroup}>
-        <Text style={styles.compactName} numberOfLines={1}>
-          {entry.loungeName}
-        </Text>
-        <Text style={styles.compactLocation} numberOfLines={1}>
-          {entry.location}
-        </Text>
-        <Text style={styles.compactMeta}>{entry.compactMeta}</Text>
-      </View>
-    </View>
+    </Pressable>
   );
 }
 
 export default function TravelTimelineScreen() {
   const navigation = useNavigation<TravelTimelineNavigationProp>();
+  const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
+  const userId = auth.currentUser?.uid;
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [groups, setGroups] = useState<TimelineGroup[]>([]);
+
+  const load = useCallback(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(false);
+    getPassport(userId)
+      .then(({ passport }) => setGroups(groupVisitsByRecency(passport.visits)))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const openLounge = (loungeId: string) => {
+    (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
+      screen: 'LoungeDetail',
+      params: { loungeId },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -116,31 +138,45 @@ export default function TravelTimelineScreen() {
           <Text style={styles.headerCaption}>Chronicle</Text>
           <Text style={styles.headerTitle}>Travel Timeline</Text>
         </View>
-        <Pressable
-          style={styles.calendarButton}
-          hitSlop={8}
-          onPress={() => Alert.alert('Coming Soon', 'Calendar view is coming soon.')}
-        >
-          <Calendar size={18} color={theme.colors.secondarySilver} />
-        </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {timelineGroups.map(group => (
-          <View key={group.id} style={styles.group}>
-            <Text style={styles.groupLabel}>{group.label}</Text>
-            <View style={styles.groupEntries}>
-              {group.entries.map(entry =>
-                entry.compact ? (
-                  <TimelineCompactRow key={entry.id} entry={entry} />
-                ) : (
-                  <TimelineCard key={entry.id} entry={entry} />
-                ),
-              )}
+      {loading ? (
+        <View style={styles.stateBox}>
+          <ActivityIndicator color={theme.colors.secondarySilver} />
+        </View>
+      ) : error ? (
+        <View style={styles.stateBox}>
+          <Text style={styles.stateText}>Couldn't load your timeline.</Text>
+          <Pressable onPress={load} hitSlop={8}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </Pressable>
+        </View>
+      ) : groups.length === 0 ? (
+        <View style={styles.stateBox}>
+          <MapPin size={28} color={theme.colors.mutedGray} />
+          <Text style={styles.stateText}>Your timeline is empty.</Text>
+          <Text style={styles.stateHint}>
+            Review a lounge you've visited and it will appear here.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {groups.map(group => (
+            <View key={group.id} style={styles.group}>
+              <Text style={styles.groupLabel}>{group.label}</Text>
+              <View style={styles.groupEntries}>
+                {group.visits.map((visit, index) => (
+                  <VisitCard
+                    key={`${visit.loungeId}-${visit.visitedAt.getTime()}-${index}`}
+                    visit={visit}
+                    onPress={() => openLounge(visit.loungeId)}
+                  />
+                ))}
+              </View>
             </View>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -155,7 +191,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
@@ -176,13 +211,32 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     marginTop: 2,
   },
-  calendarButton: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+
+  // ---- States ----
+  stateBox: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  stateText: {
+    ...theme.typography.medium,
+    fontSize: 15,
+    color: theme.colors.secondarySilver,
+    textAlign: 'center',
+  },
+  stateHint: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+  },
+  retryText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.accentGold,
   },
 
   scrollContent: {
@@ -212,68 +266,51 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     ...theme.shadows.soft,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.spacing.sm,
-  },
   cardName: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 16,
     color: theme.colors.white,
-    flex: 1,
-  },
-  favoriteBadge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
-  },
-  favoriteBadgeText: {
-    ...theme.typography.caption,
-    fontSize: 9,
-    color: theme.colors.primaryNavy,
   },
   cardLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: theme.spacing.xs,
   },
   cardLocation: {
     ...theme.typography.medium,
     fontSize: 12,
     color: theme.colors.mutedGray,
+    flex: 1,
   },
-
-  // ---- Tags ----
   tagRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: theme.spacing.sm,
   },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.background,
   },
   tagText: {
-    ...theme.typography.medium,
-    fontSize: 12,
+    ...theme.typography.caption,
+    fontSize: 10,
     color: theme.colors.secondarySilver,
   },
-
-  // ---- Quote ----
   quote: {
     ...theme.typography.medium,
     fontSize: 13,
     lineHeight: 19,
     fontStyle: 'italic',
     color: theme.colors.secondarySilver,
+    paddingLeft: theme.spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: theme.colors.accentGold,
   },
-
-  // ---- Photos ----
   photoRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
@@ -300,44 +337,8 @@ const styles = StyleSheet.create({
   },
   bannerPhoto: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    height: 150,
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.background,
-  },
-
-  // ---- Compact row ----
-  compactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    padding: theme.spacing.sm,
-    borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
-  },
-  compactThumb: {
-    width: 52,
-    height: 52,
-    borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.background,
-  },
-  compactTextGroup: {
-    flex: 1,
-    gap: 2,
-  },
-  compactName: {
-    ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
-    fontSize: 14,
-    color: theme.colors.white,
-  },
-  compactLocation: {
-    ...theme.typography.medium,
-    fontSize: 12,
-    color: theme.colors.mutedGray,
-  },
-  compactMeta: {
-    ...theme.typography.caption,
-    fontSize: 10,
-    color: theme.colors.secondarySilver,
   },
 });

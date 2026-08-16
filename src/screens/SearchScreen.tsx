@@ -67,6 +67,7 @@ import {
   type SearchHistoryEntry,
 } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
+import { displayTags } from '../utils/displayTags';
 
 type SearchNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -285,7 +286,7 @@ export default function SearchScreen() {
                     image={{ uri: item.images[0] }}
                     name={item.name}
                     location={item.address}
-                    tags={item.tags.slice(0, 2)}
+                    tags={displayTags(item.tags).slice(0, 2)}
                     rating={item.ratings.overall}
                   />
                 </Pressable>

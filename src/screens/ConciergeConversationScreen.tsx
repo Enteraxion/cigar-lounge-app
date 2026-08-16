@@ -33,6 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
+  ChevronLeft,
   ChevronRight,
   EllipsisVertical,
   Heart,
@@ -335,6 +336,9 @@ export default function ConciergeConversationScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       {/* ---------------- Header ---------------- */}
       <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+          <ChevronLeft size={24} color={theme.colors.white} />
+        </Pressable>
         <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />
         <View style={styles.headerTextGroup}>
           <Text style={styles.headerCaption}>AI Concierge</Text>

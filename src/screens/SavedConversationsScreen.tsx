@@ -15,7 +15,7 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
 import { theme } from '../theme';
 import { conciergeUser } from '../data/mockConcierge';
 import { savedConversations, type SavedConversation } from '../data/mockTripPlanner';
@@ -88,6 +88,9 @@ export default function SavedConversationsScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+          <ChevronLeft size={24} color={theme.colors.white} />
+        </Pressable>
         <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />
         <View style={styles.headerTextGroup}>
           <Text style={styles.headerCaption}>Archive</Text>

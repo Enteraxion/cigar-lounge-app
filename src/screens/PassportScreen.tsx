@@ -3,26 +3,33 @@
  *
  * Matches design-reference/Passport Home & Journey Map.pdf: header,
  * profile card, a 2x2 info grid, "Passport Stats" (2x4 grid, now a 9th
- * "Collections" card), a Journey Map section with a stylized dot-marker
- * map + highlight rows + "Exploration Stats" (2x3 grid), and links into
- * the Travel Timeline and Achievements screens.
+ * "Collections" card), a Journey Map section + highlight rows +
+ * "Exploration Stats" (2x3 grid), and links into the Travel Timeline and
+ * Achievements screens.
  *
  * Profile photo/name/tier + the Member Since/Home City/Fav Brand/Fav
  * Lounge info grid are the real signed-in user via
  * src/hooks/useUserProfile.ts — same hook ProfileScreen uses, so both
  * screens agree and "Edit Profile" (on ProfileScreen) updates both.
  *
- * "Passport Stats"' Reviews Written / Photos Uploaded / Favorites Saved
- * / Collections are real, computed client-side via
- * userActionsService.ts's getUserStats() for the signed-in user (see
- * that function's doc comment for the collectionGroup query it runs).
- * Lounges Visited / States Explored / Miles Traveled / Check-ins, and
- * the entire "Exploration Stats" section, show "Soon" instead of a
- * number — there's no check-in/travel-history feature yet, so these
- * would otherwise just be plausible-looking fake data. Achievements
- * stays mock (a separate, not-yet-real feature — see mockPassport.ts).
- * Journey Map / Journey Highlights are still local mock data too, same
- * reason.
+ * Every figure on this screen is now real. Reviews Written / Photos
+ * Uploaded / Favorites Saved / Collections come from userActionsService's
+ * getUserStats() (see that function's doc comment for the collectionGroup
+ * query it runs); Lounges Visited / States Explored / Cities Explored /
+ * Miles Traveled, the whole "Exploration Stats" section and the Journey
+ * Highlights rows are derived from the member's own visit history via
+ * src/utils/passport.ts — see that file for why a review counts as a
+ * visit. All of these previously read "Soon" or were hardcoded, because
+ * nothing tracked where a member had actually been.
+ *
+ * The Journey Map is a real embedded MapView (src/components/JourneyMap.tsx)
+ * pinning lounges actually visited — it replaced a stylized fake
+ * dot-scatter graphic per a TestFlight bug report from Julian Brinkley
+ * ("The Journey map should have an actual map").
+ *
+ * Distances depend on the member having a recognisable home city on their
+ * profile; without one they read "—" rather than 0, since claiming zero
+ * miles travelled would be a statement, and a false one.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -30,9 +37,9 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import LinearGradient from 'react-native-linear-gradient';
 import {
   Bell,
+  ChevronLeft,
   Clock3,
   Compass,
   Crown,
@@ -43,14 +50,13 @@ import {
   User,
 } from 'lucide-react-native';
 import { theme } from '../theme';
-import {
-  journeyHighlights,
-  journeyMapPoints,
-  type JourneyHighlight,
-  type StatCard,
-} from '../data/mockPassport';
+
+import JourneyMap from '../components/JourneyMap';
 import { auth } from '../services/firebaseAuth';
 import { getUserStats, type UserStats } from '../services/userActionsService';
+import { getPassport, type PassportBundle } from '../services/passportService';
+import type { PassportSummary, StatCard } from '../utils/passport';
+import { computeAchievementCategories, overallAchievementProgress } from '../utils/achievements';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount';
 import NotificationBadge from '../components/NotificationBadge';
@@ -59,39 +65,95 @@ import type { MainTabParamList } from '../navigation/MainNavigator';
 
 type PassportNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
-const COMING_SOON = 'Soon';
+/** Placeholder while the underlying fetch is still in flight. */
+const PENDING = '—';
 
-// Purely mock/unreleased — see the header comment above.
-const ACHIEVEMENTS_COUNT = '8';
+function formatVisitDate(date: Date): string {
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
-const EXPLORATION_STATS: StatCard[] = [
-  { label: 'Total States', value: COMING_SOON },
-  { label: 'Total Lounges', value: COMING_SOON },
-  { label: 'Dist. Traveled', value: COMING_SOON },
-  { label: 'Road Trips', value: COMING_SOON },
-  { label: 'Business Trips', value: COMING_SOON },
-  { label: 'Vacation Visits', value: COMING_SOON },
-];
+/**
+ * Distances read as "unknown" rather than 0 when the member's profile has
+ * no recognisable home city — showing 0 mi would state, falsely, that
+ * they've travelled nowhere.
+ */
+function formatMiles(miles: number, hasHomeCity: boolean): string {
+  if (!hasHomeCity) return '—';
+  return miles >= 1000 ? `${(miles / 1000).toFixed(1)}k` : String(miles);
+}
 
-function passportStatCards(stats: UserStats | null): StatCard[] {
+function passportStatCards(
+  stats: UserStats | null,
+  passport: PassportSummary | null,
+  hasHomeCity: boolean,
+  achievementsUnlocked: number | null,
+): StatCard[] {
   return [
-    { label: 'Lounges Visited', value: COMING_SOON },
-    { label: 'States Explored', value: COMING_SOON },
-    { label: 'Reviews Written', value: stats ? String(stats.reviewsWritten) : '—' },
-    { label: 'Photos Uploaded', value: stats ? String(stats.photosUploaded) : '—' },
-    { label: 'Favorites Saved', value: stats ? String(stats.favoritesSaved) : '—' },
-    { label: 'Miles Traveled', value: COMING_SOON },
-    { label: 'Check-ins', value: COMING_SOON },
-    { label: 'Achievements', value: ACHIEVEMENTS_COUNT },
-    { label: 'Collections', value: stats ? String(stats.collectionsCount) : '—' },
+    { label: 'Lounges Visited', value: passport ? String(passport.loungesVisited) : PENDING },
+    { label: 'States Explored', value: passport ? String(passport.statesExplored) : PENDING },
+    { label: 'Reviews Written', value: stats ? String(stats.reviewsWritten) : PENDING },
+    { label: 'Photos Uploaded', value: stats ? String(stats.photosUploaded) : PENDING },
+    { label: 'Favorites Saved', value: stats ? String(stats.favoritesSaved) : PENDING },
+    {
+      label: 'Miles Traveled',
+      value: passport ? formatMiles(passport.milesTraveled, hasHomeCity) : PENDING,
+    },
+    { label: 'Cities Explored', value: passport ? String(passport.citiesExplored) : PENDING },
+    {
+      label: 'Achievements',
+      value: achievementsUnlocked !== null ? String(achievementsUnlocked) : PENDING,
+    },
+    { label: 'Collections', value: stats ? String(stats.collectionsCount) : PENDING },
   ];
 }
 
-const HIGHLIGHT_ICON: Record<JourneyHighlight['icon'], React.ComponentType<{ size?: number; color?: string }>> = {
-  flame: Flame,
-  mapPin: MapPin,
-  compass: Compass,
-};
+/**
+ * Deliberately different metrics from the Passport Stats grid above rather
+ * than a second helping of the same numbers — this section is about the
+ * shape of the journey (how far, how consistently, over what span), where
+ * the grid above is about totals. The old tiles this replaces (Road Trips,
+ * Business Trips, Vacation Visits) all needed a "visit type" concept that
+ * doesn't exist anywhere in the app, so they could only ever have said
+ * "Soon".
+ */
+function explorationStatCards(
+  passport: PassportSummary | null,
+  hasHomeCity: boolean,
+): StatCard[] {
+  if (!passport) {
+    return [
+      { label: 'Furthest Trip', value: PENDING },
+      { label: 'Longest Streak', value: PENDING },
+      { label: 'Avg. Rating', value: PENDING },
+      { label: 'First Visit', value: PENDING },
+      { label: 'Latest Visit', value: PENDING },
+      { label: 'Total Visits', value: PENDING },
+    ];
+  }
+  return [
+    {
+      label: 'Furthest Trip',
+      value: hasHomeCity ? `${formatMiles(passport.furthestTripMiles, true)} mi` : '—',
+    },
+    {
+      label: 'Longest Streak',
+      value: passport.weekStreak > 0 ? `${passport.weekStreak} wk` : '0',
+    },
+    {
+      label: 'Avg. Rating',
+      value: passport.averageRating !== null ? passport.averageRating.toFixed(1) : '—',
+    },
+    {
+      label: 'First Visit',
+      value: passport.firstVisit ? formatVisitDate(passport.firstVisit.visitedAt) : '—',
+    },
+    {
+      label: 'Latest Visit',
+      value: passport.latestVisit ? formatVisitDate(passport.latestVisit.visitedAt) : '—',
+    },
+    { label: 'Total Visits', value: String(passport.visits.length) },
+  ];
+}
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
@@ -128,15 +190,22 @@ export default function PassportScreen() {
 
   const [stats, setStats] = useState<UserStats | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [bundle, setBundle] = useState<PassportBundle | null>(null);
 
   const loadStats = useCallback(async () => {
     if (!userId) return;
     setStatsError(null);
     setStats(null);
+    setBundle(null);
     try {
-      setStats(await getUserStats(userId));
+      const [statsResult, passportResult] = await Promise.all([
+        getUserStats(userId),
+        getPassport(userId),
+      ]);
+      setStats(statsResult);
+      setBundle(passportResult);
     } catch {
-      setStatsError("Couldn't load stats.");
+      setStatsError("Couldn't load your passport.");
     }
   }, [userId]);
 
@@ -144,14 +213,27 @@ export default function PassportScreen() {
     loadStats();
   }, [loadStats]);
 
+  const passport: PassportSummary | null = bundle?.passport ?? null;
+  const hasHomeCity = bundle?.hasHomeCity ?? false;
+  const achievementsUnlocked = stats
+    ? overallAchievementProgress(computeAchievementCategories(stats, passport)).unlocked
+    : null;
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.headerCaption}>Cigar Experience</Text>
-            <Text style={styles.headerTitle}>Cigar Passport</Text>
+          {/* Grouped with the title so the header's space-between still puts
+              the bell on the right once a back button is in the row. */}
+          <View style={styles.headerLeft}>
+            <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+              <ChevronLeft size={24} color={theme.colors.white} />
+            </Pressable>
+            <View>
+              <Text style={styles.headerCaption}>Cigar Experience</Text>
+              <Text style={styles.headerTitle}>Cigar Passport</Text>
+            </View>
           </View>
           <Pressable
             style={styles.bellButton}
@@ -219,7 +301,7 @@ export default function PassportScreen() {
             </View>
           ) : null}
           <View style={styles.statGrid}>
-            {chunkPairs(passportStatCards(stats)).map((pair, index) => (
+            {chunkPairs(passportStatCards(stats, passport, hasHomeCity, achievementsUnlocked)).map((pair, index) => (
               <View key={index} style={styles.statRow}>
                 {pair.map(stat => (
                   <StatCardTile key={stat.label} label={stat.label} value={stat.value} />
@@ -245,38 +327,81 @@ export default function PassportScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.mapArea}>
-            <LinearGradient
-              colors={[theme.colors.surfaceNavy, theme.colors.primaryNavy]}
-              style={StyleSheet.absoluteFill}
-            />
-            {journeyMapPoints.map((point, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.mapDot,
-                  point.visited ? styles.mapDotVisited : styles.mapDotUnvisited,
-                  { left: `${point.x}%`, top: `${point.y}%` },
-                ]}
-              />
-            ))}
-          </View>
+          <JourneyMap />
 
+          {/* Derived from the member's real visit history — a row is simply
+              omitted when there's nothing true to put in it, rather than
+              padding the section out with a placeholder. */}
           <View style={styles.highlightList}>
-            {journeyHighlights.map(highlight => {
-              const Icon = HIGHLIGHT_ICON[highlight.icon];
-              return (
-                <View key={highlight.id} style={styles.highlightRow}>
-                  <View style={styles.highlightIconBox}>
-                    <Icon size={16} color={theme.colors.accentGold} />
-                  </View>
-                  <View style={styles.highlightTextGroup}>
-                    <Text style={styles.highlightTitle}>{highlight.title}</Text>
-                    <Text style={styles.highlightSubtitle}>{highlight.subtitle}</Text>
-                  </View>
+            {passport && passport.weekStreak > 0 ? (
+              <View style={styles.highlightRow}>
+                <View style={styles.highlightIconBox}>
+                  <Flame size={16} color={theme.colors.accentGold} />
                 </View>
-              );
-            })}
+                <View style={styles.highlightTextGroup}>
+                  <Text style={styles.highlightTitle}>
+                    {passport.weekStreak} Week Streak
+                  </Text>
+                  <Text style={styles.highlightSubtitle}>Consistent lounge discovery</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {passport?.latestVisit ? (
+              <View style={styles.highlightRow}>
+                <View style={styles.highlightIconBox}>
+                  <MapPin size={16} color={theme.colors.accentGold} />
+                </View>
+                <View style={styles.highlightTextGroup}>
+                  <Text style={styles.highlightTitle} numberOfLines={1}>
+                    Newest: {passport.latestVisit.loungeName}
+                  </Text>
+                  <Text style={styles.highlightSubtitle}>
+                    {passport.latestVisit.city ?? passport.latestVisit.address} •{' '}
+                    {formatVisitDate(passport.latestVisit.visitedAt)}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {bundle?.suggestion ? (
+              <Pressable
+                style={styles.highlightRow}
+                onPress={() =>
+                  (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
+                    screen: 'LoungeDetail',
+                    params: { loungeId: bundle.suggestion!.id },
+                  })
+                }
+              >
+                <View style={styles.highlightIconBox}>
+                  <Compass size={16} color={theme.colors.accentGold} />
+                </View>
+                <View style={styles.highlightTextGroup}>
+                  <Text style={styles.highlightTitle} numberOfLines={1}>
+                    Next Suggestion
+                  </Text>
+                  <Text style={styles.highlightSubtitle} numberOfLines={1}>
+                    {bundle.suggestion.name}
+                    {bundle.suggestion.city ? ` • ${bundle.suggestion.city}` : ''}
+                  </Text>
+                </View>
+              </Pressable>
+            ) : null}
+
+            {passport && passport.visits.length === 0 ? (
+              <View style={styles.highlightRow}>
+                <View style={styles.highlightIconBox}>
+                  <Compass size={16} color={theme.colors.accentGold} />
+                </View>
+                <View style={styles.highlightTextGroup}>
+                  <Text style={styles.highlightTitle}>Start your passport</Text>
+                  <Text style={styles.highlightSubtitle}>
+                    Review a lounge you've visited to begin your journey
+                  </Text>
+                </View>
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -284,7 +409,7 @@ export default function PassportScreen() {
         <View style={[styles.field, styles.lastField]}>
           <Text style={styles.sectionLabel}>Exploration Stats</Text>
           <View style={styles.statGrid}>
-            {chunkPairs(EXPLORATION_STATS).map((pair, index) => (
+            {chunkPairs(explorationStatCards(passport, hasHomeCity)).map((pair, index) => (
               <View key={index} style={styles.statRow}>
                 {pair.map(stat => (
                   <StatCardTile key={stat.label} label={stat.label} value={stat.value} />
@@ -315,6 +440,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingTop: theme.spacing.md,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
   },
   headerCaption: {
     ...theme.typography.caption,
@@ -511,26 +641,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceNavy,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  mapArea: {
-    position: 'relative',
-    height: 180,
-    borderRadius: theme.radius.large,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.12)',
-  },
-  mapDot: {
-    position: 'absolute',
-    width: 9,
-    height: 9,
-    borderRadius: theme.radius.full,
-  },
-  mapDotVisited: {
-    backgroundColor: theme.colors.accentGold,
-  },
-  mapDotUnvisited: {
-    backgroundColor: theme.colors.mutedGray,
   },
 
   // ---- Journey highlights ----

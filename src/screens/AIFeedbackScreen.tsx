@@ -15,11 +15,21 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AlertTriangle, Bookmark, Settings, ThumbsDown, ThumbsUp, User } from 'lucide-react-native';
+import {
+  AlertTriangle,
+  Bookmark,
+  ChevronLeft,
+  Settings,
+  ThumbsDown,
+  ThumbsUp,
+  User,
+} from 'lucide-react-native';
 import { theme } from '../theme';
 import ReportIssueModal from '../components/ReportIssueModal';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { improvementReasons, lastRecommendation } from '../data/mockAISettings';
+import { submitIssueReport } from '../services/userActionsService';
+import { auth } from '../services/firebaseAuth';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 type AIFeedbackNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
@@ -46,9 +56,22 @@ export default function AIFeedbackScreen() {
     });
   };
 
-  const submitReport = () => {
+  const submitReport = async (description: string) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId || !description.trim()) {
+      setReportModalVisible(false);
+      return;
+    }
     setReportModalVisible(false);
-    Alert.alert('Report Submitted', "Thanks for letting us know — we'll look into it.");
+    try {
+      await submitIssueReport(userId, description);
+      Alert.alert('Report Submitted', "Thanks for letting us know — we'll look into it.");
+    } catch (error) {
+      Alert.alert(
+        "Couldn't submit report",
+        error instanceof Error ? error.message : 'Check your connection and try again.',
+      );
+    }
   };
 
   return (
@@ -56,6 +79,9 @@ export default function AIFeedbackScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+            <ChevronLeft size={24} color={theme.colors.white} />
+          </Pressable>
           {profile?.avatarUri ? (
             <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
           ) : (

@@ -10,7 +10,8 @@
     "test": "jest",
     "seed:firestore": "ts-node --project scripts/tsconfig.json scripts/seedFirestore.ts",
     "import:lounges": "ts-node --project scripts/tsconfig.json scripts/importYelpLounges.ts",
-    "remove:demo-data": "ts-node --project scripts/tsconfig.json scripts/removeDemoData.ts"
+    "remove:demo-data": "ts-node --project scripts/tsconfig.json scripts/removeDemoData.ts",
+    "backfill:hours": "ts-node --project scripts/tsconfig.json scripts/backfillCityHours.ts"
   },
   "dependencies": {
     "@react-native-community/geolocation": "^3.4.0",

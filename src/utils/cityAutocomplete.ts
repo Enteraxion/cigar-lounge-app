@@ -10,13 +10,31 @@
  * places only — Census-designated places excluded) of ~19,800 real US
  * cities/towns, so this works offline with no API key or billing,
  * unlike Google Places Autocomplete.
+ *
+ * INTERNATIONAL_CITIES below adds the same major international cities
+ * scripts/backfillCityHours.ts seeds real lounge data for (Julian
+ * Brinkley's TestFlight feedback, 2026-08-13) so they're recognized here
+ * too — both for this file's own autocomplete and for
+ * isKnownUsCityName's live-refresh gate, which some of these already
+ * coincidentally passed anyway (see that function's comment).
  */
 
 import usCities from '../data/usCities.json';
 
 type CityRow = [name: string, state: string, lat: number, lng: number];
 
-const CITIES = usCities as CityRow[];
+const INTERNATIONAL_CITIES: CityRow[] = [
+  ['Munich', 'Germany', 48.1351, 11.582],
+  ['Berlin', 'Germany', 52.52, 13.405],
+  ['Madrid', 'Spain', 40.4168, -3.7038],
+  ['London', 'UK', 51.5074, -0.1278],
+  ['Paris', 'France', 48.8566, 2.3522],
+  ['Rome', 'Italy', 41.9028, 12.4964],
+  ['Barcelona', 'Spain', 41.3874, 2.1686],
+  ['Amsterdam', 'Netherlands', 52.3676, 4.9041],
+];
+
+const CITIES = [...(usCities as CityRow[]), ...INTERNATIONAL_CITIES];
 
 const CITY_NAME_SET = new Set(CITIES.map(([name]) => name.toLowerCase()));
 
@@ -36,6 +54,32 @@ export function isKnownUsCityName(query: string): boolean {
 }
 
 export type CityMatch = { id: string; name: string; state: string; lat: number; lng: number };
+
+/**
+ * Coordinates for a free-text city label like "New York, NY" or "Munich,
+ * Germany" — used to anchor the Cigar Passport's distance maths to the
+ * member's own home city (see src/utils/passport.ts). Matches on the city
+ * name, preferring a row whose state/country also matches when one is
+ * given, so "Portland, OR" doesn't resolve to Portland, ME. Returns null
+ * for anything not in the dataset; callers should treat distance as
+ * unknown rather than guessing a fallback origin.
+ */
+export function findCityCoordinates(label: string): { lat: number; lng: number } | null {
+  const trimmed = label.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+  const [namePart, regionPart] = trimmed.split(',').map(part => part.trim());
+  const matches = CITIES.filter(([name]) => name.toLowerCase() === namePart);
+  if (matches.length === 0) {
+    return null;
+  }
+  const exact = regionPart
+    ? matches.find(([, state]) => state.toLowerCase() === regionPart)
+    : undefined;
+  const [, , lat, lng] = exact ?? matches[0];
+  return { lat, lng };
+}
 
 /**
  * Matches on the city name only (not "City, ST"), so "new" finds "New

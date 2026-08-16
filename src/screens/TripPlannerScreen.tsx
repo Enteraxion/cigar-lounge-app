@@ -15,7 +15,7 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Calendar, ChevronDown, History, MapPin, Navigation } from 'lucide-react-native';
+import { Calendar, ChevronDown, ChevronLeft, History, MapPin, Navigation } from 'lucide-react-native';
 import { theme } from '../theme';
 import { conciergeUser } from '../data/mockConcierge';
 import {
@@ -92,6 +92,9 @@ export default function TripPlannerScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
+          <Pressable style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={8}>
+            <ChevronLeft size={20} color={theme.colors.white} />
+          </Pressable>
           <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />
           <View style={styles.headerTextGroup}>
             <Text style={styles.headerCaption}>Experience</Text>

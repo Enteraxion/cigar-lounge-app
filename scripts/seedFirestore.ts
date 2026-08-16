@@ -63,12 +63,6 @@ import { favoriteLounges } from '../src/data/mockFavorites';
 import { collections as mockCollections } from '../src/data/mockCollections';
 import { mapLounges } from '../src/data/mockMap';
 import { reviews as mockReviews } from '../src/data/mockReviews';
-import {
-  specificCategories,
-  foodAndDrinksQuality,
-  statHighlightsRowOne,
-  statHighlightsRowTwo,
-} from '../src/data/mockRatingsBreakdown';
 import { passportProfile } from '../src/data/mockPassport';
 
 import type {
@@ -173,8 +167,28 @@ function uniq(values: string[]): string[] {
 
 type LoungeSeed = Omit<LoungeDocument, 'createdAt' | 'updatedAt'> & { id: string };
 
+// Inlined from the now-deleted src/data/mockRatingsBreakdown.ts (removed
+// once RatingsBreakdownScreen moved to real per-lounge data) — kept here
+// only as the seed values for this one hand-authored demo lounge.
+const specificCategories = [
+  { label: 'Atmosphere', score: 5.0 },
+  { label: 'Humidor Variety', score: 4.8 },
+  { label: 'Service', score: 4.9 },
+  { label: 'Comfort', score: 4.7 },
+  { label: 'Ventilation', score: 5.0 },
+];
+const foodAndDrinksQuality = { label: 'Food & Drinks Quality', score: 4.5 };
+const statHighlightsRowOne: [{ label: string; value: string }, { label: string; value: string }] = [
+  { label: 'Wi-Fi Speed', value: 'Excellent' },
+  { label: 'Business Friendly', value: 'High' },
+];
+const statHighlightsRowTwo: [{ label: string; value: string }, { label: string; value: string }] = [
+  { label: 'Social Scene', value: 'Refined' },
+  { label: 'Parking', value: 'Valet Only' },
+];
+
 const heritageRatingsBreakdown = Object.fromEntries(
-  specificCategories.map(c => [c.label, c.score]),
+  specificCategories.map((c: { label: string; score: number }) => [c.label, c.score]),
 ) as Record<string, number>;
 
 // reviewCount below is only modeled in mock data for heritage-oak-room

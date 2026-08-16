@@ -3,22 +3,35 @@
  *
  * "Claim your listing" — lets a signed-in member claim an unclaimed
  * lounge (asserting they're the real owner) and then edit that lounge's
- * own details. Auto-approved: there's no manual review step or business
- * verification (e.g. a confirmation email/document check) yet, first
- * claim on a given lounge wins. Ownership itself is tracked directly on
- * the lounge doc (`ownerId` — see src/types/firestore.ts) rather than a
- * separate claims collection, since it's a simple 1:1 relationship with
- * no claim history/dispute flow to model.
+ * own details. There is no in-app payment (per Julian Brinkley's
+ * direction, 2026-08-10) — submitting a claim is a sales inquiry (see
+ * ClaimListingScreen.tsx and functions/src/index.ts's
+ * sendClaimInquiryEmail), not a purchase, so submitLoungeClaim doesn't
+ * grant ownership directly. It puts the lounge into `claimStatus:
+ * 'pending'` for a human admin to review (see AdminClaimReviewScreen.tsx);
+ * only approveLoungeClaim sets `ownerId`. Ownership itself is tracked
+ * directly on the lounge doc rather than a separate claims collection,
+ * since it's a simple 1:1 relationship with no claim history/dispute
+ * flow to model.
  *
- * Enforcement here is client-side only (checking `ownerId` before
- * writing) — there's no firestore.rules file in this repo yet, so
- * nothing stops a modified client from writing around this. Same trust
- * model the rest of the app's Firestore writes already use; flagging it
- * here since ownership is a slightly higher-stakes case than favorites/
- * reviews.
+ * The checks in this file (checking `ownerId`/`claimStatus` before
+ * writing) are UX guards, not the real security boundary — firestore.rules
+ * enforces all of this again server-side (isClaimSubmission/
+ * isOwnListingEdit/isAdmin), so a modified client can't write around it.
  */
 
-import { getFirestore, doc, getDoc, updateDoc, Timestamp } from '@react-native-firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+  deleteField,
+  Timestamp,
+} from '@react-native-firebase/firestore';
 import type { LoungeDocument } from '../types/firestore';
 
 const db = getFirestore();
@@ -30,11 +43,17 @@ export type ClaimListingInput = {
 };
 
 /**
- * Claims `loungeId` for `userId`. Throws if the lounge doesn't exist or
- * is already claimed by someone else — callers should catch and show
+ * Submits a claim inquiry on `loungeId` from `userId` for admin review —
+ * this function does NOT grant ownership; it sets `claimStatus: 'pending'`
+ * so an admin can approve or reject it (see
+ * approveLoungeClaim/rejectLoungeClaim). ClaimListingScreen separately
+ * emails sales about the inquiry (functions/src/index.ts's
+ * sendClaimInquiryEmail) — that's independent of this Firestore write.
+ * Throws if the lounge doesn't exist, is already owned by someone else,
+ * or already has another claim pending — callers should catch and show
  * that as a real error, not retry.
  */
-export async function claimLounge(
+export async function submitLoungeClaim(
   loungeId: string,
   userId: string,
   input: ClaimListingInput,
@@ -44,17 +63,66 @@ export async function claimLounge(
   if (!snapshot.exists()) {
     throw new Error('This lounge no longer exists.');
   }
-  const existingOwnerId = (snapshot.data() as LoungeDocument).ownerId;
-  if (existingOwnerId && existingOwnerId !== userId) {
+  const lounge = snapshot.data() as LoungeDocument;
+  if (lounge.ownerId && lounge.ownerId !== userId) {
     throw new Error('This listing has already been claimed by someone else.');
+  }
+  if (lounge.claimStatus === 'pending' && lounge.claimantUserId !== userId) {
+    throw new Error('Someone else\'s claim on this listing is already under review.');
   }
 
   await updateDoc(loungeRef, {
-    ownerId: userId,
+    claimStatus: 'pending',
+    claimantUserId: userId,
     ownerName: input.ownerName.trim(),
     ownerContactEmail: input.ownerContactEmail.trim(),
     ownerContactPhone: input.ownerContactPhone.trim(),
     claimedAt: Timestamp.now(),
+  });
+}
+
+export type PendingClaim = LoungeDocument & { id: string };
+
+/** Every lounge with a claim currently awaiting admin review — see AdminClaimReviewScreen.tsx. */
+export async function getPendingClaims(): Promise<PendingClaim[]> {
+  const pendingQuery = query(collection(db, 'lounges'), where('claimStatus', '==', 'pending'));
+  const snapshot = await getDocs(pendingQuery);
+  return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as LoungeDocument) }));
+}
+
+/** Approves the pending claim on `loungeId`, granting ownership to its claimant. */
+export async function approveLoungeClaim(loungeId: string): Promise<void> {
+  const loungeRef = doc(db, 'lounges', loungeId);
+  const snapshot = await getDoc(loungeRef);
+  if (!snapshot.exists()) {
+    throw new Error('This lounge no longer exists.');
+  }
+  const lounge = snapshot.data() as LoungeDocument;
+  if (!lounge.claimantUserId) {
+    throw new Error('This lounge has no pending claim to approve.');
+  }
+
+  await updateDoc(loungeRef, {
+    ownerId: lounge.claimantUserId,
+    claimStatus: deleteField(),
+  });
+}
+
+/**
+ * Rejects the pending claim on `loungeId`. Clears every claim-related
+ * field so the lounge reverts to unclaimed and can be claimed again —
+ * there's no claims history collection to preserve the rejected attempt
+ * in (matches the rest of this file's no-history trust model).
+ */
+export async function rejectLoungeClaim(loungeId: string): Promise<void> {
+  const loungeRef = doc(db, 'lounges', loungeId);
+  await updateDoc(loungeRef, {
+    claimStatus: deleteField(),
+    claimantUserId: deleteField(),
+    ownerName: deleteField(),
+    ownerContactEmail: deleteField(),
+    ownerContactPhone: deleteField(),
+    claimedAt: deleteField(),
   });
 }
 

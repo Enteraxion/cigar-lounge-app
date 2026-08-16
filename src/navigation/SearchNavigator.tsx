@@ -25,7 +25,10 @@ import RatingsBreakdownScreen from '../screens/RatingsBreakdownScreen';
 import CreateCollectionScreen from '../screens/CreateCollectionScreen';
 import RecentlyViewedScreen from '../screens/RecentlyViewedScreen';
 import ClaimListingScreen from '../screens/ClaimListingScreen';
+import ClaimSubmittedScreen from '../screens/ClaimSubmittedScreen';
 import EditListingScreen from '../screens/EditListingScreen';
+import ReserveTableScreen from '../screens/ReserveTableScreen';
+import ReservationConfirmedScreen from '../screens/ReservationConfirmedScreen';
 import type { ReviewCategoryRatings } from '../types/firestore';
 import type { SearchFilters } from '../utils/loungeSearch';
 
@@ -69,11 +72,23 @@ export type SearchStackParamList = {
     | undefined;
   UploadPhotos: undefined;
   ReviewSubmitted: { loungeId?: string } | undefined;
-  RatingsBreakdown: undefined;
+  RatingsBreakdown: { loungeId: string };
   CreateCollection: undefined;
   RecentlyViewed: undefined;
   ClaimListing: { loungeId: string };
+  /** Shown after a claim inquiry is submitted — pending admin review, not yet approved.
+   * There is no in-app payment (see ClaimListingScreen's header comment). */
+  ClaimSubmitted: { loungeId: string };
   EditListing: { loungeId: string };
+  ReserveTable: { loungeId: string; loungeName: string };
+  /** date is an ISO string (nav params must be serializable) — see ReserveTableScreen's submit. */
+  ReservationConfirmed: {
+    loungeId: string;
+    loungeName: string;
+    date: string;
+    timeSlot: string;
+    partySize: number;
+  };
 };
 
 const Stack = createNativeStackNavigator<SearchStackParamList>();
@@ -93,7 +108,10 @@ export default function SearchNavigator() {
       <Stack.Screen name="CreateCollection" component={CreateCollectionScreen} />
       <Stack.Screen name="RecentlyViewed" component={RecentlyViewedScreen} />
       <Stack.Screen name="ClaimListing" component={ClaimListingScreen} />
+      <Stack.Screen name="ClaimSubmitted" component={ClaimSubmittedScreen} />
       <Stack.Screen name="EditListing" component={EditListingScreen} />
+      <Stack.Screen name="ReserveTable" component={ReserveTableScreen} />
+      <Stack.Screen name="ReservationConfirmed" component={ReservationConfirmedScreen} />
     </Stack.Navigator>
   );
 }

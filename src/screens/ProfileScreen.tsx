@@ -3,8 +3,8 @@
  *
  * Matches design-reference/User Profile Screen.pdf: centered profile
  * photo + name/tier, an Edit Profile button, a 4-stat row, the Cigar
- * Passport entry card, an Achievements preview, a Favorite Cigars rail,
- * a Travel History card, and a Recent Activity timeline.
+ * Passport entry card, an Achievements preview, a Collections rail, a
+ * Travel History card, and a Recent Activity timeline.
  *
  * Profile photo/name/tier/member-since are the real signed-in user via
  * src/hooks/useUserProfile.ts (Firebase Auth + the Firestore
@@ -21,11 +21,33 @@
  * that function's doc comment for the collectionGroup query behind
  * Reviews/Photos), and all four tiles are tappable (STAT_ACTIONS below):
  * Reviews/Photos open MyReviewsScreen, Favorites/Collections cross-navigate
- * into the Saved tab's FavoritesHome/CollectionsGrid. Everything else on
- * this screen (Achievements,
- * Favorite Cigars, Travel History, Recent Activity) is still local mock
- * data — those are separate, larger features with no real data source
- * yet (no check-in/travel-history/cigar-rating-aggregation tracking).
+ * into the Saved tab's FavoritesHome/CollectionsGrid.
+ *
+ * Every other section is now real too (2026-08-13, Julian Brinkley's
+ * TestFlight feedback: "Is this page functional?" / "make that page
+ * real") — none of these had a real data source before, so each one
+ * reuses/derives from data that already exists elsewhere rather than
+ * inventing new schema or writes:
+ *  - Achievements: src/utils/achievements.ts computes real badge
+ *    unlock state from getUserStats (see that file's header comment on
+ *    the thresholds being a first real pass, not confirmed criteria).
+ *  - Collections (was "Favorite Cigars", which had no real per-cigar
+ *    favoriting concept anywhere in the schema): now shows the user's
+ *    real collections (getUserCollections) — also fixes a real bug
+ *    found alongside this: "View Collection" already linked to the real
+ *    Collections screen, but the cards above it were fake, so tapping
+ *    through led somewhere unrelated to what was shown.
+ *  - Travel History: "Regions"/"Lounges" derive from the user's real
+ *    favorited lounges (distinct `city` values / count); the map reuses
+ *    the same real JourneyMap component built for PassportScreen; "Last
+ *    Destination" is the most recently *viewed* lounge (getRecentlyViewedLounges)
+ *    since there's no real visit-history/check-in feature to source an
+ *    actual "last destination" from.
+ *  - Recent Activity: the user's real most recent reviews
+ *    (getUserReviews) — "Reviewed X" or "Added N photos to X" depending
+ *    on whether that review included photos, with the real review text
+ *    as the quote. The old mock's "Checked in at X" / XP numbers are
+ *    gone entirely — there's no check-in feature to source them from.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -33,38 +55,45 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import LinearGradient from 'react-native-linear-gradient';
 import {
   BookMarked,
   Camera,
   ChevronRight,
   Crown,
-  LogIn,
+  MessageSquare,
   Pencil,
   Plane,
   Settings,
+  ShieldCheck,
   User,
 } from 'lucide-react-native';
 import { theme } from '../theme';
-import {
-  favoriteCigars,
-  profileAchievementsPreview,
-  profileAchievementsTotal,
-  profileAchievementsUnlocked,
-  recentActivity,
-  travelHistory,
-  type ActivityEntry,
-  type FavoriteCigar,
-} from '../data/mockProfile';
+import { isAdminEmail } from '../config/admins';
 import { auth } from '../services/firebaseAuth';
-import { getUserStats, type UserStats } from '../services/userActionsService';
+import {
+  getUserCollections,
+  getUserReviews,
+  getUserStats,
+  getRecentlyViewedLounges,
+  type UserCollection,
+  type UserReviewEntry,
+  type UserStats,
+} from '../services/userActionsService';
+import { getLoungesByIds, type Lounge } from '../services/loungeService';
+import { formatRelativeTime } from '../utils/formatRelativeTime';
+import { computeAchievementCategories } from '../utils/achievements';
+import { getPassport } from '../services/passportService';
+import type { PassportSummary } from '../utils/passport';
 import { NOT_SET, useUserProfile } from '../hooks/useUserProfile';
 import BadgeTile from '../components/BadgeTile';
-import StarRating from '../components/StarRating';
+import JourneyMap from '../components/JourneyMap';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 
 type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
+
+/** A recent review, resolved with its lounge's real name for display. */
+type RecentActivityEntry = UserReviewEntry & { loungeName: string };
 
 function profileStatCards(stats: UserStats | null) {
   return [
@@ -75,34 +104,38 @@ function profileStatCards(stats: UserStats | null) {
   ];
 }
 
-const ACTIVITY_ICON: Record<ActivityEntry['icon'], React.ComponentType<{ size?: number; color?: string }>> = {
-  logIn: LogIn,
-  camera: Camera,
-};
-
-function CigarCard({ cigar }: { cigar: FavoriteCigar }) {
+function CollectionCard({ collection, onPress }: { collection: UserCollection; onPress: () => void }) {
   return (
-    <View style={styles.cigarCard}>
-      <Image source={{ uri: cigar.image }} style={styles.cigarImage} />
+    <Pressable style={styles.cigarCard} onPress={onPress}>
+      {collection.coverImage ? (
+        <Image source={{ uri: collection.coverImage }} style={styles.cigarImage} />
+      ) : (
+        <View style={[styles.cigarImage, styles.cigarImagePlaceholder]}>
+          <BookMarked size={20} color={theme.colors.mutedGray} />
+        </View>
+      )}
       <Text style={styles.cigarName} numberOfLines={1}>
-        {cigar.name}
+        {collection.name}
       </Text>
       <Text style={styles.cigarSubtitle} numberOfLines={1}>
-        {cigar.subtitle}
+        {collection.loungeIds.length} {collection.loungeIds.length === 1 ? 'lounge' : 'lounges'}
       </Text>
-      <StarRating rating={cigar.rating} size={12} />
-    </View>
+    </Pressable>
   );
 }
 
-function ActivityRow({ entry, isLast }: { entry: ActivityEntry; isLast: boolean }) {
-  const Icon = ACTIVITY_ICON[entry.icon];
+function ActivityRow({ entry, isLast }: { entry: RecentActivityEntry; isLast: boolean }) {
+  const hasPhotos = entry.photos.length > 0;
 
   return (
     <View style={styles.activityRow}>
       <View style={styles.activityRail}>
         <View style={styles.activityIconBox}>
-          <Icon size={15} color={theme.colors.accentGold} />
+          {hasPhotos ? (
+            <Camera size={15} color={theme.colors.accentGold} />
+          ) : (
+            <MessageSquare size={15} color={theme.colors.accentGold} />
+          )}
         </View>
         {!isLast ? <View style={styles.activityLine} /> : null}
       </View>
@@ -110,30 +143,28 @@ function ActivityRow({ entry, isLast }: { entry: ActivityEntry; isLast: boolean 
       <View style={styles.activityContent}>
         <View style={styles.activityHeaderRow}>
           <Text style={styles.activityText}>
-            {entry.description} <Text style={styles.activityHighlight}>{entry.highlight}</Text>
+            {hasPhotos ? `Added ${entry.photos.length} photo${entry.photos.length > 1 ? 's' : ''} to` : 'Reviewed'}{' '}
+            <Text style={styles.activityHighlight}>{entry.loungeName}</Text>
           </Text>
-          {entry.xp ? (
-            <View style={styles.xpBadge}>
-              <Text style={styles.xpBadgeText}>+{entry.xp} XP</Text>
-            </View>
-          ) : null}
         </View>
-        <Text style={styles.activityMeta}>{entry.meta}</Text>
+        <Text style={styles.activityMeta}>{formatRelativeTime(entry.createdAt.toDate())}</Text>
 
-        {entry.quote ? (
+        {entry.text ? (
           <View style={styles.quoteCard}>
-            <Text style={styles.quoteText}>{entry.quote}</Text>
+            <Text style={styles.quoteText} numberOfLines={3}>
+              &quot;{entry.text}&quot;
+            </Text>
           </View>
         ) : null}
 
-        {entry.photos && entry.photos.length > 0 ? (
+        {hasPhotos ? (
           <View style={styles.activityPhotoRow}>
-            {entry.photos.map((uri, index) => (
+            {entry.photos.slice(0, 3).map((uri, index) => (
               <Image key={index} source={{ uri }} style={styles.activityPhotoThumb} />
             ))}
-            {entry.overflowCount ? (
+            {entry.photos.length > 3 ? (
               <View style={styles.activityPhotoOverflow}>
-                <Text style={styles.activityPhotoOverflowText}>+{entry.overflowCount}</Text>
+                <Text style={styles.activityPhotoOverflowText}>+{entry.photos.length - 3}</Text>
               </View>
             ) : null}
           </View>
@@ -149,6 +180,10 @@ export default function ProfileScreen() {
   const userId = auth.currentUser?.uid;
 
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [collections, setCollections] = useState<UserCollection[]>([]);
+  const [lastViewedLounge, setLastViewedLounge] = useState<Lounge | null>(null);
+  const [recentActivity, setRecentActivity] = useState<RecentActivityEntry[]>([]);
+  const [passport, setPassport] = useState<PassportSummary | null>(null);
   const { profile, reload: reloadProfile } = useUserProfile();
 
   const loadStats = useCallback(async () => {
@@ -161,17 +196,68 @@ export default function ProfileScreen() {
     }
   }, [userId]);
 
+  const loadProfileSections = useCallback(async () => {
+    if (!userId) return;
+    try {
+      // Favorites are no longer fetched here: the Travel History card was
+      // their only reader and now counts real visits instead, and the
+      // headline "Favorites Saved" figure comes from getUserStats.
+      const [userCollections, recentlyViewed, reviews, passportBundle] = await Promise.all([
+        getUserCollections(userId),
+        getRecentlyViewedLounges(userId, 1),
+        getUserReviews(userId),
+        getPassport(userId),
+      ]);
+      setCollections(userCollections);
+      setLastViewedLounge(recentlyViewed[0] ?? null);
+      setPassport(passportBundle.passport);
+
+      const recent = reviews.slice(0, 5);
+      const lounges = await getLoungesByIds([...new Set(recent.map(r => r.loungeId))]);
+      const loungeNameById = new Map(lounges.map(l => [l.id, l.name]));
+      setRecentActivity(
+        recent.map(review => ({
+          ...review,
+          loungeName: loungeNameById.get(review.loungeId) ?? 'a lounge',
+        })),
+      );
+    } catch {
+      // Each section already has its own empty-state copy below — not
+      // worth a full-screen error for these secondary sections.
+    }
+  }, [userId]);
+
   useEffect(() => {
     loadStats();
-  }, [loadStats]);
+    loadProfileSections();
+  }, [loadStats, loadProfileSections]);
 
-  // Refetch on focus (not just mount) so a save on EditProfileScreen
-  // shows up immediately on the way back, without an app restart.
+  // Refetch on focus (not just mount) so a save on EditProfileScreen, a
+  // new review, a new collection, etc. shows up immediately on the way
+  // back, without an app restart.
   useFocusEffect(
     useCallback(() => {
       reloadProfile();
-    }, [reloadProfile]),
+      loadProfileSections();
+    }, [reloadProfile, loadProfileSections]),
   );
+
+  // Travel History counts places actually visited, matching the JourneyMap
+  // directly above it — these used to count favorites, so the card claimed
+  // travel to lounges the member had only saved.
+  const regionsExplored = passport?.statesExplored ?? 0;
+  const loungesVisited = passport?.loungesVisited ?? 0;
+
+  // First badge from each category as the 3-tile preview (Explorer,
+  // Social Member, Traveler) — same category set every time, unlike the
+  // old mock's mismatched preview (it even showed a "Humidor Hunter"
+  // badge that didn't exist anywhere in the full Achievements screen).
+  const achievementCategories = stats ? computeAchievementCategories(stats, passport) : [];
+  const achievementPreviewBadges = achievementCategories.map(category => category.badges[0]);
+  const achievementProgress = {
+    unlocked: achievementCategories.reduce((sum, c) => sum + c.unlockedCount, 0),
+    total: achievementCategories.reduce((sum, c) => sum + c.totalCount, 0),
+  };
 
   const openCollections = () => {
     // Cross-tab navigation into the Saved stack's CollectionsGrid screen.
@@ -263,100 +349,136 @@ export default function ProfileScreen() {
           <ChevronRight size={18} color={theme.colors.secondarySilver} />
         </Pressable>
 
+        {/* ---------------- Admin: Review Claims ---------------- */}
+        {isAdminEmail(auth.currentUser?.email) && (
+          <Pressable style={styles.passportCard} onPress={() => navigation.navigate('AdminClaimReview')}>
+            <View style={styles.passportIconBox}>
+              <ShieldCheck size={20} color={theme.colors.accentGold} />
+            </View>
+            <View style={styles.passportTextGroup}>
+              <Text style={styles.passportTitle}>Review Business Claims</Text>
+              <Text style={styles.passportSubtitle}>Approve or reject pending listing claims</Text>
+            </View>
+            <ChevronRight size={18} color={theme.colors.secondarySilver} />
+          </Pressable>
+        )}
+
         {/* ---------------- Achievements ---------------- */}
         <View style={styles.field}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Achievements</Text>
             <Pressable onPress={() => navigation.navigate('Achievements')} hitSlop={8}>
               <Text style={styles.sectionLink}>
-                {profileAchievementsUnlocked} / {profileAchievementsTotal} Unlocked
+                {achievementProgress.unlocked} / {achievementProgress.total} Unlocked
               </Text>
             </Pressable>
           </View>
           <View style={styles.badgeRow}>
-            {profileAchievementsPreview.map(badge => (
+            {achievementPreviewBadges.map(badge => (
               <BadgeTile key={badge.id} badge={badge} />
             ))}
           </View>
         </View>
 
-        {/* ---------------- Favorite Cigars ---------------- */}
+        {/* ---------------- Collections ---------------- */}
         <View style={styles.field}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Favorite Cigars</Text>
+            <Text style={styles.sectionTitle}>Collections</Text>
             <Pressable onPress={openCollections} hitSlop={8}>
-              <Text style={styles.sectionLink}>View Collection</Text>
+              <Text style={styles.sectionLink}>View All</Text>
             </Pressable>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.cigarRow}
-          >
-            {favoriteCigars.map(cigar => (
-              <CigarCard key={cigar.id} cigar={cigar} />
-            ))}
-          </ScrollView>
+          {collections.length === 0 ? (
+            <Pressable style={styles.emptyCard} onPress={openCollections}>
+              <Text style={styles.emptyCardText}>
+                Create a collection to see it here.
+              </Text>
+            </Pressable>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.cigarRow}
+            >
+              {collections.map(collection => (
+                <CollectionCard
+                  key={collection.id}
+                  collection={collection}
+                  onPress={() =>
+                    (tabNavigation.navigate as (name: string, params?: object) => void)('Saved', {
+                      screen: 'CollectionDetail',
+                      params: { collectionId: collection.id },
+                    })
+                  }
+                />
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* ---------------- Travel History ---------------- */}
         <View style={styles.field}>
           <Text style={styles.sectionTitle}>Travel History</Text>
           <View style={styles.travelCard}>
-            <View style={styles.travelMap}>
-              <LinearGradient
-                colors={[theme.colors.surfaceNavy, theme.colors.primaryNavy]}
-                style={StyleSheet.absoluteFill}
-              />
-              {travelHistory.mapPoints.map((point, index) => (
-                <View
-                  key={index}
-                  style={[styles.travelMapDot, { left: `${point.x}%`, top: `${point.y}%` }]}
-                />
-              ))}
-            </View>
+            <JourneyMap />
 
             <View style={styles.travelStatRow}>
               <View style={styles.travelStat}>
-                <Text style={styles.travelStatValue}>{travelHistory.regions}</Text>
+                <Text style={styles.travelStatValue}>{regionsExplored}</Text>
                 <Text style={styles.travelStatLabel}>Regions</Text>
               </View>
               <View style={styles.travelStat}>
-                <Text style={styles.travelStatValue}>{travelHistory.lounges}</Text>
+                <Text style={styles.travelStatValue}>{loungesVisited}</Text>
                 <Text style={styles.travelStatLabel}>Lounges</Text>
               </View>
             </View>
 
-            <Pressable
-              style={styles.destinationRow}
-              onPress={() => navigation.navigate('TravelTimeline')}
-            >
-              <View style={styles.destinationIconBox}>
-                <Plane size={16} color={theme.colors.accentGold} />
-              </View>
-              <View style={styles.destinationTextGroup}>
-                <Text style={styles.destinationTitle}>Last Destination</Text>
-                <Text style={styles.destinationSubtitle}>
-                  {travelHistory.lastDestination.city} • {travelHistory.lastDestination.date}
-                </Text>
-              </View>
-              <ChevronRight size={18} color={theme.colors.secondarySilver} />
-            </Pressable>
+            {lastViewedLounge && (
+              <Pressable
+                style={styles.destinationRow}
+                onPress={() =>
+                  (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
+                    screen: 'LoungeDetail',
+                    params: { loungeId: lastViewedLounge.id },
+                  })
+                }
+              >
+                <View style={styles.destinationIconBox}>
+                  <Plane size={16} color={theme.colors.accentGold} />
+                </View>
+                <View style={styles.destinationTextGroup}>
+                  <Text style={styles.destinationTitle}>Last Viewed</Text>
+                  <Text style={styles.destinationSubtitle}>
+                    {lastViewedLounge.name}
+                    {lastViewedLounge.city ? ` • ${lastViewedLounge.city}` : ''}
+                  </Text>
+                </View>
+                <ChevronRight size={18} color={theme.colors.secondarySilver} />
+              </Pressable>
+            )}
           </View>
         </View>
 
         {/* ---------------- Recent Activity ---------------- */}
         <View style={[styles.field, styles.lastField]}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <View>
-            {recentActivity.map((entry, index) => (
-              <ActivityRow
-                key={entry.id}
-                entry={entry}
-                isLast={index === recentActivity.length - 1}
-              />
-            ))}
-          </View>
+          {recentActivity.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyCardText}>
+                Write your first review to see your activity here.
+              </Text>
+            </View>
+          ) : (
+            <View>
+              {recentActivity.map((entry, index) => (
+                <ActivityRow
+                  key={entry.id}
+                  entry={entry}
+                  isLast={index === recentActivity.length - 1}
+                />
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -553,6 +675,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceNavy,
     marginBottom: 4,
   },
+  cigarImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cigarName: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
@@ -565,6 +691,18 @@ const styles = StyleSheet.create({
     color: theme.colors.mutedGray,
     marginBottom: 2,
   },
+  emptyCard: {
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surfaceNavy,
+    alignItems: 'center',
+  },
+  emptyCardText: {
+    ...theme.typography.medium,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+  },
 
   // ---- Travel History ----
   travelCard: {
@@ -572,21 +710,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     backgroundColor: theme.colors.surfaceNavy,
     gap: theme.spacing.md,
-  },
-  travelMap: {
-    position: 'relative',
-    height: 110,
-    borderRadius: theme.radius.medium,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.12)',
-  },
-  travelMapDot: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.accentGold,
   },
   travelStatRow: {
     flexDirection: 'row',
@@ -683,17 +806,6 @@ const styles = StyleSheet.create({
   activityHighlight: {
     color: theme.colors.accentGold,
     textDecorationLine: 'underline',
-  },
-  xpBadge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
-  },
-  xpBadgeText: {
-    ...theme.typography.caption,
-    fontSize: 9,
-    color: theme.colors.accentGold,
   },
   activityMeta: {
     ...theme.typography.medium,

@@ -12,7 +12,7 @@
  * "Hours not yet available" and no description).
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -34,26 +34,51 @@ export default function EditListingScreen() {
   const userId = auth.currentUser?.uid;
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [description, setDescription] = useState('');
   const [hours, setHours] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [amenitiesText, setAmenitiesText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [descriptionError, setDescriptionError] = useState('');
+  const [hoursError, setHoursError] = useState('');
+
+  const loadLounge = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
+    getLoungeById(loungeId)
+      .then(lounge => {
+        if (lounge) {
+          setDescription(lounge.description);
+          setHours(lounge.hours);
+          setPriceRange(lounge.priceRange);
+          setAmenitiesText(lounge.amenities.join(', '));
+        }
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }, [loungeId]);
 
   useEffect(() => {
-    getLoungeById(loungeId).then(lounge => {
-      if (lounge) {
-        setDescription(lounge.description);
-        setHours(lounge.hours);
-        setPriceRange(lounge.priceRange);
-        setAmenitiesText(lounge.amenities.join(', '));
-      }
-      setLoading(false);
-    });
-  }, [loungeId]);
+    loadLounge();
+  }, [loadLounge]);
 
   const save = async () => {
     if (!userId) return;
+
+    let hasError = false;
+    if (!description.trim()) {
+      setDescriptionError('Description is required.');
+      hasError = true;
+    }
+    if (!hours.trim()) {
+      setHoursError('Hours are required.');
+      hasError = true;
+    }
+    if (hasError) {
+      return;
+    }
+
     setSubmitting(true);
     try {
       await updateLoungeDetails(loungeId, userId, {
@@ -90,29 +115,44 @@ export default function EditListingScreen() {
         <View style={styles.stateBox}>
           <ActivityIndicator color={theme.colors.secondarySilver} />
         </View>
+      ) : loadError ? (
+        <View style={styles.stateBox}>
+          <Text style={styles.errorStateText}>Couldn't load this listing.</Text>
+          <Pressable style={styles.retryButton} onPress={loadLounge}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </Pressable>
+        </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Description</Text>
             <TextInput
               value={description}
-              onChangeText={setDescription}
+              onChangeText={text => {
+                setDescription(text);
+                if (descriptionError) setDescriptionError('');
+              }}
               placeholder="Tell customers about your business"
               placeholderTextColor={theme.colors.mutedGray}
-              style={[styles.textInput, styles.multilineInput]}
+              style={[styles.textInput, styles.multilineInput, descriptionError && styles.textInputError]}
               multiline
             />
+            {!!descriptionError && <Text style={styles.fieldError}>{descriptionError}</Text>}
           </View>
 
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Hours</Text>
             <TextInput
               value={hours}
-              onChangeText={setHours}
+              onChangeText={text => {
+                setHours(text);
+                if (hoursError) setHoursError('');
+              }}
               placeholder="e.g. Mon-Sat 11am-11pm"
               placeholderTextColor={theme.colors.mutedGray}
-              style={styles.textInput}
+              style={[styles.textInput, hoursError && styles.textInputError]}
             />
+            {!!hoursError && <Text style={styles.fieldError}>{hoursError}</Text>}
           </View>
 
           <View style={styles.field}>
@@ -185,10 +225,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.spacing.md,
+  },
+  errorStateText: {
+    ...theme.typography.body,
+    fontSize: 14,
+    color: theme.colors.mutedGray,
+  },
+  retryButton: {
+    paddingHorizontal: theme.spacing.lg,
+    height: 44,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surfaceNavy,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.white,
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    // Clears MainNavigator's floating pill tab bar (bottom: 24 + height: 64)
+    // plus breathing room, so the submit button never sits under it.
+    paddingBottom: theme.spacing.xxl + 64,
     gap: theme.spacing.xl,
   },
   field: {
@@ -214,6 +278,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceNavy,
     borderWidth: 1,
     borderColor: 'rgba(192, 192, 192, 0.15)',
+  },
+  textInputError: {
+    borderColor: theme.colors.danger,
+  },
+  fieldError: {
+    ...theme.typography.caption,
+    fontSize: 12,
+    color: theme.colors.danger,
   },
   multilineInput: {
     height: 100,

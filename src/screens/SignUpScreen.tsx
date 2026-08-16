@@ -111,6 +111,15 @@ export default function SignUpScreen() {
         contentContainerStyle={styles.mainContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* ---------------- Back button ---------------- */}
+        {/* The "Sign In" footer link at the bottom of this form already gets
+            you back to Login, but it sits below the fold on a long scrolling
+            form — this matches ForgotPasswordScreen's top-left back button so
+            both Auth screens behave the same way. */}
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={12}>
+          <Icon name="arrow-back" size={22} color="#FFFFFF" />
+        </Pressable>
+
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <View style={styles.logoBadge}>
@@ -307,6 +316,18 @@ const styles = StyleSheet.create({
   mainContent: {
     paddingHorizontal: 24,
     paddingVertical: 32,
+  },
+
+  // ---- Back button (matches ForgotPasswordScreen) ----
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(18, 30, 63, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // ---- Header ----

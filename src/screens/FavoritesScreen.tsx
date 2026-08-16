@@ -43,6 +43,7 @@ import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
 import type { Lounge } from '../services/loungeService';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
+import { displayTags } from '../utils/displayTags';
 
 type FavoritesNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
@@ -52,7 +53,7 @@ function FavoriteLoungeCard({ lounge, onPress }: { lounge: Lounge; onPress: () =
       <Image source={{ uri: lounge.images[0] }} style={styles.loungeImage} />
       <View style={styles.loungeBody}>
         <Text style={styles.loungeName}>{lounge.name}</Text>
-        <Text style={styles.loungeTags}>{lounge.tags.join(' • ')}</Text>
+        <Text style={styles.loungeTags}>{displayTags(lounge.tags).join(' • ')}</Text>
         <StarRating rating={lounge.ratings.overall} size={13} />
       </View>
     </Pressable>

@@ -103,28 +103,3 @@ export const savedLounges: WishlistLounge[] = [
     image: whiskeyBars[0],
   },
 ];
-
-export type TravelTimelineEntry = {
-  id: string;
-  month: string;
-  day: string;
-  title: string;
-  lounges: string;
-};
-
-export const travelTimeline: TravelTimelineEntry[] = [
-  {
-    id: 'ny-business-trip',
-    month: 'Dec',
-    day: '12',
-    title: 'New York Business Trip',
-    lounges: 'The Gatsby • Casa de Montecristo',
-  },
-  {
-    id: 'london-weekend-break',
-    month: 'Jan',
-    day: '05',
-    title: 'London Weekend Break',
-    lounges: 'Smoke & Velvet • The Heritage',
-  },
-];

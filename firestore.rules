@@ -1,0 +1,225 @@
+// Firestore security rules for The Reserve.
+//
+// Replaces the default 30-day "test mode" rules (wide open to anyone),
+// which Firebase emails a warning about before they expire — after that,
+// with no real rules deployed, every client request gets denied and the
+// app stops working entirely. These rules are written directly against
+// what src/services/*.ts actually reads/writes (see those files' header
+// comments) rather than a generic template.
+//
+// Trust model: matches what ownerService.ts/userActionsService.ts already
+// document — real enforcement of "who can touch what," but not
+// airtight defense against a maliciously modified client within an
+// already-allowed collection/field (e.g. favoritedByUserIds's array
+// contents aren't individually validated). Good enough for this app's
+// current stage; revisit if abuse shows up.
+//
+// DEPLOY: firebase deploy --only firestore:rules
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Mirrors src/config/admins.ts's ADMIN_EMAILS — keep both lists in
+    // sync when adding/removing admins.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email in [
+        'rohithakepati@gmail.com'
+      ];
+    }
+
+    function affectedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ---------------------------------------------------------------
+    // lounges/{loungeId}
+    // ---------------------------------------------------------------
+    match /lounges/{loungeId} {
+      // Public directory data — readable without signing in.
+      allow read: if true;
+
+      // Lounges are only ever created by the Yelp import script /
+      // refreshCityLounges Cloud Function, both using the Admin SDK,
+      // which bypasses these rules entirely. No client create/delete.
+      allow create, delete: if false;
+
+      allow update: if isAdmin()
+        || isClaimSubmission()
+        || isOwnListingEdit()
+        || isFavoriteToggle();
+
+      // ownerService.submitLoungeClaim — submitting a claim inquiry (no
+      // in-app payment) creates a pending claim for admin review, it does
+      // not grant ownership.
+      function isClaimSubmission() {
+        let existing = resource.data;
+        let incoming = request.resource.data;
+        return isSignedIn()
+          && existing.get('ownerId', null) == null
+          && (existing.get('claimStatus', null) != 'pending'
+              || existing.get('claimantUserId', null) == request.auth.uid)
+          && incoming.claimStatus == 'pending'
+          && incoming.claimantUserId == request.auth.uid
+          && affectedKeys().hasOnly([
+               'claimStatus', 'claimantUserId', 'ownerName',
+               'ownerContactEmail', 'ownerContactPhone', 'claimedAt',
+             ]);
+      }
+
+      // ownerService.updateLoungeDetails — only the approved owner, only
+      // the fields EditListingScreen actually edits.
+      function isOwnListingEdit() {
+        return isSignedIn()
+          && resource.data.get('ownerId', null) == request.auth.uid
+          && affectedKeys().hasOnly([
+               'description', 'hours', 'priceRange', 'amenities', 'updatedAt',
+               // Humidor inventory — owner-entered from the Owner Portal's
+               // Inventory page. Never populated by the Yelp/Google imports
+               // (both write an empty array), so an owner filling this in is
+               // the only way a lounge ever gets one.
+               'humidorItems',
+             ]);
+      }
+
+      // userActionsService.toggleFavorite mirrors the favorite onto the
+      // lounge doc's own favoritedByUserIds — any signed-in user may
+      // touch this one field (to add/remove themselves).
+      function isFavoriteToggle() {
+        return isSignedIn() && affectedKeys().hasOnly(['favoritedByUserIds']);
+      }
+
+      // ---------------------------------------------------------------
+      // lounges/{loungeId}/reviews/{reviewId}
+      // ---------------------------------------------------------------
+      match /reviews/{reviewId} {
+        allow read: if true;
+
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+        allow update: if isSignedIn() && (
+          // userActionsService.updateReview — author editing their own review
+          (resource.data.userId == request.auth.uid
+            && affectedKeys().hasOnly([
+                 'rating', 'text', 'categoryRatings', 'wouldReturn', 'recommend', 'photos', 'visitDate',
+               ]))
+          ||
+          // userActionsService.toggleReviewHelpful — any signed-in user
+          (affectedKeys().hasOnly(['helpfulUserIds', 'helpfulCount']))
+        );
+
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      }
+
+      // ---------------------------------------------------------------
+      // lounges/{loungeId}/reservations/{reservationId}
+      // ---------------------------------------------------------------
+      // reservationService.createReservation — no availability/capacity
+      // checking exists yet (see that file's header comment), so a
+      // reservation is a record of intent, not a negotiated booking.
+      //
+      // Two parties can see a reservation: the guest who made it, and the
+      // owner of the lounge it's for (the Owner Portal's reservations
+      // list — until that existed, reservations were write-only from the
+      // owner's side, which made the whole feature a dead end for shops).
+      // Ownership is read off the parent lounge doc rather than duplicated
+      // onto every reservation, so approving/rejecting a claim
+      // automatically changes who can see the bookings.
+      function isReservationGuest() {
+        return isSignedIn() && resource.data.userId == request.auth.uid;
+      }
+      /** Owner of the parent lounge — read off the lounge doc rather than
+       * duplicated onto each child, so approving/rejecting a claim
+       * immediately changes who can manage its reservations and events. */
+      function isLoungeOwner() {
+        return isSignedIn()
+          && get(/databases/$(database)/documents/lounges/$(loungeId)).data.get('ownerId', null)
+             == request.auth.uid;
+      }
+
+      match /reservations/{reservationId} {
+        allow read: if isReservationGuest() || isLoungeOwner();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        // Owners may only stamp acknowledgedAt — never rewrite the guest's
+        // own details (name/phone/party size/date/time).
+        allow update: if isLoungeOwner()
+          && affectedKeys().hasOnly(['acknowledgedAt']);
+        allow delete: if isReservationGuest();
+      }
+
+      // ---------------------------------------------------------------
+      // lounges/{loungeId}/events/{eventId}
+      // ---------------------------------------------------------------
+      // Owner-authored events (Owner Portal's Events page), shown to
+      // everyone on the lounge's detail screen — so public read, but only
+      // the approved owner can post/edit/remove. No RSVP or ticketing
+      // exists, so there's no guest-write path here at all.
+      match /events/{eventId} {
+        allow read: if true;
+        allow create, update, delete: if isLoungeOwner();
+      }
+    }
+
+    // Collection-group read for getUserStats/getUserReviews's
+    // collectionGroup(db, 'reviews') queries ("reviews I wrote").
+    match /{path=**}/reviews/{reviewId} {
+      allow read: if true;
+    }
+
+    // ---------------------------------------------------------------
+    // users/{userId} and its subcollections
+    // ---------------------------------------------------------------
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /favorites/{loungeId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /recentlyViewed/{loungeId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /searchHistory/{termSlug} {
+        allow read, write: if isOwner(userId);
+      }
+      match /savedFilters/{filterId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /issueReports/{reportId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /collections/{collectionId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /notifications/{notificationId} {
+        allow read, update, delete: if isOwner(userId);
+
+        // userActionsService.createNotification writes into a DIFFERENT
+        // user's notifications (e.g. notifying everyone who favorited a
+        // lounge about a new review) — so this can't be owner-only.
+        // Restricted to the exact shape createNotification writes.
+        allow create: if isSignedIn()
+          && request.resource.data.keys().hasOnly(['type', 'title', 'body', 'read', 'createdAt', 'data'])
+          && request.resource.data.type in ['review_helpful', 'new_review_on_favorite']
+          && request.resource.data.read == false;
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // cityRefreshes/{citySlug} — only written by refreshCityLounges
+    // (Cloud Function, Admin SDK) — no client access needed at all.
+    // ---------------------------------------------------------------
+    match /cityRefreshes/{citySlug} {
+      allow read, write: if false;
+    }
+  }
+}

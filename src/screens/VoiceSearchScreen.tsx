@@ -21,15 +21,14 @@ export default function VoiceSearchScreen() {
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
 
   const openSuggestion = (suggestion: string) => {
-    // VoiceSearch is a root-level modal (see AppNavigator), reached from
-    // more than one tab, so MainTabParamList doesn't model the Search
-    // stack's nested SearchResults screen. Same untyped escape-hatch
-    // pattern used for cross-tab navigation elsewhere (e.g. MapScreen's
-    // openSearch/openLoungeDetails) — navigate() bubbles up to the
-    // ancestor Stack.Navigator at runtime.
-    (navigation.navigate as (name: string, params?: object) => void)('Search', {
-      screen: 'SearchResults',
-      params: { query: suggestion },
+    // VoiceSearch is a root-level modal (see AppNavigator's
+    // RootStackParamList — its only siblings are Auth/Main/AIConcierge/
+    // Notifications), so 'Search' isn't a route it can navigate to
+    // directly — it has to go through 'Main' first, same pattern as
+    // ConciergeConversationScreen's cross-tab navigation.
+    (navigation.navigate as (name: string, params?: object) => void)('Main', {
+      screen: 'Search',
+      params: { screen: 'SearchResults', params: { query: suggestion } },
     });
   };
   const pulse = useRef(new Animated.Value(0)).current;

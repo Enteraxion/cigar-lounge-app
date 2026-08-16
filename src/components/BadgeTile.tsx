@@ -25,7 +25,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { theme } from '../theme';
-import type { Badge } from '../data/mockPassport';
+import type { Badge } from '../utils/achievements';
 
 export const BADGE_ICON: Record<Badge['icon'], React.ComponentType<{ size?: number; color?: string }>> = {
   compass: Compass,

@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "the-reserve-app-c44ed"
-  }
+  },
+  "targets": {
+    "the-reserve-app-c44ed": {
+      "hosting": {
+        "owner-portal": [
+          "reserve-owner-portal"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

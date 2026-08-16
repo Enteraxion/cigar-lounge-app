@@ -36,6 +36,7 @@ import {
 import type {
   CollectionDocument,
   FavoriteDocument,
+  IssueReportDocument,
   LoungeDocument,
   NotificationDocument,
   RecentlyViewedDocument,
@@ -578,4 +579,17 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
     query(collection(db, 'users', userId, 'notifications'), where('read', '==', false)),
   );
   await Promise.all(snapshot.docs.map(d => updateDoc(d.ref, { read: true })));
+}
+
+// ---------------------------------------------------------------------------
+// Issue reports — users/{userId}/issueReports/{reportId}
+// ---------------------------------------------------------------------------
+
+/** Persists a free-text problem report (see ReportIssueModal/AIFeedbackScreen). */
+export async function submitIssueReport(userId: string, description: string): Promise<void> {
+  const data: IssueReportDocument = {
+    description: description.trim(),
+    createdAt: Timestamp.now(),
+  };
+  await addDoc(collection(db, 'users', userId, 'issueReports'), data);
 }

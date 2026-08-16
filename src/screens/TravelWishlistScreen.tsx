@@ -8,13 +8,15 @@
  * button. Reached via the Favorites/Collections/Wishlist segmented
  * switcher (see FavoritesScreen).
  *
- * ONLY `activePlan`, `destinations`, `nextStopHighlight`, and
- * `travelTimeline` (from src/data/mockWishlist.ts) remain mock — there's
- * no real "trip planning"/"destinations" backend concept in this app yet.
+ * ONLY `activePlan`, `destinations` and `nextStopHighlight` (from
+ * src/data/mockWishlist.ts) remain mock — there's no real "trip
+ * planning"/"destinations" backend concept in this app yet.
  * "All Saved Lounges" is real: it fetches the signed-in user's actual
  * favorited lounges via userActionsService.ts's getUserFavorites(),
  * refetching on focus (useFocusEffect) so a lounge favorited elsewhere
- * shows up here immediately on return. "Edit Route" / "View List" /
+ * shows up here immediately on return. The travel timeline is real too —
+ * the member's five most recent visits (src/utils/passport.ts), replacing
+ * a pair of invented trips every member saw identically. "Edit Route" / "View List" /
  * the floating "+" have no real backend to wire to yet, so they show a
  * "coming soon" alert instead of being silently dead.
  */
@@ -50,12 +52,13 @@ import {
   activePlan,
   destinations,
   nextStopHighlight,
-  travelTimeline,
   type WishlistDestination,
-  type TravelTimelineEntry,
 } from '../data/mockWishlist';
+import { getPassport } from '../services/passportService';
+import type { Visit } from '../utils/passport';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { displayTags } from '../utils/displayTags';
 
 type WishlistNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
@@ -78,22 +81,24 @@ function DestinationCard({ destination }: { destination: WishlistDestination }) 
   );
 }
 
-function TimelineRow({ entry }: { entry: TravelTimelineEntry }) {
+function TimelineRow({ visit, onPress }: { visit: Visit; onPress: () => void }) {
   return (
-    <View style={styles.timelineRow}>
+    <Pressable style={styles.timelineRow} onPress={onPress}>
       <View style={styles.timelineDateBadge}>
-        <Text style={styles.timelineMonth}>{entry.month}</Text>
-        <Text style={styles.timelineDay}>{entry.day}</Text>
+        <Text style={styles.timelineMonth}>
+          {visit.visitedAt.toLocaleDateString(undefined, { month: 'short' })}
+        </Text>
+        <Text style={styles.timelineDay}>{visit.visitedAt.getDate()}</Text>
       </View>
       <View style={styles.timelineTextGroup}>
         <Text style={styles.timelineTitle} numberOfLines={1}>
-          {entry.title}
+          {visit.loungeName}
         </Text>
         <Text style={styles.timelineLounges} numberOfLines={1}>
-          {entry.lounges}
+          {visit.city ?? visit.address}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -106,6 +111,10 @@ export default function TravelWishlistScreen() {
 
   const [savedLounges, setSavedLounges] = useState<Lounge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The five most recent real visits — this section used to show two
+  // invented trips ("New York Business Trip", "London Weekend Break")
+  // that every member saw identically.
+  const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
 
   const load = useCallback(async () => {
     if (!userId) {
@@ -118,6 +127,13 @@ export default function TravelWishlistScreen() {
       setSavedLounges(await getUserFavorites(userId));
     } catch {
       setError("Couldn't load your saved lounges. Check your connection and try again.");
+    }
+    try {
+      const { passport } = await getPassport(userId);
+      setRecentVisits(passport.visits.slice(0, 5));
+    } catch {
+      // The timeline has its own empty state — a saved-lounges failure is
+      // what the error banner above is for, and this shouldn't trigger it.
     }
   }, [userId]);
 
@@ -284,7 +300,7 @@ export default function TravelWishlistScreen() {
                     image={{ uri: item.images[0] }}
                     name={item.name}
                     location={item.address}
-                    tags={item.tags}
+                    tags={displayTags(item.tags)}
                     rating={item.ratings.overall}
                   />
                 </Pressable>
@@ -296,11 +312,21 @@ export default function TravelWishlistScreen() {
         {/* ---------------- Travel Timeline ---------------- */}
         <View style={[styles.section, styles.lastSection]}>
           <SectionHeader title="Travel Timeline" />
-          <View style={styles.timelineList}>
-            {travelTimeline.map(entry => (
-              <TimelineRow key={entry.id} entry={entry} />
-            ))}
-          </View>
+          {recentVisits.length === 0 ? (
+            <Text style={styles.timelineEmpty}>
+              Review a lounge you've visited and your trips will show up here.
+            </Text>
+          ) : (
+            <View style={styles.timelineList}>
+              {recentVisits.map((visit, index) => (
+                <TimelineRow
+                  key={`${visit.loungeId}-${visit.visitedAt.getTime()}-${index}`}
+                  visit={visit}
+                  onPress={() => openLounge(visit.loungeId)}
+                />
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -535,6 +561,11 @@ const styles = StyleSheet.create({
   },
 
   // ---- Travel Timeline ----
+  timelineEmpty: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+  },
   timelineList: {
     gap: theme.spacing.md,
   },

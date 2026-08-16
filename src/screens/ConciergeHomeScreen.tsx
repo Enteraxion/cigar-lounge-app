@@ -15,7 +15,7 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Bell, ChevronRight, Compass, History, Map, Search, Star } from 'lucide-react-native';
+import { Bell, ChevronRight, Compass, History, Map, Search, Star, X } from 'lucide-react-native';
 import { theme } from '../theme';
 import SectionHeader from '../components/SectionHeader';
 import NotificationBadge from '../components/NotificationBadge';
@@ -94,10 +94,19 @@ export default function ConciergeHomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
+          {/* This screen is the root of the AIConcierge modal stack (see
+              AppNavigator), which renders above the tab bar — so without an
+              explicit close the only way out is iOS's swipe-down gesture,
+              which doesn't exist on Android. */}
+          <Pressable style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={8}>
+            <X size={18} color={theme.colors.secondarySilver} />
+          </Pressable>
           <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />
           <View style={styles.headerTextGroup}>
             <Text style={styles.headerCaption}>AI Concierge</Text>
-            <Text style={styles.headerGreeting}>Good Evening, Julian</Text>
+            <Text style={styles.headerGreeting} numberOfLines={1}>
+              Good Evening, Julian
+            </Text>
           </View>
           <Pressable
             style={styles.headerButton}

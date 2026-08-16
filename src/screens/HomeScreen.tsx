@@ -55,6 +55,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { haversineDistanceMiles } from '../utils/loungeSearch';
+import { displayTags } from '../utils/displayTags';
 import { defaultRegion } from '../data/mockMap';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
 // TODO(firestore): Cigar of the Week / Member Events aren't modeled in
@@ -216,7 +217,10 @@ export default function HomeScreen() {
                   <Pressable
                     style={styles.reserveButton}
                     onPress={() =>
-                      Alert.alert('Coming Soon', 'Table reservations are not available yet.')
+                      (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
+                        screen: 'ReserveTable',
+                        params: { loungeId: featuredLounge.id, loungeName: featuredLounge.name },
+                      })
                     }
                   >
                     <Text style={styles.reserveButtonText}>Reserve a Table</Text>
@@ -230,11 +234,19 @@ export default function HomeScreen() {
             <View style={styles.section}>
               <SectionHeader
                 title="Nearby Lounges"
-                subtitle="Within 5 miles of your location"
+                // Deliberately not a fixed radius: nearbyLounges below is the
+                // N closest lounges sorted by real distance, with no cutoff, so
+                // the section is still useful somewhere with nothing within a
+                // few miles. The old copy claimed "Within 5 miles of your
+                // location", which was doubly wrong — nothing filtered to 5
+                // miles, and "View All" hands SearchResults a 25-mile radius
+                // (defaultDistanceMiles), so the two disagreed.
+                subtitle="Closest to your location"
                 actionLabel="View All"
                 onActionPress={() =>
                   (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
                     screen: 'SearchResults',
+                    params: { initialFilters: { nearCurrentLocation: true } },
                   })
                 }
               />
@@ -249,7 +261,7 @@ export default function HomeScreen() {
                     <LoungeCard
                       image={{ uri: item.images[0] }}
                       name={item.name}
-                      tags={item.tags.join(' • ')}
+                      tags={displayTags(item.tags).join(' • ')}
                       rating={item.ratings.overall}
                       loungeId={item.id}
                       userId={userId}

@@ -5,9 +5,18 @@
  * CreateCollectionScreen for the same tappable-photo + text-field +
  * submit-button pattern). Reached from ProfileScreen's "Edit Profile"
  * button. Editable fields: profile photo, name, home city, favorite
- * brand, favorite lounge (a plain text field rather than a lounge
- * picker — simpler to build and just as functional for a free-text
- * "favorite" preference).
+ * brand, favorite lounge — all three autocomplete as you type (Julian
+ * Brinkley's TestFlight feedback, 2026-08-13: "should auto complete. If
+ * any can't be found in our database the user should be able to add
+ * them") via the local AutocompleteField below, but none force a
+ * selection — whatever's typed is what gets saved, matching that ask.
+ * Home City suggests from src/utils/cityAutocomplete.ts's real US +
+ * international city dataset; Favorite Brand suggests from
+ * src/data/cigarBrands.ts's curated real-brand reference list (no
+ * Firestore-backed brand data exists anywhere in this app yet — see that
+ * file's header comment); Favorite Lounge suggests from real Firestore
+ * lounges via loungeService.searchLounges, debounced since that's a full
+ * collection read.
  *
  * Saving writes to two places:
  *  - Firebase Auth (updateProfile: displayName/photoURL) — the source of
@@ -24,7 +33,7 @@
  * until that upload resolves.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -46,9 +55,66 @@ import { theme } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { getUserProfile, updateUserProfile } from '../services/userActionsService';
 import { uploadImage } from '../services/storageService';
+import { searchLounges } from '../services/loungeService';
+import { searchUsCities } from '../utils/cityAutocomplete';
+import { CIGAR_BRANDS } from '../data/cigarBrands';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 type EditProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
+
+/**
+ * A text field with a tap-to-fill suggestion dropdown underneath — never
+ * forces a selection, so whatever's typed is always what gets saved even
+ * if it matches nothing (see this screen's header comment).
+ */
+function AutocompleteField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  suggestions,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+  suggestions: string[];
+}) {
+  const [focused, setFocused] = useState(false);
+  const showSuggestions = focused && value.trim().length > 0 && suggestions.length > 0;
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        // Delay hiding so a tap on a suggestion row below registers first.
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        placeholder={placeholder}
+        placeholderTextColor={theme.colors.mutedGray}
+        style={styles.textInput}
+      />
+      {showSuggestions && (
+        <View style={styles.suggestionList}>
+          {suggestions.map(suggestion => (
+            <Pressable
+              key={suggestion}
+              style={styles.suggestionRow}
+              onPress={() => {
+                onChangeText(suggestion);
+                setFocused(false);
+              }}
+            >
+              <Text style={styles.suggestionText}>{suggestion}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<EditProfileNavigationProp>();
@@ -66,6 +132,39 @@ export default function EditProfileScreen() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+
+  const citySuggestions = useMemo(
+    () => searchUsCities(homeCity, 6).map(city => city.name),
+    [homeCity],
+  );
+  const brandSuggestions = useMemo(() => {
+    const query = favoriteBrand.trim().toLowerCase();
+    if (!query) return [];
+    return CIGAR_BRANDS.filter(brand => brand.toLowerCase().includes(query)).slice(0, 6);
+  }, [favoriteBrand]);
+
+  // Debounced — searchLounges reads the whole `lounges` collection
+  // (thousands of docs), so this shouldn't fire on every keystroke.
+  const [loungeSuggestions, setLoungeSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    const query = favoriteLounge.trim();
+    if (!query) {
+      setLoungeSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      searchLounges(query).then(lounges => {
+        if (!cancelled) {
+          setLoungeSuggestions(lounges.slice(0, 6).map(lounge => lounge.name));
+        }
+      });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [favoriteLounge]);
 
   useEffect(() => {
     if (!authUser) return;
@@ -218,40 +317,31 @@ export default function EditProfileScreen() {
         </View>
 
         {/* ---------------- Home City ---------------- */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Home City</Text>
-          <TextInput
-            value={homeCity}
-            onChangeText={setHomeCity}
-            placeholder="e.g. New York, NY"
-            placeholderTextColor={theme.colors.mutedGray}
-            style={styles.textInput}
-          />
-        </View>
+        <AutocompleteField
+          label="Home City"
+          value={homeCity}
+          onChangeText={setHomeCity}
+          placeholder="e.g. New York, NY"
+          suggestions={citySuggestions}
+        />
 
         {/* ---------------- Favorite Brand ---------------- */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Favorite Brand</Text>
-          <TextInput
-            value={favoriteBrand}
-            onChangeText={setFavoriteBrand}
-            placeholder="e.g. Padrón"
-            placeholderTextColor={theme.colors.mutedGray}
-            style={styles.textInput}
-          />
-        </View>
+        <AutocompleteField
+          label="Favorite Brand"
+          value={favoriteBrand}
+          onChangeText={setFavoriteBrand}
+          placeholder="e.g. Padrón"
+          suggestions={brandSuggestions}
+        />
 
         {/* ---------------- Favorite Lounge ---------------- */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Favorite Lounge</Text>
-          <TextInput
-            value={favoriteLounge}
-            onChangeText={setFavoriteLounge}
-            placeholder="e.g. The Heritage Oak Room"
-            placeholderTextColor={theme.colors.mutedGray}
-            style={styles.textInput}
-          />
-        </View>
+        <AutocompleteField
+          label="Favorite Lounge"
+          value={favoriteLounge}
+          onChangeText={setFavoriteLounge}
+          placeholder="e.g. The Heritage Oak Room"
+          suggestions={loungeSuggestions}
+        />
 
         <Pressable
           style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
@@ -382,6 +472,27 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceNavy,
     borderWidth: 1,
     borderColor: 'rgba(192, 192, 192, 0.15)',
+  },
+
+  // ---- Autocomplete suggestions ----
+  suggestionList: {
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surfaceNavy,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 192, 192, 0.15)',
+    overflow: 'hidden',
+  },
+  suggestionRow: {
+    height: 42,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(192, 192, 192, 0.1)',
+  },
+  suggestionText: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.secondarySilver,
   },
 
   // ---- Submit ----

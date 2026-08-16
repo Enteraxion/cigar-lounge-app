@@ -16,6 +16,7 @@ import AchievementsScreen from '../screens/AchievementsScreen';
 import AISettingsScreen from '../screens/AISettingsScreen';
 import AIFeedbackScreen from '../screens/AIFeedbackScreen';
 import MyReviewsScreen from '../screens/MyReviewsScreen';
+import AdminClaimReviewScreen from '../screens/AdminClaimReviewScreen';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -26,6 +27,8 @@ export type ProfileStackParamList = {
   AISettings: undefined;
   AIFeedback: undefined;
   MyReviews: undefined;
+  /** Only reachable from ProfileScreen's admin-only entry card — see src/config/admins.ts. */
+  AdminClaimReview: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -41,6 +44,7 @@ export default function ProfileNavigator() {
       <Stack.Screen name="AISettings" component={AISettingsScreen} />
       <Stack.Screen name="AIFeedback" component={AIFeedbackScreen} />
       <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
+      <Stack.Screen name="AdminClaimReview" component={AdminClaimReviewScreen} />
     </Stack.Navigator>
   );
 }

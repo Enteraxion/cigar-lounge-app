@@ -1,22 +1,36 @@
 /**
  * refreshCityLounges — Cloud Function backing "live refresh" search.
  *
- * The Yelp API key can't live in the mobile app bundle (anyone could
- * extract it and burn through/abuse the quota), so this function holds
- * it server-side as a Firebase secret. The app calls this (via
+ * The Yelp/Google API keys can't live in the mobile app bundle (anyone
+ * could extract them and burn through/abuse the quota), so this function
+ * holds them server-side as Firebase secrets. The app calls this (via
  * @react-native-firebase/functions) when someone searches a city; it
- * re-queries Yelp for that city and upserts results into the same
- * `lounges` collection scripts/importYelpLounges.ts populates — same
- * doc shape, same `yelp-<place_id>` ids, so this is just that script's
- * per-city logic re-run automatically instead of by hand.
+ * re-queries Yelp AND Google Places for that city and upserts results
+ * into the same `lounges` collection scripts/importYelpLounges.ts
+ * populates — same doc shape, same `yelp-<place_id>` ids for Yelp results,
+ * so this is just that script's per-city logic re-run automatically
+ * instead of by hand, now with Google Places merged in too.
+ *
+ * Combining both sources (per Julian Brinkley's direction, 2026-08-10):
+ * Yelp and Google Places each return partial info — Yelp has strong
+ * ratings/review-count/price-tier data but no real hours without an
+ * extra paid Business Details call (see the NOTE below on photos, same
+ * restriction applies to hours); Google Places returns real structured
+ * opening hours cheaply. So for any business both sources agree on
+ * (matched by name + within ~0.2mi), we keep Yelp's rating/price/reviews
+ * but take real hours from Google instead of the "Hours not yet
+ * available" placeholder. Google-only results (no Yelp match — smaller
+ * towns/global coverage Yelp doesn't cover as well) are added as their
+ * own docs (`google-<place_id>`).
  *
  * Rate-limited per city via `cityRefreshes/{citySlug}` — a city already
  * refreshed within the last 30 days is skipped, so repeat searches for
- * the same city don't re-hit Yelp when the data's still fresh (shop
- * details don't change often enough to need daily re-pulls).
+ * the same city don't re-hit either API when the data's still fresh
+ * (shop details don't change often enough to need daily re-pulls).
  *
  * DEPLOY:
- *   firebase functions:secrets:set YELP_API_KEY   (one-time, or when it changes)
+ *   firebase functions:secrets:set YELP_API_KEY            (one-time, or when it changes)
+ *   firebase functions:secrets:set GOOGLE_PLACES_API_KEY    (one-time, or when it changes)
  *   npm --prefix functions run build && firebase deploy --only functions
  */
 
@@ -24,11 +38,15 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { logger } from 'firebase-functions';
+import sgMail from '@sendgrid/mail';
 
 initializeApp();
 const db = getFirestore();
 
 const yelpApiKey = defineSecret('YELP_API_KEY');
+const googlePlacesApiKey = defineSecret('GOOGLE_PLACES_API_KEY');
+const sendgridApiKey = defineSecret('SENDGRID_API_KEY');
 
 const REFRESH_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
 // Yelp's own `cigarbars` category is narrow — a lot of real cigar
@@ -39,6 +57,10 @@ const REFRESH_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
 const CATEGORY = 'cigarbars,hookah_bars';
 const PAGE_SIZE = 50;
 const MAX_RESULTS = 200;
+// Same-business match threshold when reconciling a Yelp result against
+// Google Places results for the same city — two listings within this
+// distance of each other are treated as the same real-world venue.
+const MATCH_DISTANCE_MILES = 0.2;
 
 // ---------------------------------------------------------------------------
 // Yelp Fusion Business Search — same shape as scripts/importYelpLounges.ts
@@ -84,7 +106,7 @@ async function fetchYelpPage(
   return data;
 }
 
-async function fetchAllResults(apiKey: string, location: string): Promise<YelpBusiness[]> {
+async function fetchAllYelpResults(apiKey: string, location: string): Promise<YelpBusiness[]> {
   const all: YelpBusiness[] = [];
   let offset = 0;
   while (offset < MAX_RESULTS) {
@@ -106,6 +128,71 @@ async function fetchAllResults(apiKey: string, location: string): Promise<YelpBu
 // live against a 1,147-review business and got `"photos": []`, so this
 // isn't worth an extra paid API call per business — `image_url` from
 // Business Search remains the only photo we can actually get.
+
+// ---------------------------------------------------------------------------
+// Google Places (New) Text Search — supplies real opening hours and
+// catches businesses Yelp doesn't have listed (smaller towns/global).
+// ---------------------------------------------------------------------------
+
+type GooglePlace = {
+  id: string;
+  displayName?: { text: string };
+  formattedAddress?: string;
+  location?: { latitude: number; longitude: number };
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  photos?: { name: string }[];
+};
+
+type GoogleSearchResponse = {
+  places?: GooglePlace[];
+  error?: { code: number; message: string; status: string };
+};
+
+async function fetchGooglePlaces(apiKey: string, location: string): Promise<GooglePlace[]> {
+  const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask':
+        'places.id,places.displayName,places.formattedAddress,places.location,places.regularOpeningHours',
+    },
+    body: JSON.stringify({
+      textQuery: `cigar lounge in ${location}`,
+      maxResultCount: 20,
+    }),
+  });
+  const data = (await response.json()) as GoogleSearchResponse;
+  if (data.error) {
+    // Places (New) returns 200-with-error-body in some cases as well as
+    // real HTTP error codes — check both so a bad/restricted key or a
+    // not-yet-enabled API doesn't silently look like "zero results."
+    throw new Error(`Google Places API error (${data.error.status}): ${data.error.message}`);
+  }
+  if (!response.ok) {
+    throw new Error(`Google Places API HTTP ${response.status}`);
+  }
+  return data.places ?? [];
+}
+
+function haversineDistanceMiles(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const earthRadiusMiles = 3958.8;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * earthRadiusMiles * Math.asin(Math.sqrt(h));
+}
+
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
 
 // ---------------------------------------------------------------------------
 // Mapping onto the app's LoungeDocument shape (see src/types/firestore.ts —
@@ -130,14 +217,14 @@ function ratingsFromYelp(rating: number | undefined) {
   };
 }
 
-function toLoungeDocument(business: YelpBusiness, now: Timestamp) {
+function toLoungeDocument(business: YelpBusiness, hours: string, now: Timestamp) {
   const images = business.image_url ? [business.image_url] : [];
   return {
     name: business.name,
     description: '',
     address: business.location.display_address.join(', '),
     coordinates: { lat: business.coordinates.latitude, lng: business.coordinates.longitude },
-    hours: 'Hours not yet available',
+    hours,
     status: business.is_closed ? 'closed' : 'open',
     images,
     amenities: [],
@@ -155,6 +242,26 @@ function toLoungeDocument(business: YelpBusiness, now: Timestamp) {
   };
 }
 
+function toLoungeDocumentFromGoogle(place: GooglePlace, hours: string, now: Timestamp) {
+  return {
+    name: place.displayName?.text ?? 'Unnamed Lounge',
+    description: '',
+    address: place.formattedAddress ?? '',
+    coordinates: { lat: place.location?.latitude ?? 0, lng: place.location?.longitude ?? 0 },
+    hours,
+    status: 'open' as const,
+    images: [] as string[],
+    amenities: [] as string[],
+    tags: ['imported-from-google'],
+    priceRange: '',
+    ratings: ratingsFromYelp(undefined),
+    reviewCount: 0,
+    humidorItems: [] as never[],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 function slugifyCity(city: string): string {
   return city
     .trim()
@@ -168,7 +275,7 @@ function slugifyCity(city: string): string {
 // ---------------------------------------------------------------------------
 
 export const refreshCityLounges = onCall(
-  { secrets: [yelpApiKey] },
+  { secrets: [yelpApiKey, googlePlacesApiKey] },
   async request => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Sign in required.');
@@ -188,17 +295,217 @@ export const refreshCityLounges = onCall(
       return { refreshed: false, reason: 'cached', city };
     }
 
-    const businesses = await fetchAllResults(yelpApiKey.value(), city);
-    const now = Timestamp.now();
+    const [businesses, googlePlaces] = await Promise.all([
+      fetchAllYelpResults(yelpApiKey.value(), city),
+      // Best-effort — a Google Places outage/quota issue shouldn't block
+      // the Yelp-only refresh that already worked fine before this merge.
+      fetchGooglePlaces(googlePlacesApiKey.value(), city).catch(error => {
+        logger.error('Google Places fetch failed', { city, error: String(error) });
+        return [];
+      }),
+    ]);
+    logger.info('Fetched source results', {
+      city,
+      yelpCount: businesses.length,
+      googleCount: googlePlaces.length,
+    });
 
-    const batch = db.batch();
-    for (const business of businesses) {
-      const docRef = db.collection('lounges').doc(`yelp-${business.id}`);
-      batch.set(docRef, toLoungeDocument(business, now), { merge: true });
+    // Index Google results by normalized name for matching against Yelp.
+    const googleByName = new Map<string, GooglePlace[]>();
+    for (const place of googlePlaces) {
+      const key = normalizeName(place.displayName?.text ?? '');
+      const bucket = googleByName.get(key) ?? [];
+      bucket.push(place);
+      googleByName.set(key, bucket);
     }
+
+    const now = Timestamp.now();
+    const batch = db.batch();
+    const matchedGoogleIds = new Set<string>();
+
+    for (const business of businesses) {
+      const candidates = googleByName.get(normalizeName(business.name)) ?? [];
+      const match = candidates.find(
+        candidate =>
+          candidate.location &&
+          haversineDistanceMiles(
+            { lat: business.coordinates.latitude, lng: business.coordinates.longitude },
+            { lat: candidate.location.latitude, lng: candidate.location.longitude },
+          ) <= MATCH_DISTANCE_MILES,
+      );
+
+      const hours =
+        match?.regularOpeningHours?.weekdayDescriptions?.join('; ') ?? 'Hours not yet available';
+      if (match) {
+        matchedGoogleIds.add(match.id);
+      }
+
+      const docRef = db.collection('lounges').doc(`yelp-${business.id}`);
+      batch.set(docRef, toLoungeDocument(business, hours, now), { merge: true });
+    }
+
+    // Google-only businesses (no Yelp match) — new venues Yelp doesn't cover.
+    for (const place of googlePlaces) {
+      if (matchedGoogleIds.has(place.id) || !place.location) {
+        continue;
+      }
+      const hours = place.regularOpeningHours?.weekdayDescriptions?.join('; ') ?? 'Hours not yet available';
+      const docRef = db.collection('lounges').doc(`google-${place.id}`);
+      batch.set(docRef, toLoungeDocumentFromGoogle(place, hours, now), { merge: true });
+    }
+
     batch.set(refreshRef, { lastRefreshedAt: now, city });
     await batch.commit();
 
-    return { refreshed: true, city, count: businesses.length };
+    logger.info('Merge complete', {
+      city,
+      yelpCount: businesses.length,
+      googleCount: googlePlaces.length,
+      matchedCount: matchedGoogleIds.size,
+      googleOnlyAdded: googlePlaces.filter(p => !matchedGoogleIds.has(p.id)).length,
+    });
+
+    return {
+      refreshed: true,
+      city,
+      count: businesses.length + googlePlaces.filter(p => !matchedGoogleIds.has(p.id)).length,
+    };
+  },
+);
+
+// ---------------------------------------------------------------------------
+// sendClaimInquiryEmail — notifies sales of a "Claim Business" inquiry
+// ---------------------------------------------------------------------------
+
+// Real sales inbox, per Sean's email to Rohith (2026-08-10). FROM_EMAIL is
+// still a placeholder — it needs to be an address whose domain is verified
+// as a sender in SendGrid once SENDGRID_API_KEY is a real key, otherwise
+// SendGrid will reject the send regardless of the API key being valid.
+const SALES_INQUIRY_EMAIL = 'sean@joalcigar.com';
+const FROM_EMAIL = 'no-reply@REPLACE_WITH_REAL_DOMAIN.com';
+
+/**
+ * Emails the sales team a business's claim inquiry (see
+ * src/screens/ClaimListingScreen.tsx) — there is no in-app payment (per
+ * Julian Brinkley's direction, 2026-08-10); the $399/month + free kiosk
+ * deal is closed by sales outside the app. This is best-effort from the
+ * client's side — the claim itself is already recorded in Firestore by
+ * ownerService.submitLoungeClaim before this is called, so a failure here
+ * doesn't lose the inquiry, just delays sales finding out about it.
+ *
+ * DEPLOY:
+ *   firebase functions:secrets:set SENDGRID_API_KEY   (one-time, or when it changes)
+ *   npm --prefix functions run build && firebase deploy --only functions
+ */
+export const sendClaimInquiryEmail = onCall(
+  { secrets: [sendgridApiKey] },
+  async request => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    const loungeId = String(request.data?.loungeId ?? '').trim();
+    const ownerName = String(request.data?.ownerName ?? '').trim();
+    const ownerContactEmail = String(request.data?.ownerContactEmail ?? '').trim();
+    const ownerContactPhone = String(request.data?.ownerContactPhone ?? '').trim();
+    if (!loungeId || !ownerName || !ownerContactEmail) {
+      throw new HttpsError('invalid-argument', 'loungeId, ownerName, and ownerContactEmail are required.');
+    }
+
+    const loungeSnapshot = await db.collection('lounges').doc(loungeId).get();
+    const loungeName = (loungeSnapshot.data()?.name as string | undefined) ?? loungeId;
+
+    sgMail.setApiKey(sendgridApiKey.value());
+    await sgMail.send({
+      to: SALES_INQUIRY_EMAIL,
+      from: FROM_EMAIL,
+      subject: `Claim Business inquiry: ${loungeName}`,
+      text: [
+        `Lounge: ${loungeName} (${loungeId})`,
+        `Name: ${ownerName}`,
+        `Email: ${ownerContactEmail}`,
+        `Phone: ${ownerContactPhone}`,
+      ].join('\n'),
+    });
+
+    return { sent: true };
+  },
+);
+
+// ---------------------------------------------------------------------------
+// sendReservationEmail — notifies a lounge's owner of a new reservation
+// ---------------------------------------------------------------------------
+
+/**
+ * Emails a lounge's contact address that a member has reserved a table and
+ * is on the way (per Julian Brinkley's TestFlight bug report, 2026-08-13:
+ * "Reserve a table should send an email to the lounge with the users
+ * information indicating that the user is on the way"). The "share
+ * additional info" part of that same report is the reservation form's
+ * existing Notes field (see ReserveTableScreen.tsx) — included in the
+ * email body below rather than a second dialog, since the form already
+ * collects it.
+ *
+ * Only sends if the lounge has an `ownerContactEmail` — that's only set
+ * once a claim on the lounge is approved (see ownerService.ts), so most
+ * lounges (unclaimed, imported from Yelp/Google) have no address to send
+ * to yet. That's expected, not an error — this returns `{ sent: false,
+ * reason: 'no-contact-email' }` rather than throwing, since the
+ * reservation itself (already written to Firestore by
+ * reservationService.createReservation before this is called) is the
+ * part that actually matters; the email is a best-effort bonus on top.
+ *
+ * DEPLOY:
+ *   firebase functions:secrets:set SENDGRID_API_KEY   (one-time, or when it changes — already set)
+ *   npm --prefix functions run build && firebase deploy --only functions
+ */
+export const sendReservationEmail = onCall(
+  { secrets: [sendgridApiKey] },
+  async request => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    const loungeId = String(request.data?.loungeId ?? '').trim();
+    const guestName = String(request.data?.guestName ?? '').trim();
+    const contactPhone = String(request.data?.contactPhone ?? '').trim();
+    const partySize = Number(request.data?.partySize ?? 0);
+    const date = String(request.data?.date ?? '').trim();
+    const timeSlot = String(request.data?.timeSlot ?? '').trim();
+    const notes = String(request.data?.notes ?? '').trim();
+    if (!loungeId || !guestName || !contactPhone || !partySize || !date || !timeSlot) {
+      throw new HttpsError(
+        'invalid-argument',
+        'loungeId, guestName, contactPhone, partySize, date, and timeSlot are required.',
+      );
+    }
+
+    const loungeSnapshot = await db.collection('lounges').doc(loungeId).get();
+    const lounge = loungeSnapshot.data();
+    const ownerContactEmail = lounge?.ownerContactEmail as string | undefined;
+    if (!ownerContactEmail) {
+      return { sent: false, reason: 'no-contact-email' };
+    }
+    const loungeName = (lounge?.name as string | undefined) ?? loungeId;
+
+    sgMail.setApiKey(sendgridApiKey.value());
+    await sgMail.send({
+      to: ownerContactEmail,
+      from: FROM_EMAIL,
+      subject: `New reservation at ${loungeName}: ${guestName}, party of ${partySize}`,
+      text: [
+        `${guestName} has reserved a table and is on the way.`,
+        '',
+        `Date: ${date}`,
+        `Time: ${timeSlot}`,
+        `Party size: ${partySize}`,
+        `Contact phone: ${contactPhone}`,
+        notes ? `Notes: ${notes}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    });
+
+    return { sent: true };
   },
 );

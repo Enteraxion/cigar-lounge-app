@@ -32,20 +32,7 @@ import {
 } from '../services/userActionsService';
 import type { NotificationDocument } from '../types/firestore';
 import type { MainTabParamList } from '../navigation/MainNavigator';
-
-/** Short relative timestamp ("Just now" / "5m ago" / "3h ago" / "2d ago" / a date once it's old) — no date library, this is the only place in the app that needs one so far. */
-function formatRelativeTime(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / (60 * 1000));
-  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
-  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+import { formatRelativeTime } from '../utils/formatRelativeTime';
 
 function NotificationRow({
   notification,
@@ -113,12 +100,14 @@ export default function NotificationsScreen() {
 
     const loungeId = notification.data?.loungeId;
     if (loungeId) {
-      // Cross-tab navigation into the Search stack's LoungeDetail screen —
-      // same escape-hatch pattern as FavoritesScreen/TravelWishlistScreen's
-      // openLounge, bubbling up from this root-level modal.
-      (navigation.navigate as (name: string, params?: object) => void)('Search', {
-        screen: 'LoungeDetail',
-        params: { loungeId },
+      // This screen is a root-level modal (see AppNavigator's
+      // RootStackParamList — its only siblings are Auth/Main/VoiceSearch/
+      // AIConcierge), so 'Search' isn't a route it can navigate to
+      // directly — it has to go through 'Main' first, same pattern as
+      // ConciergeConversationScreen's cross-tab navigation.
+      (navigation.navigate as (name: string, params?: object) => void)('Main', {
+        screen: 'Search',
+        params: { screen: 'LoungeDetail', params: { loungeId } },
       });
     }
   };

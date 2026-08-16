@@ -113,17 +113,33 @@ export type LoungeDocument = {
    */
   city?: string;
   /**
-   * Set once a business owner claims this listing (see
-   * src/services/ownerService.ts's claimLounge) — auto-approved (no
-   * manual review step exists yet), first claim wins. `ownerId` gates
-   * edit access in updateLoungeDetails; presence of `ownerId` alone
-   * means "claimed," regardless of whether contact fields are filled.
+   * Set once an admin approves a pending claim (see
+   * src/services/ownerService.ts's approveLoungeClaim) — `ownerId` gates
+   * edit access in updateLoungeDetails and is the sole source of truth
+   * for "who owns this listing." Submitting a claim inquiry alone does
+   * NOT set this (there is no in-app payment — see ClaimListingScreen's
+   * header comment); it only creates a `claimStatus: 'pending'` claim for
+   * a human to review (see claimStatus below) while sales follows up
+   * separately.
    */
   ownerId?: string;
   ownerName?: string;
   ownerContactEmail?: string;
   ownerContactPhone?: string;
   claimedAt?: Timestamp;
+  /**
+   * Present only while a claim is awaiting manual admin review (see
+   * src/screens/AdminClaimReviewScreen.tsx) — blocks new claims on this
+   * lounge while set. Absent once resolved either way: approving clears
+   * it (leaving `ownerId` as the sole marker of ownership); rejecting
+   * clears it along with `ownerName`/`claimantUserId`/etc, since there's
+   * no claim-history collection to preserve a rejected attempt in — the
+   * lounge just becomes claimable again.
+   */
+  claimStatus?: 'pending';
+  /** uid of the member whose paid claim is pending review — distinct from
+   * `ownerId`, which is only set once that claim is approved. */
+  claimantUserId?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -174,6 +190,72 @@ export type ReviewDocument = {
    * if toggleReviewHelpful is called twice for the same user.
    */
   helpfulUserIds?: string[];
+};
+
+// ---------------------------------------------------------------------------
+// lounges/{loungeId}/events/{eventId}
+// ---------------------------------------------------------------------------
+
+/**
+ * A one-off event a shop is hosting — cigar night, tasting, launch party.
+ * Owner-authored from the Owner Portal's Events page; Julian Brinkley's
+ * ask in the 2026-08-05 meeting was simply that shops "can basically post
+ * events", with no further definition, so this is a deliberately small
+ * first shape for him to react to rather than a guess at something
+ * elaborate: no ticketing, no RSVP, no recurrence.
+ *
+ * A subcollection rather than an inline array (unlike humidorItems) since
+ * events accumulate over time and are queried by date, where inventory is
+ * a short list always read whole with the lounge.
+ */
+export type EventDocument = {
+  title: string;
+  description: string;
+  /** When the event starts — what upcoming/past is decided on. */
+  startsAt: Timestamp;
+  /** Optional; owners can also just put timing detail in the description. */
+  endsAt?: Timestamp;
+  imageUrl?: string;
+  createdAt: Timestamp;
+};
+
+// ---------------------------------------------------------------------------
+// lounges/{loungeId}/reservations/{reservationId}
+// ---------------------------------------------------------------------------
+
+/**
+ * A "Reserve a Table" booking — a lounge-scoped subcollection, same
+ * pattern as reviews above, rather than a top-level collection (this
+ * schema has no top-level collections anywhere). `date` + `timeSlot` are
+ * kept separate (a calendar day plus a fixed slot label like "7:00 PM")
+ * rather than combined into one Timestamp, since ReserveTableScreen picks
+ * them independently and slots are a fixed list, not free-form time
+ * entry — see that screen for why (LoungeDocument's `hours` is
+ * unstructured free text, so there's no real open/close data to validate
+ * a time against). No availability/capacity checking exists yet — this
+ * only records the request; there's no owner-facing view of reservations
+ * to conflict against yet either.
+ */
+export type ReservationDocument = {
+  userId: string;
+  guestName: string;
+  contactPhone: string;
+  partySize: number;
+  /** Calendar day for the reservation, midnight local time. */
+  date: Timestamp;
+  /** Fixed slot label, e.g. "7:00 PM" — see ReserveTableScreen's SLOTS. */
+  timeSlot: string;
+  notes?: string;
+  createdAt: Timestamp;
+  /**
+   * Set when the lounge's owner marks the reservation as seen from the
+   * Owner Portal — Julian Brinkley's ask in the 2026-08-05 meeting: shops
+   * should be able to "indicate that they recognize when somebody has
+   * reserved a table." Absent means nobody at the lounge has confirmed
+   * seeing it yet; this is an acknowledgement, not an approval — there's
+   * no reject/capacity flow (see reservationService.ts).
+   */
+  acknowledgedAt?: Timestamp;
 };
 
 // ---------------------------------------------------------------------------
@@ -317,4 +399,21 @@ export type NotificationDocument = {
     loungeId?: string;
     reviewId?: string;
   };
+};
+
+// ---------------------------------------------------------------------------
+// users/{userId}/issueReports/{reportId}
+// ---------------------------------------------------------------------------
+
+/**
+ * Free-text problem reports from ReportIssueModal (currently only reachable
+ * from AIFeedbackScreen's "Report Issues" action, about an AI
+ * recommendation). Kept per-user rather than a top-level collection, same
+ * reasoning as the rest of this schema — there's no admin-facing reports
+ * inbox yet to read these back out; this just stops the report from being
+ * silently discarded.
+ */
+export type IssueReportDocument = {
+  description: string;
+  createdAt: Timestamp;
 };

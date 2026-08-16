@@ -17,6 +17,8 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StatusBar,
   StyleSheet,
@@ -92,7 +94,10 @@ export default function LoginScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.main}>
+      <KeyboardAvoidingView
+        style={styles.main}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <View style={styles.logoBadge}>
@@ -223,7 +228,7 @@ export default function LoginScreen() {
             </Text>
           </Text>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -54,6 +54,7 @@ import type { Visit } from '../utils/passport';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { displayTags } from '../utils/displayTags';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type WishlistNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
@@ -312,7 +313,7 @@ export default function TravelWishlistScreen() {
               renderItem={({ item }) => (
                 <Pressable onPress={() => openLounge(item.id)}>
                   <CompactLoungeCard
-                    image={{ uri: item.images[0] }}
+                    image={{ uri: loungeImageUri(item) }}
                     name={item.name}
                     location={item.address}
                     tags={displayTags(item.tags)}

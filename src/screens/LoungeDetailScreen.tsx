@@ -56,6 +56,7 @@ import { getUpcomingEvents, type LoungeEvent } from '../services/eventService';
 import { deleteReview, isFavorited, recordLoungeView } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type LoungeDetailNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 type LoungeDetailRouteProp = RouteProp<SearchStackParamList, 'LoungeDetail'>;
@@ -535,7 +536,7 @@ export default function LoungeDetailScreen() {
         lounge={{
           name: lounge.name,
           location: lounge.address,
-          imageUri: lounge.images[0],
+          imageUri: loungeImageUri(lounge),
         }}
         onClose={() => setCollectionSheetVisible(false)}
         onCreateNew={() => {

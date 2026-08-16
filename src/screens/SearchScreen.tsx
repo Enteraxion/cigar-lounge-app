@@ -70,6 +70,7 @@ import {
 } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import { displayTags } from '../utils/displayTags';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type SearchNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -289,7 +290,7 @@ export default function SearchScreen() {
                   onPress={() => navigation.navigate('LoungeDetail', { loungeId: item.id })}
                 >
                   <CompactLoungeCard
-                    image={{ uri: item.images[0] }}
+                    image={{ uri: loungeImageUri(item) }}
                     name={item.name}
                     location={item.address}
                     tags={displayTags(item.tags).slice(0, 2)}

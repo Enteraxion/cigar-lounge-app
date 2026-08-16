@@ -236,8 +236,13 @@ async function fetchGooglePlaces(apiKey: string, location: string): Promise<Goog
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
+      // places.photos matters more than it looks: without it every
+      // Google-sourced lounge stored images:[] and the app rendered a
+      // blank box where the photo goes. Yelp returns a photo by default,
+      // Google only if asked — which is why exactly the Google half of
+      // the directory had no pictures.
       'X-Goog-FieldMask':
-        'places.id,places.displayName,places.formattedAddress,places.location,places.regularOpeningHours,places.primaryType',
+        'places.id,places.displayName,places.formattedAddress,places.location,places.regularOpeningHours,places.primaryType,places.photos',
     },
     body: JSON.stringify({
       textQuery: `cigar lounge in ${location}`,
@@ -270,6 +275,38 @@ function haversineDistanceMiles(
   const h =
     Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * earthRadiusMiles * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Turns a Places photo resource name into a URL the app can render.
+ *
+ * The obvious approach — building a `.../media?key=...` URL and storing it
+ * — would bake our API key into 3,000 public Firestore documents, i.e.
+ * publish it. Asking with `skipHttpRedirect` instead returns the underlying
+ * googleusercontent URI, which needs no key, and that is what gets stored.
+ *
+ * Best-effort by design: one extra request per lounge, and a lounge with no
+ * usable photo just keeps an empty images array and falls back to curated
+ * artwork in the app (src/utils/loungeImage.ts). Never worth failing a
+ * whole city refresh over.
+ */
+async function resolveGooglePhotoUri(
+  apiKey: string,
+  photoName: string,
+): Promise<string | null> {
+  try {
+    const url =
+      `https://places.googleapis.com/v1/${photoName}/media` +
+      `?maxWidthPx=1200&skipHttpRedirect=true&key=${apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as { photoUri?: string };
+    return data.photoUri ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function normalizeName(name: string): string {
@@ -324,7 +361,12 @@ function toLoungeDocument(business: YelpBusiness, hours: string, now: Timestamp)
   };
 }
 
-function toLoungeDocumentFromGoogle(place: GooglePlace, hours: string, now: Timestamp) {
+function toLoungeDocumentFromGoogle(
+  place: GooglePlace,
+  hours: string,
+  now: Timestamp,
+  images: string[] = [],
+) {
   return {
     name: place.displayName?.text ?? 'Unnamed Lounge',
     description: '',
@@ -332,7 +374,7 @@ function toLoungeDocumentFromGoogle(place: GooglePlace, hours: string, now: Time
     coordinates: { lat: place.location?.latitude ?? 0, lng: place.location?.longitude ?? 0 },
     hours,
     status: 'open' as const,
-    images: [] as string[],
+    images,
     amenities: [] as string[],
     tags: ['imported-from-google'],
     priceRange: '',
@@ -433,14 +475,29 @@ export const refreshCityLounges = onCall(
     }
 
     // Google-only businesses (no Yelp match) — new venues Yelp doesn't cover.
-    for (const place of relevantGooglePlaces) {
-      if (matchedGoogleIds.has(place.id) || !place.location) {
-        continue;
-      }
-      const hours = place.regularOpeningHours?.weekdayDescriptions?.join('; ') ?? 'Hours not yet available';
+    const googleOnly = relevantGooglePlaces.filter(
+      place => !matchedGoogleIds.has(place.id) && place.location,
+    );
+    // Photo URIs resolve in parallel — one extra request each, and they're
+    // independent, so doing them serially would add seconds per city for
+    // no reason.
+    const photoUris = await Promise.all(
+      googleOnly.map(place => {
+        const photoName = place.photos?.[0]?.name;
+        return photoName
+          ? resolveGooglePhotoUri(googlePlacesApiKey.value(), photoName)
+          : Promise.resolve(null);
+      }),
+    );
+    googleOnly.forEach((place, index) => {
+      const hours =
+        place.regularOpeningHours?.weekdayDescriptions?.join('; ') ?? 'Hours not yet available';
+      const uri = photoUris[index];
       const docRef = db.collection('lounges').doc(`google-${place.id}`);
-      batch.set(docRef, toLoungeDocumentFromGoogle(place, hours, now), { merge: true });
-    }
+      batch.set(docRef, toLoungeDocumentFromGoogle(place, hours, now, uri ? [uri] : []), {
+        merge: true,
+      });
+    });
 
     batch.set(refreshRef, { lastRefreshedAt: now, city });
     await batch.commit();

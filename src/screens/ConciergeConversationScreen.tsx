@@ -58,6 +58,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { displayTags } from '../utils/displayTags';
 import type { Lounge } from '../services/loungeService';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
+import { loungeImageUri } from '../utils/loungeImage';
 
 /**
  * Defined here rather than imported from mockConcierge because a real
@@ -85,7 +86,7 @@ function toRecommendationCard(lounge: Lounge): RecommendationCard {
     // the row when it's empty rather than printing an invented number.
     distance: '',
     rating: lounge.ratings.overall,
-    image: lounge.images[0],
+    image: loungeImageUri(lounge),
     tags: displayTags(lounge.tags).slice(0, 3),
   };
 }
@@ -95,7 +96,7 @@ function toCompactSuggestion(lounge: Lounge): CompactSuggestion {
     id: lounge.id,
     name: lounge.name,
     subtitle: lounge.city ?? lounge.address,
-    image: lounge.images[0],
+    image: loungeImageUri(lounge),
   };
 }
 

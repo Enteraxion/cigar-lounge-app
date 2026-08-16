@@ -64,6 +64,7 @@ import {
   getUpcomingEventsAcrossLounges,
   type MemberEvent,
 } from '../services/eventService';
+import { loungeImageUri } from '../utils/loungeImage';
 
 const NEARBY_COUNT = 4;
 const TRENDING_COUNT = 3;
@@ -226,7 +227,7 @@ export default function HomeScreen() {
                 onPress={() => openLoungeDetails(featuredLounge.id)}
               >
                 <Image
-                  source={{ uri: featuredLounge.images[0] }}
+                  source={{ uri: loungeImageUri(featuredLounge) }}
                   style={styles.featuredImage}
                   resizeMode="cover"
                 />
@@ -301,7 +302,7 @@ export default function HomeScreen() {
                 renderItem={({ item }) => (
                   <Pressable onPress={() => openLoungeDetails(item.id)}>
                     <LoungeCard
-                      image={{ uri: item.images[0] }}
+                      image={{ uri: loungeImageUri(item) }}
                       name={item.name}
                       tags={displayTags(item.tags).join(' • ')}
                       rating={item.ratings.overall}
@@ -383,7 +384,7 @@ export default function HomeScreen() {
               renderItem={({ item }) => (
                 <Pressable onPress={() => openLoungeDetails(item.id)}>
                   <LoungeCard
-                    image={{ uri: item.images[0] }}
+                    image={{ uri: loungeImageUri(item) }}
                     name={item.name}
                     location={item.address}
                     loungeId={item.id}

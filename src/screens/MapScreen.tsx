@@ -49,6 +49,7 @@ import { conciergeSuggestion, defaultRegion, mapFilterChips, weatherWidget } fro
 import { getAllLounges, type Lounge } from '../services/loungeService';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { loungeImageUri } from '../utils/loungeImage';
 
 function MapPin({
   lounge,
@@ -305,7 +306,7 @@ export default function MapScreen() {
       ) : selectedLounge ? (
         <View style={styles.infoCard}>
           <View style={styles.infoTopRow}>
-            <Image source={{ uri: selectedLounge.images[0] }} style={styles.infoImage} />
+            <Image source={{ uri: loungeImageUri(selectedLounge) }} style={styles.infoImage} />
             <View style={styles.infoTextGroup}>
               <View style={styles.infoNameRow}>
                 <Text style={styles.infoName} numberOfLines={1}>

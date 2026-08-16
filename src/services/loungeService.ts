@@ -22,6 +22,7 @@ import {
   orderBy,
 } from '@react-native-firebase/firestore';
 import type { LoungeDocument, ReviewDocument } from '../types/firestore';
+import { loungeImageUri } from '../utils/loungeImage';
 
 const db = getFirestore();
 
@@ -106,7 +107,7 @@ async function getCityHighlights(): Promise<CityHighlight[]> {
     const existing = byCity.get(lounge.city);
     byCity.set(lounge.city, {
       count: (existing?.count ?? 0) + 1,
-      imageUri: existing?.imageUri ?? lounge.images[0],
+      imageUri: existing?.imageUri ?? loungeImageUri(lounge),
     });
   }
 

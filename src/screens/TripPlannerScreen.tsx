@@ -42,6 +42,7 @@ import { planRoute, preferenceMatch, type RoutePlan, type RouteStop } from '../u
 import { displayTags } from '../utils/displayTags';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
@@ -84,7 +85,7 @@ function RouteStopCard({
       </View>
 
       <Pressable style={styles.loungeCard} onPress={onReserve}>
-        <Image source={{ uri: lounge.images[0] }} style={styles.loungeImage} />
+        <Image source={{ uri: loungeImageUri(lounge) }} style={styles.loungeImage} />
         <View style={styles.loungeTextGroup}>
           <Text style={styles.loungeName} numberOfLines={1}>
             {lounge.name}

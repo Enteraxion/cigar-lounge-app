@@ -29,6 +29,7 @@ import type { Lounge } from '../services/loungeService';
 import { getRecentlyViewedLounges, getUserFavoriteIds } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type RecentlyViewedNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -108,7 +109,7 @@ export default function RecentlyViewedScreen() {
           lounge={{
             name: savingResult.name,
             location: savingResult.address,
-            imageUri: savingResult.images[0],
+            imageUri: loungeImageUri(savingResult),
           }}
           onClose={() => setSavingResult(null)}
           onCreateNew={() => {

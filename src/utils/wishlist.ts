@@ -22,6 +22,7 @@
 
 import type { Lounge } from '../services/loungeService';
 import type { Visit } from './passport';
+import { loungeImageUri } from './loungeImage';
 
 export type WishlistDestination = {
   id: string;
@@ -83,7 +84,7 @@ export function buildWishlist(saved: Lounge[], visits: Visit[] = []): Wishlist {
         city: parts.city,
         country: parts.region,
         loungesSaved: 1,
-        image: lounge.images[0],
+        image: loungeImageUri(lounge),
       });
     }
   }
@@ -108,7 +109,7 @@ export function buildWishlist(saved: Lounge[], visits: Visit[] = []): Wishlist {
           : destinations.length === 1
             ? `${destinations[0].city} Trip`
             : `${destinations[0].city} & ${destinations.length - 1} more`,
-      heroImage: saved[0]?.images[0] ?? null,
+      heroImage: saved[0] ? loungeImageUri(saved[0]) : null,
       destinationsCount: destinations.length,
       savedLoungesCount: saved.length,
     },
@@ -118,7 +119,7 @@ export function buildWishlist(saved: Lounge[], visits: Visit[] = []): Wishlist {
           label: 'Next Stop',
           loungeId: next.id,
           loungeName: next.name,
-          image: next.images[0],
+          image: loungeImageUri(next),
           location: next.city ?? next.address,
           rating: next.ratings.overall,
           ratingLabel: next.reviewCount > 0 ? `${next.reviewCount} reviews` : 'New',

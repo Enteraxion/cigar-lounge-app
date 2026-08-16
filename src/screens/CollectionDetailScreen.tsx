@@ -64,6 +64,7 @@ import {
 import { getLoungesByIds, type Lounge } from '../services/loungeService';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type CollectionDetailNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 type CollectionDetailRouteProp = RouteProp<SavedStackParamList, 'CollectionDetail'>;
@@ -75,7 +76,7 @@ function SavedLoungeRow({ lounge, onPress }: { lounge: Lounge; onPress: () => vo
   return (
     <View style={styles.loungeCard}>
       <View style={styles.loungeImageWrapper}>
-        <Image source={{ uri: lounge.images[0] }} style={styles.loungeImage} />
+        <Image source={{ uri: loungeImageUri(lounge) }} style={styles.loungeImage} />
         <View style={styles.loungeRatingBadge}>
           <Star size={11} color={theme.colors.accentGold} fill={theme.colors.accentGold} />
           <Text style={styles.loungeRatingText}>{lounge.ratings.overall}</Text>
@@ -205,7 +206,7 @@ export default function CollectionDetailScreen() {
     );
   }
 
-  const galleryImages = lounges.length > 0 ? lounges.map(l => l.images[0]) : [collection.coverImage];
+  const galleryImages = lounges.length > 0 ? lounges.map(l => loungeImageUri(l)) : [collection.coverImage];
   const PrivacyIcon = collection.isPrivate ? Lock : Globe;
 
   return (

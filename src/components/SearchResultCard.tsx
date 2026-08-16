@@ -19,6 +19,7 @@ import { theme } from '../theme';
 import { getAmenityIcon } from '../utils/amenityIcon';
 import type { Lounge } from '../services/loungeService';
 import FavoriteButton from './FavoriteButton';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type Props = {
   result: Lounge;
@@ -42,7 +43,7 @@ export default function SearchResultCard({
   return (
     <View style={styles.card}>
       <View style={styles.imageWrapper}>
-        <Image source={{ uri: result.images[0] }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: loungeImageUri(result) }} style={styles.image} resizeMode="cover" />
 
         <View style={styles.badgeRow}>
           <View

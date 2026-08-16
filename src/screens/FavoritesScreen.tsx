@@ -44,13 +44,14 @@ import type { Lounge } from '../services/loungeService';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import { displayTags } from '../utils/displayTags';
+import { loungeImageUri } from '../utils/loungeImage';
 
 type FavoritesNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
 function FavoriteLoungeCard({ lounge, onPress }: { lounge: Lounge; onPress: () => void }) {
   return (
     <Pressable style={styles.loungeCard} onPress={onPress}>
-      <Image source={{ uri: lounge.images[0] }} style={styles.loungeImage} />
+      <Image source={{ uri: loungeImageUri(lounge) }} style={styles.loungeImage} />
       <View style={styles.loungeBody}>
         <Text style={styles.loungeName}>{lounge.name}</Text>
         <Text style={styles.loungeTags}>{displayTags(lounge.tags).join(' • ')}</Text>

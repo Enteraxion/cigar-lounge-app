@@ -96,6 +96,7 @@ import {
 } from '../utils/loungeSearch';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
+import { loungeImageUri } from '../utils/loungeImage';
 
 // Deliberately neutral (no filtering applied) — this is the screen's actual
 // applied-filter state before the user has ever pressed "Show Results" on
@@ -549,7 +550,7 @@ export default function SearchResultsScreen() {
           lounge={{
             name: savingResult.name,
             location: savingResult.address,
-            imageUri: savingResult.images[0],
+            imageUri: loungeImageUri(savingResult),
           }}
           onClose={() => setSavingResult(null)}
           onCreateNew={() => {

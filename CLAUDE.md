@@ -158,3 +158,48 @@ a travel "passport" feature, and an AI concierge.
   concept of a visit type). Deleted `src/data/mockPassport.ts` entirely — its
   last live export, `StatCard`, moved into `src/utils/passport.ts`. Typecheck,
   ESLint and a full Metro bundle all clean.
+- 2026-08-16 (night): Autonomous pass over the remaining "Coming Soon"
+  features, per Rohith's "finish everything while I'm out". Five commits:
+  * **Home** — Cigar of the Week was one hardcoded cigar shown every week
+    forever; new `src/data/cigars.ts` is 30 real cigars with real wrapper/
+    strength/burn time, picked by a Monday-based week index (same member
+    sees the same cigar that week, turns over predictably, no cron).
+    Member Events showed two invented events; owners could already post
+    real ones from the Owner Portal and nothing read them across lounges —
+    added `eventService.getUpcomingEventsAcrossLounges` (one collectionGroup
+    query) plus the matching collection-group READ rule (writes stay on the
+    per-lounge path). The per-event "+" promised members could add events,
+    which the rules forbid — rows now open the lounge. The FAB is a real
+    quick-actions sheet.
+  * **AI Concierge** — was the largest mock surface: every reply a hardcoded
+    string, chat pre-loaded with an invented Mayfair exchange. Now a real
+    `askConcierge` Cloud Function (**never in the app — an Anthropic key in
+    a RN bundle is a published key**) using `claude-opus-5` at low effort.
+    Grounded: the function pulls real candidate lounges from Firestore and
+    asks Claude to recommend *from that list only*, returning ids, via a
+    json_schema structured output; ids are filtered against what we offered
+    before reaching the UI, so a recommendation always opens a real lounge.
+    Thinking stays on — disabling it on Opus 5 can leak `<thinking>` tags
+    into the visible reply. `ANTHROPIC_API_KEY` is a **placeholder secret**
+    (same dormant pattern as YELP/GOOGLE_PLACES) — fully built, needs the
+    real key to switch on.
+  * **Trip Planner** — was a prefilled London→Edinburgh route with invented
+    stopovers. New `src/utils/routePlanner.ts` finds lounges inside a
+    corridor around the line between two real cities, spaced along the
+    journey. Deliberately a great-circle corridor, not driving directions
+    (that needs a paid API + Julian's call), so the UI says "12 mi from
+    start / on your route" instead of the mock's fake "ETA: 11:30 AM".
+  * **Travel Wishlist header** — "European Grand Tour" etc. replaced by
+    `src/utils/wishlist.ts`, derived from the member's own saved lounges.
+    `src/data/mockWishlist.ts` deleted.
+  * **Search's Featured Travel Guide** — fixed "Traveling to Nashville?"
+    replaced by the best-covered real city with its real lounge count; the
+    button runs a real search.
+  Deleted: `mockWishlist.ts`, the invented route in `mockTripPlanner.ts`,
+  the travel-guide block in `mockSearch.ts`. Typecheck, ESLint (0 errors)
+  and a full Metro bundle clean at every commit.
+  **Still blocked, not done:** social sign-in (Google/Apple) needs OAuth
+  client IDs from the Firebase console and an Apple Sign In capability on
+  the provisioning profile — neither obtainable from here. Concierge
+  Inspiration/Results/SavedConversations and the AI Settings toggles are
+  still mock (they hang off the concierge feature set, not data wiring).

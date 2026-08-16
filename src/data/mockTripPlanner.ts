@@ -1,70 +1,34 @@
 /**
  * Mock data for the Trip Planner flow — matches design-reference/
- * Trip Planner & Saved Conversations.pdf. Photography pulled from
- * src/data/mockImages.ts (there is no bundled assets/images/lounges/ set
- * in this project — see mockImages.ts for why). No real routing/AI wired
- * up yet.
+ * Trip Planner & Saved Conversations.pdf.
+ *
+ * The invented route (a fixed London -> Edinburgh trip with three
+ * hardcoded stopovers at lounges that exist nowhere in the database) is
+ * gone — TripPlannerScreen now builds real itineraries from real lounge
+ * coordinates, see src/utils/routePlanner.ts. What remains here is the
+ * preference chip vocabulary and the saved-conversations list.
  */
 
-import { loungeInteriors } from './mockImages';
-
-export const routeDetails = {
-  starting: 'Mayfair, London',
-  destination: 'Edinburgh, UK',
-  travelDate: 'Oct 28, 2024',
-  stopFrequency: 'Every 2 Hours',
-};
-
+/**
+ * The preference chips on the Trip Planner. Real in the sense that
+ * matters: each label is matched against the tags and amenities a lounge
+ * actually carries (see routePlanner.preferenceMatch), so the "% match"
+ * on a stop reflects real lounge data rather than a decorative number.
+ */
 export type PreferenceOption = {
   id: string;
   label: string;
 };
 
 export const preferenceOptions: PreferenceOption[] = [
-  { id: 'padron', label: 'Padrón' },
-  { id: 'davidoff', label: 'Davidoff' },
-  { id: 'quiet-atmosphere', label: 'Quiet Atmosphere' },
-  { id: 'leather-seating', label: 'Leather Seating' },
+  { id: 'cigar', label: 'Cigar' },
+  { id: 'whiskey', label: 'Whiskey' },
+  { id: 'lounge', label: 'Lounge' },
+  { id: 'patio', label: 'Patio' },
+  { id: 'hookah', label: 'Hookah' },
 ];
 
-export const defaultSelectedPreferenceIds = ['quiet-atmosphere'];
-
-export type RouteStopLounge = {
-  name: string;
-  location: string;
-  image: string;
-};
-
-export type RouteStop = {
-  id: string;
-  order: number;
-  name: string;
-  eta: string;
-  distance: string;
-  lounge?: RouteStopLounge;
-};
-
-export const routeStops: RouteStop[] = [
-  {
-    id: 'cambridge-stopover',
-    order: 1,
-    name: 'Cambridge Stopover',
-    eta: '11:30 AM',
-    distance: '55 miles from start',
-    lounge: {
-      name: 'Smoke & Velvet',
-      location: 'Cambridge Centre',
-      image: loungeInteriors[1],
-    },
-  },
-  {
-    id: 'york-heritage-break',
-    order: 2,
-    name: 'York Heritage Break',
-    eta: '2:45 PM',
-    distance: '152 miles from start',
-  },
-];
+export const defaultSelectedPreferenceIds: string[] = [];
 
 export type SavedConversation = {
   id: string;

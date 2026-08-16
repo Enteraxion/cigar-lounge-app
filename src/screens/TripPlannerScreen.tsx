@@ -7,73 +7,150 @@
  * Itinerary" button, and a numbered list of route stops — some with an
  * embedded mini lounge card. Reached from the "Plan a Trip" entry point
  * on ConciergeHomeScreen. Mock data only (see
- * src/data/mockTripPlanner.ts) — no real routing/AI wired up yet.
+ * src/utils/routePlanner.ts). Real: type a start and a destination city
+ * and it finds the lounges that actually sit near the line between them,
+ * ordered along the journey, each opening the real reservation flow.
+ *
+ * The corridor is a straight-line approximation rather than a driving
+ * route — that needs a paid directions API — so the copy says "on your
+ * route" and "miles from start" instead of quoting drive times it can't
+ * know. See routePlanner.ts for the full reasoning.
  */
 
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Calendar, ChevronDown, ChevronLeft, History, MapPin, Navigation } from 'lucide-react-native';
 import { theme } from '../theme';
 import { conciergeUser } from '../data/mockConcierge';
-import {
-  defaultSelectedPreferenceIds,
-  preferenceOptions,
-  routeDetails,
-  routeStops,
-  type RouteStop,
-} from '../data/mockTripPlanner';
+import { defaultSelectedPreferenceIds, preferenceOptions } from '../data/mockTripPlanner';
+import { getAllLounges } from '../services/loungeService';
+import { findCityCoordinates } from '../utils/cityAutocomplete';
+import { planRoute, preferenceMatch, type RoutePlan, type RouteStop } from '../utils/routePlanner';
+import { displayTags } from '../utils/displayTags';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
+import type { MainTabParamList } from '../navigation/MainNavigator';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
-function RouteStopCard({ stop }: { stop: RouteStop }) {
+/** Next 30 days — a trip you're planning is a trip you take soon. */
+const UPCOMING_DAYS: Date[] = Array.from({ length: 30 }, (_, index) => {
+  const day = new Date();
+  day.setHours(0, 0, 0, 0);
+  day.setDate(day.getDate() + index);
+  return day;
+});
+
+function RouteStopCard({
+  stop,
+  order,
+  match,
+  onReserve,
+}: {
+  stop: RouteStop;
+  order: number;
+  match: number | null;
+  onReserve: () => void;
+}) {
+  const { lounge } = stop;
   return (
     <View style={styles.stopCard}>
       <View style={styles.stopHeaderRow}>
         <View style={styles.stopBadge}>
-          <Text style={styles.stopBadgeText}>{stop.order}</Text>
+          <Text style={styles.stopBadgeText}>{order}</Text>
         </View>
         <View style={styles.stopTextGroup}>
-          <Text style={styles.stopName}>{stop.name}</Text>
+          <Text style={styles.stopName}>{lounge.city ?? lounge.address}</Text>
+          {/* Miles along the route, not an ETA — we have coordinates, not
+              drive times, and inventing an arrival time would be fiction. */}
           <Text style={styles.stopMeta}>
-            ETA: {stop.eta} • {stop.distance}
+            {stop.milesFromStart} mi from start
+            {stop.detourMiles > 1 ? ` • ${stop.detourMiles} mi off route` : ' • on your route'}
+            {match !== null ? ` • ${match}% match` : ''}
           </Text>
         </View>
       </View>
 
-      {stop.lounge ? (
-        <View style={styles.loungeCard}>
-          <Image source={{ uri: stop.lounge.image }} style={styles.loungeImage} />
-          <View style={styles.loungeTextGroup}>
-            <Text style={styles.loungeName} numberOfLines={1}>
-              {stop.lounge.name}
-            </Text>
-            <Text style={styles.loungeLocation} numberOfLines={1}>
-              {stop.lounge.location}
-            </Text>
-          </View>
-          <Pressable
-            style={styles.reserveButton}
-            onPress={() => Alert.alert('Coming Soon', 'Table reservations are not available yet.')}
-          >
-            <Text style={styles.reserveButtonText}>Reserve</Text>
-          </Pressable>
+      <Pressable style={styles.loungeCard} onPress={onReserve}>
+        <Image source={{ uri: lounge.images[0] }} style={styles.loungeImage} />
+        <View style={styles.loungeTextGroup}>
+          <Text style={styles.loungeName} numberOfLines={1}>
+            {lounge.name}
+          </Text>
+          <Text style={styles.loungeLocation} numberOfLines={1}>
+            {displayTags(lounge.tags).slice(0, 2).join(' • ') || lounge.address}
+          </Text>
         </View>
-      ) : null}
+        <View style={styles.reserveButton}>
+          <Text style={styles.reserveButtonText}>Reserve</Text>
+        </View>
+      </Pressable>
     </View>
   );
 }
 
 export default function TripPlannerScreen() {
   const navigation = useNavigation<ConciergeNavigationProp>();
-  const [starting, setStarting] = useState(routeDetails.starting);
-  const [destination, setDestination] = useState(routeDetails.destination);
+  const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
+  // Empty rather than a prefilled London → Edinburgh trip nobody asked for.
+  const [starting, setStarting] = useState('');
+  const [destination, setDestination] = useState('');
+  const [travelDate, setTravelDate] = useState<Date | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [maxStops, setMaxStops] = useState(6);
   const [selectedPreferences, setSelectedPreferences] = useState<Set<string>>(
     new Set(defaultSelectedPreferenceIds),
   );
+  const [plan, setPlan] = useState<RoutePlan | null>(null);
+  const [planning, setPlanning] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+
+  const preferenceLabels = preferenceOptions
+    .filter(option => selectedPreferences.has(option.id))
+    .map(option => option.label);
+
+  const generateItinerary = async () => {
+    const from = findCityCoordinates(starting);
+    const to = findCityCoordinates(destination);
+    if (!from || !to) {
+      // Naming which end failed saves the member guessing which of the two
+      // city names we didn't recognise.
+      setPlanError(
+        !from
+          ? `We don't recognise "${starting.trim() || 'that start'}" as a city.`
+          : `We don't recognise "${destination.trim() || 'that destination'}" as a city.`,
+      );
+      setPlan(null);
+      return;
+    }
+    setPlanning(true);
+    setPlanError(null);
+    try {
+      const lounges = await getAllLounges();
+      const next = planRoute(from, to, lounges, maxStops);
+      setPlan(next);
+      if (next.stops.length === 0) {
+        setPlanError('No lounges on that route yet. Try two larger cities.');
+      }
+    } catch {
+      setPlanError("Couldn't build your itinerary. Check your connection and try again.");
+      setPlan(null);
+    } finally {
+      setPlanning(false);
+    }
+  };
 
   const togglePreference = (id: string) => {
     setSelectedPreferences(prev => {
@@ -138,21 +215,29 @@ export default function TripPlannerScreen() {
           <View style={styles.sideBySideRow}>
             <Pressable
               style={styles.sideField}
-              onPress={() => Alert.alert('Coming Soon', 'Date selection is coming soon.')}
+              onPress={() => setDatePickerOpen(true)}
             >
               <Text style={styles.sideFieldLabel}>Travel Date</Text>
               <View style={styles.sideFieldValueRow}>
                 <Calendar size={14} color={theme.colors.secondarySilver} />
-                <Text style={styles.sideFieldValue}>{routeDetails.travelDate}</Text>
+                <Text style={styles.sideFieldValue}>
+                  {travelDate
+                    ? travelDate.toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : 'Pick a date'}
+                </Text>
               </View>
             </Pressable>
             <Pressable
               style={styles.sideField}
-              onPress={() => Alert.alert('Coming Soon', 'Stop frequency selection is coming soon.')}
+              onPress={() => setMaxStops(current => (current >= 10 ? 4 : current + 2))}
             >
               <Text style={styles.sideFieldLabel}>Stop Frequency</Text>
               <View style={styles.sideFieldValueRow}>
-                <Text style={styles.sideFieldValue}>{routeDetails.stopFrequency}</Text>
+                <Text style={styles.sideFieldValue}>{maxStops} stops</Text>
                 <ChevronDown size={14} color={theme.colors.secondarySilver} />
               </View>
             </Pressable>
@@ -183,21 +268,80 @@ export default function TripPlannerScreen() {
         {/* ---------------- Generate Itinerary ---------------- */}
         <Pressable
           style={styles.generateButton}
-          onPress={() => Alert.alert('Coming Soon', 'Itinerary generation is not available yet.')}
+          onPress={generateItinerary}
+          disabled={planning}
         >
-          <Text style={styles.generateButtonText}>Generate Itinerary</Text>
+          {planning ? (
+            <ActivityIndicator color={theme.colors.primaryNavy} />
+          ) : (
+            <Text style={styles.generateButtonText}>Generate Itinerary</Text>
+          )}
         </Pressable>
+
+        {planError ? <Text style={styles.planError}>{planError}</Text> : null}
+        {plan && plan.stops.length > 0 ? (
+          <Text style={styles.planSummary}>
+            {plan.stops.length} {plan.stops.length === 1 ? 'stop' : 'stops'} over{' '}
+            {plan.totalMiles.toLocaleString()} miles
+            {travelDate
+              ? ` on ${travelDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+              : ''}
+          </Text>
+        ) : null}
 
         {/* ---------------- Route Stops ---------------- */}
         <View style={[styles.field, styles.lastField]}>
           <Text style={styles.sectionTitle}>Your Route Stops</Text>
           <View style={styles.stopList}>
-            {routeStops.map(stop => (
-              <RouteStopCard key={stop.id} stop={stop} />
+            {(plan?.stops ?? []).map((stop: RouteStop, index: number) => (
+              <RouteStopCard
+                key={stop.lounge.id}
+                stop={stop}
+                order={index + 1}
+                match={preferenceMatch(stop.lounge, preferenceLabels)}
+                onReserve={() =>
+                  (tabNavigation.navigate as (n: string, p?: object) => void)('Search', {
+                    screen: 'ReserveTable',
+                    params: { loungeId: stop.lounge.id, loungeName: stop.lounge.name },
+                  })
+                }
+              />
             ))}
           </View>
         </View>
       </ScrollView>
+      <Modal
+        visible={datePickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDatePickerOpen(false)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setDatePickerOpen(false)}>
+          <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
+            <Text style={styles.sheetTitle}>Travel date</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {UPCOMING_DAYS.map(day => (
+                <Pressable
+                  key={day.toISOString()}
+                  style={styles.sheetRow}
+                  onPress={() => {
+                    setTravelDate(day);
+                    setDatePickerOpen(false);
+                  }}
+                >
+                  <Text style={styles.sheetRowText}>
+                    {day.toLocaleDateString(undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -346,6 +490,46 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     fontFamily: theme.fontFamily.semibold,
     color: theme.colors.primaryNavy,
+  },
+
+  planError: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+    marginTop: theme.spacing.sm,
+  },
+  planSummary: {
+    ...theme.typography.medium,
+    fontSize: 13,
+    color: theme.colors.secondarySilver,
+    marginTop: theme.spacing.sm,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 10, 24, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    maxHeight: '70%',
+    backgroundColor: theme.colors.surfaceNavy,
+    borderTopLeftRadius: theme.radius.large,
+    borderTopRightRadius: theme.radius.large,
+    padding: theme.spacing.lg,
+  },
+  sheetTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 16,
+    color: theme.colors.white,
+    marginBottom: theme.spacing.sm,
+  },
+  sheetRow: {
+    paddingVertical: theme.spacing.md,
+  },
+  sheetRowText: {
+    ...theme.typography.medium,
+    fontSize: 15,
+    color: theme.colors.white,
   },
 
   // ---- Generate button ----

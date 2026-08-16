@@ -175,6 +175,15 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // Collection-group read for HomeScreen's "Member Events" rail, which
+    // shows upcoming events across every lounge rather than one at a time
+    // (eventService.getUpcomingEventsAcrossLounges). Writes are NOT
+    // granted here — they stay on the per-lounge path above, so only the
+    // approved owner can still post an event.
+    match /{path=**}/events/{eventId} {
+      allow read: if true;
+    }
+
     // ---------------------------------------------------------------
     // users/{userId} and its subcollections
     // ---------------------------------------------------------------

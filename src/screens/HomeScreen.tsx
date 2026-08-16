@@ -21,9 +21,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -35,6 +35,7 @@ import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import {
   Bell,
   ChevronRight,
+  Compass,
   Clock,
   Leaf,
   MapPin,
@@ -58,12 +59,40 @@ import { haversineDistanceMiles } from '../utils/loungeSearch';
 import { displayTags } from '../utils/displayTags';
 import { defaultRegion } from '../data/mockMap';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
-// TODO(firestore): Cigar of the Week / Member Events aren't modeled in
-// Firestore yet — see header comment above.
-import { cigarOfWeek, memberEvents } from '../data/mockHome';
+import { cigarOfTheWeek } from '../data/cigars';
+import {
+  getUpcomingEventsAcrossLounges,
+  type MemberEvent,
+} from '../services/eventService';
 
 const NEARBY_COUNT = 4;
 const TRENDING_COUNT = 3;
+const EVENTS_COUNT = 5;
+
+/** Real cigar for the current week — see src/data/cigars.ts. */
+const cigarOfWeek = cigarOfTheWeek();
+
+type TabNav = NavigationProp<MainTabParamList>;
+
+/** Shortcuts behind the "+" button — every target is an existing screen. */
+const QUICK_ACTIONS: {
+  label: string;
+  icon: typeof MapPin;
+  go: (nav: TabNav) => void;
+}[] = [
+  { label: 'Find lounges near me', icon: MapPin, go: nav => nav.navigate('Map') },
+  {
+    label: 'Search by name or city',
+    icon: Compass,
+    go: nav => (nav.navigate as (n: string, p?: object) => void)('Search', { screen: 'SearchHome' }),
+  },
+  {
+    label: 'My Cigar Passport',
+    icon: User,
+    go: nav =>
+      (nav.navigate as (n: string, p?: object) => void)('Profile', { screen: 'Passport' }),
+  },
+];
 
 export default function HomeScreen() {
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
@@ -73,6 +102,11 @@ export default function HomeScreen() {
   const [lounges, setLounges] = useState<Lounge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  // Real owner-posted events across every lounge. Empty until a shop
+  // posts one from the Owner Portal, which is the honest state — this
+  // rail used to show two invented events no shop had ever posted.
+  const [events, setEvents] = useState<MemberEvent[]>([]);
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
 
   const userId = auth.currentUser?.uid;
 
@@ -103,6 +137,14 @@ export default function HomeScreen() {
   useEffect(() => {
     loadLounges();
   }, [loadLounges]);
+
+  // Events load independently of lounges: an events failure (or simply
+  // no shop having posted one) must not take the whole Home screen down.
+  useEffect(() => {
+    getUpcomingEventsAcrossLounges(EVENTS_COUNT)
+      .then(setEvents)
+      .catch(() => setEvents([]));
+  }, []);
 
   const featuredLounge = lounges?.length
     ? [...lounges].sort((a, b) => b.ratings.overall - a.ratings.overall)[0]
@@ -284,7 +326,7 @@ export default function HomeScreen() {
               resizeMode="cover"
             />
             <View style={styles.cigarDetails}>
-              <Text style={styles.cigarBrandLabel}>{cigarOfWeek.brandLabel}</Text>
+              <Text style={styles.cigarBrandLabel}>{cigarOfWeek.brand.toUpperCase()}</Text>
               <Text style={styles.cigarName}>{cigarOfWeek.name}</Text>
 
               <View style={styles.cigarStat}>
@@ -355,45 +397,87 @@ export default function HomeScreen() {
         ) : null}
 
         {/* ---------------- Member Events ---------------- */}
+        {/* Real events posted by shop owners from the Owner Portal. The
+            per-row "+" that used to sit here promised members could add
+            their own events — nothing in the schema or the rules allows
+            that (events are owner-authored only), so the row now opens
+            the lounge hosting it, which is the thing a member can act on. */}
         <View style={[styles.section, styles.lastSection]}>
           <SectionHeader title="Member Events" />
-          <View style={{ gap: theme.spacing.md }}>
-            {memberEvents.map(event => (
-              <View key={event.id} style={styles.eventRow}>
-                <View style={styles.eventDateBadge}>
-                  <Text style={styles.eventMonth}>{event.month}</Text>
-                  <Text style={styles.eventDay}>{event.day}</Text>
-                </View>
-                <View style={styles.eventDetails}>
-                  <Text style={styles.eventTitle} numberOfLines={2}>
-                    {event.title}
-                  </Text>
-                  <Text style={styles.eventVenue}>
-                    {event.venue} • {event.time}
-                  </Text>
-                </View>
-                <Pressable
-                  style={styles.eventAddButton}
-                  hitSlop={8}
-                  onPress={() =>
-                    Alert.alert('Coming Soon', 'Adding your own events is not available yet.')
-                  }
-                >
-                  <Plus size={16} color={theme.colors.secondarySilver} />
-                </Pressable>
-              </View>
-            ))}
-          </View>
+          {events.length === 0 ? (
+            <Text style={styles.eventsEmpty}>
+              No events posted yet. Lounges announce tastings and cigar nights here.
+            </Text>
+          ) : (
+            <View style={{ gap: theme.spacing.md }}>
+              {events.map(event => {
+                const startsAt = event.startsAt.toDate();
+                return (
+                  <Pressable
+                    key={event.id}
+                    style={styles.eventRow}
+                    onPress={() => openLoungeDetails(event.loungeId)}
+                  >
+                    <View style={styles.eventDateBadge}>
+                      <Text style={styles.eventMonth}>
+                        {startsAt.toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}
+                      </Text>
+                      <Text style={styles.eventDay}>{startsAt.getDate()}</Text>
+                    </View>
+                    <View style={styles.eventDetails}>
+                      <Text style={styles.eventTitle} numberOfLines={2}>
+                        {event.title}
+                      </Text>
+                      <Text style={styles.eventVenue}>
+                        {startsAt.toLocaleTimeString(undefined, {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </View>
+                    <ChevronRight size={16} color={theme.colors.mutedGray} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
       {/* ---------------- Floating Action Button ---------------- */}
-      <Pressable
-        style={styles.fab}
-        onPress={() => Alert.alert('Coming Soon', 'Quick actions are coming soon.')}
-      >
+      {/* Was an Alert.alert('Coming Soon'). Every destination below is a
+          screen that already exists, so this is a real shortcut rather
+          than a new feature — the fastest routes into the three things a
+          member actually opens this app to do. */}
+      <Pressable style={styles.fab} onPress={() => setQuickActionsOpen(true)}>
         <Plus size={22} color={theme.colors.primaryNavy} />
       </Pressable>
+
+      <Modal
+        visible={quickActionsOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setQuickActionsOpen(false)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setQuickActionsOpen(false)}>
+          <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
+            <Text style={styles.sheetTitle}>Quick Actions</Text>
+            {QUICK_ACTIONS.map(action => (
+              <Pressable
+                key={action.label}
+                style={styles.sheetRow}
+                onPress={() => {
+                  setQuickActionsOpen(false);
+                  action.go(tabNavigation);
+                }}
+              >
+                <action.icon size={18} color={theme.colors.accentGold} />
+                <Text style={styles.sheetRowText}>{action.label}</Text>
+              </Pressable>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -667,13 +751,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.mutedGray,
   },
-  eventAddButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+  eventsEmpty: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+  },
+
+  // ---- Quick actions sheet ----
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 10, 24, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: theme.colors.surfaceNavy,
+    borderTopLeftRadius: theme.radius.large,
+    borderTopRightRadius: theme.radius.large,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.xs,
+  },
+  sheetTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 16,
+    color: theme.colors.white,
+    marginBottom: theme.spacing.sm,
+  },
+  sheetRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+  },
+  sheetRowText: {
+    ...theme.typography.medium,
+    fontSize: 15,
+    color: theme.colors.white,
   },
 
   // ---- FAB ----

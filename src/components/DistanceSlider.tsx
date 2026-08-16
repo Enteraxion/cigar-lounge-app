@@ -15,6 +15,20 @@
  * made the slider appear stuck: touches on the thumb itself never
  * reached the expected coordinate space. Absolute screen coordinates
  * sidestep that entirely.
+ *
+ * Both places this is used sit inside a vertical ScrollView, and that is
+ * the second reason it could feel stuck: a horizontal drag starting on
+ * the thumb was being claimed by the scroll view, so the value never
+ * moved. The four capture/termination handlers below are what keep the
+ * gesture here — `onStartShouldSetPanResponderCapture` claims the touch
+ * before the scroll view sees it, `onPanResponderTerminationRequest`
+ * refuses to hand it back mid-drag, and `onShouldBlockNativeResponder`
+ * stops the native scroller taking over on iOS.
+ *
+ * The track is also re-measured on every touch rather than only on
+ * layout: it lives in a Modal that slides in and in a list that scrolls,
+ * so a position captured once at layout time can be stale by the time a
+ * finger arrives — which would map the touch to the wrong value.
  */
 
 import React, { useRef, useState } from 'react';
@@ -36,27 +50,49 @@ export default function DistanceSlider({ value, min = 1, max = 100, onChange }: 
   const containerRef = useRef<View>(null);
   const percent = (value - min) / (max - min);
 
+  // Kept in refs as well as state: the PanResponder below is created once
+  // (useRef) and would otherwise close over the first render's values, so
+  // reading state directly there would leave it permanently measuring
+  // against a width of 0 — the early return would swallow every drag.
+  const trackWidthRef = useRef(0);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const rangeRef = useRef({ min, max });
+  rangeRef.current = { min, max };
+
   const measureTrack = () => {
     containerRef.current?.measureInWindow((x, _y, width) => {
       trackScreenX.current = x;
+      trackWidthRef.current = width;
       setTrackWidth(width);
     });
   };
 
   const updateFromPageX = (pageX: number) => {
-    if (!trackWidth) {
+    const width = trackWidthRef.current;
+    if (!width) {
       return;
     }
-    const clamped = Math.min(Math.max(pageX - trackScreenX.current, 0), trackWidth);
-    const ratio = clamped / trackWidth;
-    onChange(Math.round(min + ratio * (max - min)));
+    const clamped = Math.min(Math.max(pageX - trackScreenX.current, 0), width);
+    const ratio = clamped / width;
+    const range = rangeRef.current;
+    onChangeRef.current(Math.round(range.min + ratio * (range.max - range.min)));
   };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: evt => updateFromPageX(evt.nativeEvent.pageX),
+      onMoveShouldSetPanResponderCapture: () => true,
+      // Never surrender the gesture to the surrounding ScrollView once the
+      // drag has started, and stop the native scroller competing for it.
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: evt => {
+        measureTrack();
+        updateFromPageX(evt.nativeEvent.pageX);
+      },
       onPanResponderMove: evt => updateFromPageX(evt.nativeEvent.pageX),
     }),
   ).current;

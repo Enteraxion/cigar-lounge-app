@@ -23,6 +23,8 @@ import {
 } from '@react-native-firebase/firestore';
 import type { LoungeDocument, ReviewDocument } from '../types/firestore';
 import { loungeImageUri } from '../utils/loungeImage';
+import { findCityCoordinates } from '../utils/cityAutocomplete';
+import { haversineDistanceMiles } from '../utils/loungeSearch';
 
 const db = getFirestore();
 
@@ -72,6 +74,14 @@ export async function getLoungesByIds(ids: string[]): Promise<Lounge[]> {
  * screen's List toggle land here with no query) rather than "match
  * nothing", so it returns every lounge unfiltered.
  */
+/**
+ * How far around a searched town counts as "near it" when the town itself
+ * has no lounges. Wide enough to reach the next real city — which is the
+ * whole point in rural areas — without returning results from three states
+ * away.
+ */
+const NEARBY_SEARCH_RADIUS_MILES = 60;
+
 export async function searchLounges(searchQuery: string): Promise<Lounge[]> {
   const needle = searchQuery.trim().toLowerCase();
   const lounges = await getAllLounges();
@@ -79,10 +89,37 @@ export async function searchLounges(searchQuery: string): Promise<Lounge[]> {
     return lounges;
   }
 
-  return lounges.filter(lounge => {
+  const textMatches = lounges.filter(lounge => {
     const haystack = [lounge.name, lounge.address, ...lounge.tags].join(' ').toLowerCase();
     return haystack.includes(needle);
   });
+  if (textMatches.length > 0) {
+    return textMatches;
+  }
+
+  // Nothing matched the text. If the query is a real place, fall back to
+  // searching *around* it rather than *for* it.
+  //
+  // Searching "Atalissa, IA" used to return nothing at all, because no
+  // lounge has "Atalissa" in its name or address — while a real lounge sat
+  // 18 miles away in Iowa City. Someone searching a small town wants the
+  // lounges they could drive to, not only the ones inside the town
+  // boundary, and small towns are exactly the case where the difference
+  // decides between "no lounges" and a usable answer.
+  const coordinates = findCityCoordinates(searchQuery);
+  if (!coordinates) {
+    return [];
+  }
+  const origin = { latitude: coordinates.lat, longitude: coordinates.lng };
+  return lounges
+    .filter(lounge => lounge.coordinates)
+    .map(lounge => ({
+      lounge,
+      distance: haversineDistanceMiles(origin, lounge.coordinates),
+    }))
+    .filter(entry => entry.distance <= NEARBY_SEARCH_RADIUS_MILES)
+    .sort((a, b) => a.distance - b.distance)
+    .map(entry => entry.lounge);
 }
 
 export type CitySuggestion = { id: string; name: string };

@@ -65,7 +65,12 @@ import {
   saveSearchFilter,
   type SavedFilter,
 } from '../services/userActionsService';
-import { applySearchFilters, type LatLng, type SearchFilters } from '../utils/loungeSearch';
+import {
+  applySearchFilters,
+  viableFilterOptions,
+  type LatLng,
+  type SearchFilters,
+} from '../utils/loungeSearch';
 
 type Props = {
   visible: boolean;
@@ -235,6 +240,13 @@ export default function FilterBottomSheet({
   // recomputing this on every render (as chips are toggled) is cheap
   // enough to skip memoizing.
   const resultCount = applySearchFilters(results, draftFilters, currentLocation).length;
+
+  // Only offer chips that can actually match something in the data we have
+  // — see viableFilterOptions for why a chip that always returns zero is
+  // worse than no chip at all.
+  const viableAtmosphere = viableFilterOptions(results, atmosphereOptions);
+  const viableAmenities = viableFilterOptions(results, amenitiesOptions);
+  const viableEntertainment = viableFilterOptions(results, entertainmentOptions);
 
   const handleShowResults = () => {
     onApply(draftFilters);
@@ -428,6 +440,9 @@ export default function FilterBottomSheet({
           </View>
 
           {/* ---------------- Atmosphere ---------------- */}
+          {/* Hidden entirely when nothing in the dataset carries these
+              attributes — an empty section reads as a broken filter. */}
+          {viableAtmosphere.length > 0 ? (
           <View style={styles.section}>
             <SectionHeaderRow
               icon={<Sparkles size={16} color={theme.colors.secondarySilver} />}
@@ -438,15 +453,19 @@ export default function FilterBottomSheet({
             {expandedSections.includes('atmosphere') ? (
               <View style={styles.sectionBody}>
                 <ChipGroup
-                  options={atmosphereOptions}
+                  options={viableAtmosphere}
                   selectedIds={selectedAtmosphere}
                   onToggle={id => setSelectedAtmosphere(prev => toggleId(prev, id))}
                 />
               </View>
             ) : null}
           </View>
+          ) : null}
 
           {/* ---------------- Amenities ---------------- */}
+          {/* Hidden entirely when nothing in the dataset carries these
+              attributes — an empty section reads as a broken filter. */}
+          {viableAmenities.length > 0 ? (
           <View style={styles.section}>
             <SectionHeaderRow
               icon={<LayoutGrid size={16} color={theme.colors.secondarySilver} />}
@@ -457,15 +476,17 @@ export default function FilterBottomSheet({
             {expandedSections.includes('amenities') ? (
               <View style={styles.sectionBody}>
                 <ChipGroup
-                  options={amenitiesOptions}
+                  options={viableAmenities}
                   selectedIds={selectedAmenities}
                   onToggle={id => setSelectedAmenities(prev => toggleId(prev, id))}
                 />
               </View>
             ) : null}
           </View>
+          ) : null}
 
           {/* ---------------- Entertainment ---------------- */}
+          {viableEntertainment.length > 0 ? (
           <View style={[styles.section, styles.lastSection]}>
             <SectionHeaderRow
               icon={<Music size={16} color={theme.colors.secondarySilver} />}
@@ -476,13 +497,14 @@ export default function FilterBottomSheet({
             {expandedSections.includes('entertainment') ? (
               <View style={styles.sectionBody}>
                 <ChipGroup
-                  options={entertainmentOptions}
+                  options={viableEntertainment}
                   selectedIds={selectedEntertainment}
                   onToggle={id => setSelectedEntertainment(prev => toggleId(prev, id))}
                 />
               </View>
             ) : null}
           </View>
+          ) : null}
         </ScrollView>
 
         <View style={styles.footer}>

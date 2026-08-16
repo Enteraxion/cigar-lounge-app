@@ -93,6 +93,38 @@ function matchesKeywordCategory(lounge: Lounge, selectedLabels: string[]): boole
   return selectedLabels.some(label => haystack.includes(keywordForLabel(label)));
 }
 
+/**
+ * Which of a chip category's options could actually match something in the
+ * current dataset.
+ *
+ * This exists because the filter sheet was offering twenty chips that
+ * could never return a result. The Atmosphere / Amenities / Entertainment
+ * chips match against `tags + amenities + description`, and every imported
+ * lounge has an empty `amenities`, an empty `description`, and only an
+ * `imported-from-*` tag — so selecting any of them returned zero lounges.
+ * A filter that always returns nothing is worse than a missing filter: the
+ * member assumes there are no quiet lounges near them, rather than
+ * realising the app doesn't know which lounges are quiet.
+ *
+ * Rather than deleting the chips (they become real the moment the import
+ * starts populating amenities), the sheet now only shows options that match
+ * at least one lounge it can see. Sections empty themselves out, and refill
+ * on their own as the data improves.
+ */
+export function viableFilterOptions<T extends { label: string }>(
+  lounges: Lounge[],
+  options: T[],
+): T[] {
+  if (lounges.length === 0) {
+    return options;
+  }
+  const haystacks = lounges.map(loungeKeywordHaystack);
+  return options.filter(option => {
+    const keyword = keywordForLabel(option.label);
+    return haystacks.some(haystack => haystack.includes(keyword));
+  });
+}
+
 /** Best-effort, case-insensitive check of the free-text `hours` field for
  * "open late" / "open 24 hours" style availability chips — `hours` isn't
  * parsed open/close data, so this is inherently approximate. */

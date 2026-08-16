@@ -223,7 +223,52 @@ type GooglePlace = {
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   photos?: { name: string }[];
   primaryType?: string;
+  // Structured attributes — these are what make the app's Amenities and
+  // Entertainment filters work. Without them every lounge stored an empty
+  // `amenities` array, so selecting any of those chips returned zero
+  // results (see src/utils/loungeSearch.ts's viableFilterOptions).
+  outdoorSeating?: boolean;
+  liveMusic?: boolean;
+  servesCocktails?: boolean;
+  servesCoffee?: boolean;
+  goodForWatchingSports?: boolean;
+  goodForGroups?: boolean;
+  reservable?: boolean;
+  restroom?: boolean;
+  parkingOptions?: {
+    freeParkingLot?: boolean;
+    paidParkingLot?: boolean;
+    valetParking?: boolean;
+    freeStreetParking?: boolean;
+  };
 };
+
+/**
+ * Google's boolean attributes mapped onto the exact amenity labels the
+ * app's filter chips look for (src/data/mockFilters.ts). The labels have
+ * to match those chips or the filter still finds nothing — this is the
+ * join between the two, and the reason it's a literal list rather than
+ * something clever.
+ */
+function amenitiesFromGoogle(place: GooglePlace): string[] {
+  const amenities: string[] = [];
+  if (place.outdoorSeating) amenities.push('Outdoor Patio');
+  if (place.servesCocktails) amenities.push('Full Bar');
+  if (place.servesCoffee) amenities.push('Coffee');
+  if (place.liveMusic) amenities.push('Live Music');
+  if (place.goodForWatchingSports) amenities.push('Sports Viewing');
+  if (place.goodForGroups) amenities.push('Social');
+  if (place.reservable) amenities.push('Reservations');
+  if (place.parkingOptions?.valetParking) amenities.push('Valet Parking');
+  if (
+    place.parkingOptions?.freeParkingLot ||
+    place.parkingOptions?.paidParkingLot ||
+    place.parkingOptions?.freeStreetParking
+  ) {
+    amenities.push('Parking');
+  }
+  return amenities;
+}
 
 type GoogleSearchResponse = {
   places?: GooglePlace[];
@@ -242,7 +287,14 @@ async function fetchGooglePlaces(apiKey: string, location: string): Promise<Goog
       // Google only if asked — which is why exactly the Google half of
       // the directory had no pictures.
       'X-Goog-FieldMask':
-        'places.id,places.displayName,places.formattedAddress,places.location,places.regularOpeningHours,places.primaryType,places.photos',
+        'places.id,places.displayName,places.formattedAddress,places.location,' +
+        'places.regularOpeningHours,places.primaryType,places.photos,' +
+        // Atmosphere-tier fields — see amenitiesFromGoogle. These move the
+        // request into a higher-priced Places SKU, which is a deliberate
+        // trade: without them the app's Amenities/Entertainment filters
+        // cannot work at all.
+        'places.outdoorSeating,places.liveMusic,places.servesCocktails,places.servesCoffee,' +
+        'places.goodForWatchingSports,places.goodForGroups,places.reservable,places.parkingOptions',
     },
     body: JSON.stringify({
       textQuery: `cigar lounge in ${location}`,
@@ -367,6 +419,7 @@ function toLoungeDocumentFromGoogle(
   now: Timestamp,
   images: string[] = [],
 ) {
+  const amenities = amenitiesFromGoogle(place);
   return {
     name: place.displayName?.text ?? 'Unnamed Lounge',
     description: '',
@@ -375,8 +428,10 @@ function toLoungeDocumentFromGoogle(
     hours,
     status: 'open' as const,
     images,
-    amenities: [] as string[],
-    tags: ['imported-from-google'],
+    amenities,
+    // The amenities double as tags so they're visible on cards, not just
+    // filterable — displayTags strips the internal imported-from-* marker.
+    tags: ['imported-from-google', ...amenities],
     priceRange: '',
     ratings: ratingsFromYelp(undefined),
     reviewCount: 0,

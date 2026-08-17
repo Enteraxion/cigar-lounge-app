@@ -7,7 +7,12 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>CigarLoungeApp</string>
+	<!-- What appears under the icon on the home screen. The Xcode target is
+	     still called CigarLoungeApp for historical reasons, but the product
+	     has been "The Reserve" everywhere in the UI and copy since the
+	     beginning — showing the target name to members was a leak of an
+	     internal detail. -->
+	<string>The Reserve</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

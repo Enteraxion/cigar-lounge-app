@@ -14,7 +14,8 @@
     "backfill:hours": "ts-node --project scripts/tsconfig.json scripts/backfillCityHours.ts",
     "test:integration": "jest --selectProjects integration",
     "test:all": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:city-stats": "ts-node --project scripts/tsconfig.json scripts/buildCityStats.ts"
   },
   "dependencies": {
     "@react-native-community/geolocation": "^3.4.0",

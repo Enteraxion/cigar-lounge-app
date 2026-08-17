@@ -18,23 +18,117 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit as fsLimit,
   query,
   orderBy,
+  where,
 } from '@react-native-firebase/firestore';
 import type { LoungeDocument, ReviewDocument } from '../types/firestore';
 import { loungeImageUri } from '../utils/loungeImage';
-import { findCityCoordinates } from '../utils/cityAutocomplete';
+import { findCityCoordinates, isKnownUsCityName } from '../utils/cityAutocomplete';
 import { haversineDistanceMiles } from '../utils/loungeSearch';
+import {
+  createAsyncCache,
+  createKeyedAsyncCache,
+  memoizeOnIdentity,
+} from '../utils/asyncCache';
+import { latitudeBand, nearbyCacheKey, withinRadius } from '../utils/geoQuery';
 
 const db = getFirestore();
 
 export type Lounge = LoungeDocument & { id: string };
 export type Review = ReviewDocument & { id: string };
 
-/** Fetches every document in the `lounges` collection. */
-export async function getAllLounges(): Promise<Lounge[]> {
+/**
+ * How long a fetched collection stays usable before we go back to the
+ * network. Long enough that moving between tabs never refetches, short
+ * enough that a newly imported or edited lounge shows up without a restart.
+ */
+const LOUNGE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function fetchAllLounges(): Promise<Lounge[]> {
   const snapshot = await getDocs(collection(db, 'lounges'));
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as LoungeDocument) }));
+}
+
+const allLoungesCache = createAsyncCache(fetchAllLounges, LOUNGE_CACHE_TTL_MS);
+
+/**
+ * Fetches every document in the `lounges` collection.
+ *
+ * **Prefer `getLoungesNear` for anything location-shaped.** This collection
+ * is 8,294 documents / ~6.8 MB and takes over 7 seconds to transfer on a
+ * wired connection, so this is only the right call when a feature genuinely
+ * needs national breadth (city rankings, corridor planning, concierge
+ * candidates) — not to display four nearby lounges.
+ *
+ * Cached with in-flight de-duplication, so concurrent callers share one
+ * request and tab switches cost nothing. Returns a shallow copy: callers
+ * that sort in place (which several did) would otherwise reorder the array
+ * every other screen is holding.
+ */
+export async function getAllLounges(): Promise<Lounge[]> {
+  const lounges = await allLoungesCache.get();
+  return lounges.slice();
+}
+
+/**
+ * Forces the next read to go back to Firestore. For pull-to-refresh and for
+ * after a write that changes what a list should show.
+ */
+export function invalidateLoungeCaches(): void {
+  allLoungesCache.invalidate();
+  nearbyCache.invalidate();
+}
+
+/**
+ * Lounges within `radiusMiles` of a point, nearest first.
+ *
+ * Firestore has no geo query, but it does support a range on a single field,
+ * so this narrows server-side to a latitude band and finishes the circle in
+ * JS. Measured selectivity on the real collection: a 60-mile band is 7.5% of
+ * documents around Austin, 11.6% around Greenville, 16.6% around New York —
+ * a 6–13x reduction against fetching everything, which is the difference
+ * between a tab that opens and one that hangs.
+ *
+ * Every document in the collection has numeric coordinates (verified — 0 of
+ * 8,294 missing), so the band is safe to rely on. The one case it cannot
+ * serve is a member nowhere near any lounge at all, where the band is empty
+ * and we fall back to the full collection so "nothing nearby" is a real
+ * answer rather than an artifact of the query shape.
+ */
+const nearbyCache = createKeyedAsyncCache(async (key: string) => {
+  const { lat, lng, radiusMiles } = JSON.parse(key) as {
+    lat: number;
+    lng: number;
+    radiusMiles: number;
+  };
+  const band = latitudeBand(lat, radiusMiles);
+  const snapshot = await getDocs(
+    query(
+      collection(db, 'lounges'),
+      where('coordinates.lat', '>=', band.minLat),
+      where('coordinates.lat', '<=', band.maxLat),
+    ),
+  );
+  const inBand = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as LoungeDocument) }));
+  return withinRadius(inBand, { lat, lng }, radiusMiles);
+}, LOUNGE_CACHE_TTL_MS);
+
+export async function getLoungesNear(
+  center: { lat: number; lng: number },
+  radiusMiles: number,
+  max = 150,
+): Promise<Lounge[]> {
+  const nearby = await nearbyCache.get(nearbyCacheKey(center, radiusMiles));
+  if (nearby.length > 0) {
+    return nearby.slice(0, max);
+  }
+  // Nothing in the band. Rather than claim there are no lounges, answer from
+  // the whole collection sorted by distance — expensive, but this is the
+  // "member is far from anywhere we cover" path, not the common one.
+  const all = await allLoungesCache.get();
+  return withinRadius(all, center, Number.POSITIVE_INFINITY).slice(0, max);
 }
 
 /** Fetches a single lounge by id, or null if it doesn't exist. */
@@ -62,32 +156,64 @@ export async function getLoungesByIds(ids: string[]): Promise<Lounge[]> {
 }
 
 /**
- * Basic client-side substring search across name, address, and tags.
- * Firestore has no native case-insensitive substring query, and at this
- * app's current scale (a few dozen lounges) fetching everything and
- * filtering in JS is simpler and cheaper than maintaining keyword-array
- * indexes for prefix queries. Revisit with a real search index (e.g.
- * Algolia/Typesense) if the lounge count grows large enough for this to
- * matter.
- *
- * A blank query means "browse all" (e.g. "View All" links and the Map
- * screen's List toggle land here with no query) rather than "match
- * nothing", so it returns every lounge unfiltered.
- */
-/**
- * How far around a searched town counts as "near it" when the town itself
- * has no lounges. Wide enough to reach the next real city — which is the
- * whole point in rural areas — without returning results from three states
- * away.
+ * How far around a searched town counts as "near it". Wide enough to reach
+ * the next real city — which is the whole point in rural areas — without
+ * returning results from three states away.
  */
 const NEARBY_SEARCH_RADIUS_MILES = 60;
 
+/**
+ * Search by place or by text, in that order.
+ *
+ * This function's previous comment claimed that "at this app's current scale
+ * (a few dozen lounges) fetching everything and filtering in JS is simpler
+ * and cheaper", and said to revisit "if the lounge count grows large enough
+ * for this to matter." The Yelp + Google Places import then took the
+ * collection to 8,294 documents and nobody revisited — which is how every
+ * tab in the app ended up waiting on a 6.8 MB download. The lesson worth
+ * keeping is that a comment recording an assumption is not the same as
+ * anything enforcing it.
+ *
+ * So: a query that names a real US city is answered by a bounded proximity
+ * query. Only free text with no place in it still needs the whole
+ * collection, because Firestore has no case-insensitive substring index and
+ * there is no server-side equivalent to fall back on. That remaining case is
+ * the one that wants a real search index (Algolia/Typesense) — it is now the
+ * *only* full-collection read a member can trigger by typing.
+ *
+ * A blank query means "browse all" (e.g. "View All" links and the Map
+ * screen's List toggle land here with no query) rather than "match nothing",
+ * so it returns every lounge unfiltered.
+ */
+
 export async function searchLounges(searchQuery: string): Promise<Lounge[]> {
   const needle = searchQuery.trim().toLowerCase();
-  const lounges = await getAllLounges();
   if (!needle) {
-    return lounges;
+    return getAllLounges();
   }
+
+  // Place searches take the bounded path, before anything downloads the whole
+  // collection. "Houston", "Austin, TX" and the like are the most common
+  // thing typed into this box, and a city resolves to a coordinate, which is
+  // a query Firestore can narrow server-side — 961 documents instead of
+  // 8,294 in a real metro.
+  //
+  // This also changes what a city name means: searching "Houston" now returns
+  // lounges *around Houston* rather than lounges with "Houston" in their name.
+  // For a place name that is the answer the member wanted.
+  if (isKnownUsCityName(searchQuery)) {
+    const cityCoordinates = findCityCoordinates(searchQuery);
+    if (cityCoordinates) {
+      const near = await getLoungesNear(cityCoordinates, NEARBY_SEARCH_RADIUS_MILES, 200);
+      if (near.length > 0) {
+        return near;
+      }
+    }
+  }
+
+  // Not a place, or a place we cover nothing near: fall back to substring
+  // matching, which has no server-side equivalent and so needs everything.
+  const lounges = await getAllLounges();
 
   const textMatches = lounges.filter(lounge => {
     const haystack = [lounge.name, lounge.address, ...lounge.tags].join(' ').toLowerCase();
@@ -133,9 +259,14 @@ type CityHighlight = { id: string; name: string; count: number; imageUri?: strin
  * lounge photo from that city where one exists. Shared source for
  * getDistinctCities/getPopularDestinations/getTrendingCities below so
  * they all rank cities the same way instead of three separate counts.
+ *
+ * Memoized on the identity of the cached lounge array, because SearchScreen
+ * asks for this through four different loaders on every focus and each one
+ * would otherwise walk all 8,294 documents again. Reads the cache directly
+ * rather than through getAllLounges() so the array reference stays stable
+ * (getAllLounges hands out copies to protect callers that sort in place).
  */
-async function getCityHighlights(): Promise<CityHighlight[]> {
-  const lounges = await getAllLounges();
+const deriveCityHighlights = memoizeOnIdentity((lounges: Lounge[]): CityHighlight[] => {
   const byCity = new Map<string, { count: number; imageUri?: string }>();
   for (const lounge of lounges) {
     if (!lounge.city) {
@@ -156,6 +287,47 @@ async function getCityHighlights(): Promise<CityHighlight[]> {
       count: data.count,
       imageUri: data.imageUri,
     }));
+});
+
+/**
+ * Reads the ranking from the single pre-computed `aggregates/cityStats`
+ * document (built by scripts/buildCityStats.ts), falling back to deriving it
+ * from the full collection.
+ *
+ * The fallback is the original implementation and stays deliberately: if the
+ * aggregate has never been built, or the read fails, Search must still show
+ * real cities — slowly — rather than none. Cached so the four SearchScreen
+ * loaders that ask for this share one read.
+ */
+const cityStatsCache = createAsyncCache(async (): Promise<CityHighlight[] | null> => {
+  try {
+    const snapshot = await getDoc(doc(db, 'aggregates', 'cityStats'));
+    if (!snapshot.exists()) {
+      return null;
+    }
+    const cities = (snapshot.data() as { cities?: unknown }).cities;
+    if (!Array.isArray(cities) || cities.length === 0) {
+      return null;
+    }
+    return cities.map(city => ({
+      id: String(city.id),
+      name: String(city.name),
+      count: Number(city.count) || 0,
+      // Stored as null when the city has no lounge photo; the rails that
+      // need one filter on this being present.
+      imageUri: city.imageUri ?? undefined,
+    }));
+  } catch {
+    return null;
+  }
+}, LOUNGE_CACHE_TTL_MS);
+
+async function getCityHighlights(): Promise<CityHighlight[]> {
+  const precomputed = await cityStatsCache.get();
+  if (precomputed) {
+    return precomputed;
+  }
+  return deriveCityHighlights(await allLoungesCache.get());
 }
 
 /**
@@ -232,10 +404,21 @@ export async function getTrendingCities(limitCount = 4): Promise<TrendingCity[]>
  * Top-rated lounges by `ratings.overall`, for SearchSuggestionsScreen's
  * Lounges list — there's no separate "featured lounges" concept yet, so
  * highest-rated is the stand-in for "what to suggest."
+ *
+ * Ordered and limited by Firestore rather than in JS: this used to download
+ * all 8,294 documents and sort them to return ten. `ratings.overall` is a
+ * single field, so Firestore's automatic single-field index serves this with
+ * no composite index to deploy.
  */
 export async function getTopRatedLounges(limitCount = 10): Promise<Lounge[]> {
-  const lounges = await getAllLounges();
-  return lounges.sort((a, b) => b.ratings.overall - a.ratings.overall).slice(0, limitCount);
+  const snapshot = await getDocs(
+    query(
+      collection(db, 'lounges'),
+      orderBy('ratings.overall', 'desc'),
+      fsLimit(limitCount),
+    ),
+  );
+  return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as LoungeDocument) }));
 }
 
 /** Fetches the `reviews` subcollection for a lounge, newest first. */

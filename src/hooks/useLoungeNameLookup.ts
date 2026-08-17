@@ -12,9 +12,15 @@
  * "not found" state (the mock card's own `id` is never a real Firestore
  * lounge id).
  *
- * This hook fetches every real lounge once (cheap at this app's current
- * scale — see loungeService.getAllLounges) and exposes a case-insensitive
- * exact name -> id lookup. It's a best-effort bridge, not real search: no
+ * This hook fetches every real lounge and exposes a case-insensitive exact
+ * name -> id lookup. That is **not** cheap — the collection is 8,294
+ * documents / ~6.8 MB (the "cheap at this app's current scale" this comment
+ * used to claim stopped being true when the Yelp/Google import ran). It is
+ * tolerable only because this hook is confined to the Concierge screens,
+ * which are not tabs, and because loungeService caches the fetch. Anything
+ * that needs lounges by *place* should use getLoungesNear instead.
+ *
+ * It's a best-effort bridge, not real search: no
  * fuzzy matching, no backend change. Once Concierge has real recommendation
  * data this whole lookup becomes unnecessary.
  */

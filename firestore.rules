@@ -42,6 +42,28 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------
+    // aggregates/{name}
+    //
+    // Pre-computed rollups of data that is already world-readable, written
+    // only by trusted server-side code. `cityStats` is the per-city lounge
+    // ranking SearchScreen orders its sections by — see
+    // scripts/buildCityStats.ts for why it exists (the client otherwise has
+    // to download all 8,294 lounges to count them) and
+    // loungeService.getCityHighlights for the read path.
+    //
+    // Readable by anyone, on the same basis as `lounges` below: it contains
+    // nothing that isn't already public. Client writes are refused outright
+    // — the Admin SDK used by scripts and Cloud Functions bypasses these
+    // rules, so nothing legitimate needs write access from a client, and
+    // allowing it would let any signed-in member rewrite what every other
+    // member sees on the Search tab.
+    // ---------------------------------------------------------------
+    match /aggregates/{name} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------
     // lounges/{loungeId}
     // ---------------------------------------------------------------
     match /lounges/{loungeId} {

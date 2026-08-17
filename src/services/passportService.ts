@@ -7,10 +7,19 @@
  * src/utils/passport.ts — this is only the data-gathering half.
  */
 
-import { getLoungesByIds, getAllLounges, type Lounge } from './loungeService';
+import { getLoungesByIds, getLoungesNear, type Lounge } from './loungeService';
 import { getUserProfile, getUserReviews } from './userActionsService';
 import { findCityCoordinates } from '../utils/cityAutocomplete';
 import { buildPassport, suggestNextLounge, type PassportSummary } from '../utils/passport';
+
+/**
+ * How far out to look for the "where next" suggestion, and how many
+ * candidates to hand the (pure) picker. Wider than Home's nearby radius
+ * because a suggestion is aspirational — somewhere worth a drive — but still
+ * bounded, so this can never become a full-collection scan again.
+ */
+const SUGGESTION_RADIUS_MILES = 100;
+const SUGGESTION_CANDIDATES = 200;
 
 export type PassportBundle = {
   passport: PassportSummary;
@@ -33,12 +42,26 @@ export async function getPassport(userId: string): Promise<PassportBundle> {
   const lounges = await getLoungesByIds(visitedLoungeIds);
   const passport = buildPassport(reviews, lounges, homeCoordinates);
 
-  // Only worth scanning the full collection for a suggestion once the
-  // member actually has a history to base one on.
+  // Only worth looking for a suggestion once the member actually has a
+  // history to base one on.
+  //
+  // Candidates come from around a point rather than from the whole 8,294-doc
+  // collection, which this used to download every time the Profile tab
+  // opened. Anchoring on the most recent visit before the profile home city
+  // is deliberate: suggestNextLounge already prefers cities the member knows,
+  // so the place they last went is a better centre than where they live —
+  // and it is the one anchor that exists for every member with a history,
+  // including those whose home city we can't resolve.
   let suggestion: Lounge | null = null;
   if (passport.visits.length > 0) {
     try {
-      suggestion = suggestNextLounge(await getAllLounges(), passport);
+      const anchor = lounges[0]?.coordinates ?? homeCoordinates;
+      if (anchor) {
+        suggestion = suggestNextLounge(
+          await getLoungesNear(anchor, SUGGESTION_RADIUS_MILES, SUGGESTION_CANDIDATES),
+          passport,
+        );
+      }
     } catch {
       // A suggestion is a nice-to-have; never fail the passport over it.
     }

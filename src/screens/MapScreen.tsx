@@ -46,7 +46,8 @@ import SimplifiedMapView from '../components/SimplifiedMapView';
 // TODO(firestore): weather widget and Concierge suggestion aren't
 // modeled in Firestore yet — see header comment above.
 import { conciergeSuggestion, defaultRegion, mapFilterChips, weatherWidget } from '../data/mockMap';
-import { getAllLounges, type Lounge } from '../services/loungeService';
+import { getLoungesNear, type Lounge } from '../services/loungeService';
+import { nearbyCacheKey, radiusForViewport } from '../utils/geoQuery';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
 import { tabBarClearance } from '../utils/tabBarLayout';
 import type { MainTabParamList } from '../navigation/MainNavigator';
@@ -80,6 +81,17 @@ function MapPin({
   );
 }
 
+/**
+ * Hard ceiling on rendered markers.
+ *
+ * react-native-maps mounts a native view per Marker, and these are custom
+ * markers with children — 8,294 of them, which is what the screen used to
+ * ask for, is seconds of work before the map responds to a touch. 150 is
+ * more pins than are legible on a phone screen anyway, and getLoungesNear
+ * returns them nearest-first, so the ones dropped are always the furthest.
+ */
+const MAX_PINS = 150;
+
 export default function MapScreen() {
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   // Keeps the info card clear of the floating tab bar on every device —
@@ -108,18 +120,46 @@ export default function MapScreen() {
     setMapType(prev => order[(order.indexOf(prev) + 1) % order.length]);
   };
 
+  /**
+   * What the map is currently looking at, which is what decides which pins to
+   * load. Seeded from the initial region and updated when a pan or zoom
+   * settles — `onRegionChangeComplete`, not `onRegionChange`, so this runs
+   * once per gesture rather than once per frame.
+   */
+  const [viewport, setViewport] = useState({
+    lat: initialRegion.latitude,
+    lng: initialRegion.longitude,
+    latitudeDelta: initialRegion.latitudeDelta,
+  });
+
+  const radiusMiles = radiusForViewport(viewport.latitudeDelta);
+
   const loadLounges = useCallback(async () => {
     setError(null);
-    setLounges(null);
     try {
-      const result = await getAllLounges();
+      // Scoped to the viewport. This screen used to load every lounge in the
+      // country — 8,294 documents — and then render a Marker for each one,
+      // which is what made the Map tab take seconds to become interactive.
+      // MAX_PINS caps the render even in the densest metro; the query itself
+      // widens with zoom (see radiusForViewport) so zooming out still fills
+      // the map instead of leaving it suspiciously empty.
+      const result = await getLoungesNear(
+        { lat: viewport.lat, lng: viewport.lng },
+        radiusMiles,
+        MAX_PINS,
+      );
       setLounges(result);
-      setSelectedLoungeId(result[0]?.id ?? null);
+      setSelectedLoungeId(previous =>
+        previous && result.some(lounge => lounge.id === previous) ? previous : result[0]?.id ?? null,
+      );
     } catch {
       setError("Couldn't load lounges. Check your connection and try again.");
     }
-  }, []);
+  }, [viewport.lat, viewport.lng, radiusMiles]);
 
+  // Does not blank `lounges` on a refetch: panning the map should not make
+  // every pin vanish and reappear. Repeat queries for a nearby centre are
+  // served from cache (see loungeService), so this is cheap.
   useEffect(() => {
     loadLounges();
   }, [loadLounges]);
@@ -224,6 +264,22 @@ export default function MapScreen() {
           initialRegion={initialRegion}
           mapType={mapType}
           onPress={() => setSelectedLoungeId(null)}
+          onRegionChangeComplete={region => {
+            // Reuses the data cache key as the "has this meaningfully moved?"
+            // test, so the threshold for refetching is exactly the
+            // granularity at which the answer could differ. Returning the
+            // existing object makes React bail out of the render entirely,
+            // which is what keeps a long pan from re-rendering 150 markers
+            // on every gesture.
+            const next = {
+              lat: region.latitude,
+              lng: region.longitude,
+              latitudeDelta: region.latitudeDelta,
+            };
+            const keyOf = (v: typeof next) =>
+              nearbyCacheKey({ lat: v.lat, lng: v.lng }, radiusForViewport(v.latitudeDelta));
+            setViewport(current => (keyOf(current) === keyOf(next) ? current : next));
+          }}
         >
           {(lounges ?? []).map(lounge => (
             <MapPin

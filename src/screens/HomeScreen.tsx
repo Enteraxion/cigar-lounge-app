@@ -5,12 +5,18 @@
  * lounge hero, nearby lounges, cigar of the week, trending now, member
  * events, and a floating action button. Featured/Nearby/Trending Now all
  * read from Firestore via src/services/loungeService.ts — see that file
- * and src/types/firestore.ts for the schema. Featured is highest-rated;
- * Trending is most-reviewed; Nearby is sorted by real distance from the
- * member's actual position (src/hooks/useCurrentLocation.ts), falling
- * back to their profile home city and only then to a static coordinate —
- * and the section subtitle says which of the three it used, so "Nearby"
- * is never a claim the app can't back up.
+ * and src/types/firestore.ts for the schema.
+ *
+ * All three rails draw from lounges within HOME_RADIUS_MILES of the member,
+ * via loungeService.getLoungesNear — which narrows the query server-side
+ * rather than downloading the whole 8,294-document collection, as this
+ * screen used to. Featured is the highest-rated of those, Trending the
+ * most-reviewed, Nearby the closest.
+ *
+ * Distance is measured from the member's actual position
+ * (src/hooks/useCurrentLocation.ts), falling back to their profile home city
+ * and only then to a static coordinate — and the section subtitle says which
+ * of the three it used, so "Nearby" is never a claim the app can't back up.
  *
  * Cigar of the Week is real (src/data/cigars.ts) and Member Events are
  * real owner-posted events (eventService). The header greeting is the
@@ -48,13 +54,12 @@ import SectionHeader from '../components/SectionHeader';
 import LoungeCard from '../components/LoungeCard';
 import FavoriteButton from '../components/FavoriteButton';
 import NotificationBadge from '../components/NotificationBadge';
-import { getAllLounges, type Lounge } from '../services/loungeService';
+import { getLoungesNear, type Lounge } from '../services/loungeService';
 import { getUserFavoriteIds } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount';
 import type { MainTabParamList } from '../navigation/MainNavigator';
-import { haversineDistanceMiles } from '../utils/loungeSearch';
 import { displayTags } from '../utils/displayTags';
 import { defaultRegion } from '../data/mockMap';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
@@ -68,6 +73,11 @@ import { loungeImageUri } from '../utils/loungeImage';
 import { tabBarClearance, TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 const NEARBY_COUNT = 4;
+/**
+ * How far out Home looks for "nearby". Matches loungeService's search
+ * fallback radius so the two features agree on what counts as reachable.
+ */
+const HOME_RADIUS_MILES = 60;
 const TRENDING_COUNT = 3;
 const EVENTS_COUNT = 5;
 
@@ -132,12 +142,31 @@ export default function HomeScreen() {
     });
   };
 
+  // Where "nearby" is measured from, in order of how much we trust it: the
+  // device's real fix, else the home city on the member's profile, else the
+  // app's static stand-in. Computed before the fetch rather than after,
+  // because the fetch is now anchored to it (see loadLounges).
+  const homeCoordinates = profile?.homeCity ? findCityCoordinates(profile.homeCity) : null;
+  const nearbyOrigin =
+    currentLocation ??
+    (homeCoordinates
+      ? { latitude: homeCoordinates.lat, longitude: homeCoordinates.lng }
+      : defaultRegion);
+  const nearbyIsReal = currentLocation !== null || homeCoordinates !== null;
+  // Primitives, not the object: `nearbyOrigin` is rebuilt on every render, so
+  // depending on it directly would refetch forever.
+  const originLat = nearbyOrigin.latitude;
+  const originLng = nearbyOrigin.longitude;
+
   const loadLounges = useCallback(async () => {
     setError(null);
-    setLounges(null);
     try {
       const [result, favoritedIds] = await Promise.all([
-        getAllLounges(),
+        // Proximity-scoped, not the whole collection. This screen shows four
+        // nearby lounges and three trending ones; it used to download all
+        // 8,294 documents (~6.8 MB, over 7s on a wired connection) to do it,
+        // which is the single biggest reason opening a tab felt frozen.
+        getLoungesNear({ lat: originLat, lng: originLng }, HOME_RADIUS_MILES),
         userId ? getUserFavoriteIds(userId) : Promise.resolve<string[]>([]),
       ]);
       setLounges(result);
@@ -145,8 +174,11 @@ export default function HomeScreen() {
     } catch {
       setError("Couldn't load lounges. Check your connection and try again.");
     }
-  }, [userId]);
+  }, [userId, originLat, originLng]);
 
+  // Deliberately does not reset `lounges` to null: a GPS fix arriving after
+  // first paint changes the origin and re-runs this, and blanking the screen
+  // back to its skeleton for that second load reads as a bug.
   useEffect(() => {
     loadLounges();
   }, [loadLounges]);
@@ -159,41 +191,28 @@ export default function HomeScreen() {
       .catch(() => setEvents([]));
   }, []);
 
+  // Featured and Trending are now drawn from the same nearby set as Nearby
+  // itself, because that is what this screen can honestly source. The old
+  // national ranking picked the highest-rated lounge out of all 8,294 —
+  // routinely one on the other side of the country, presented on a member's
+  // home screen as the thing to go to tonight. "Best near you" is both a
+  // truer claim and the one a member can act on.
+  //
+  // The origin is chosen above, in order of how much we trust it: the
+  // device's real fix, else the home city on the member's profile, else the
+  // app's static stand-in. That middle step matters — without it a member
+  // whose location is off got lounges near defaultRegion, a fixed coordinate
+  // in London, labelled "Nearby Lounges". Sorting US lounges by distance
+  // from London is not a neutral fallback; it's a wrong answer delivered
+  // confidently. `nearbyIsReal` is what the UI uses to say so.
   const featuredLounge = lounges?.length
     ? [...lounges].sort((a, b) => b.ratings.overall - a.ratings.overall)[0]
     : null;
 
-  // Sorted by distance from the user's real device location (see
-  // src/hooks/useCurrentLocation.ts), falling back to defaultRegion if
-  // permission was denied or no fix is available yet — same reference
-  // point Search/Map use.
-  // Where "nearby" is measured from, in order of how much we trust it:
-  // the device's real fix, else the home city on the member's profile,
-  // else the app's static stand-in.
-  //
-  // That middle step matters. Without it, a member whose location is off
-  // or unavailable got lounges near defaultRegion — a fixed coordinate in
-  // London — presented as "Nearby Lounges", with nothing on screen saying
-  // the app didn't actually know where they were. Sorting US lounges by
-  // distance from London is not a neutral fallback; it's a wrong answer
-  // delivered confidently.
-  const homeCoordinates = profile?.homeCity ? findCityCoordinates(profile.homeCity) : null;
-  const nearbyOrigin =
-    currentLocation ??
-    (homeCoordinates
-      ? { latitude: homeCoordinates.lat, longitude: homeCoordinates.lng }
-      : defaultRegion);
-  const nearbyIsReal = currentLocation !== null || homeCoordinates !== null;
-
+  // getLoungesNear already returns nearest-first, so this only has to drop
+  // the featured lounge and take the first few.
   const nearbyLounges = lounges
-    ? [...lounges]
-        .filter(l => l.id !== featuredLounge?.id)
-        .sort(
-          (a, b) =>
-            haversineDistanceMiles(nearbyOrigin, a.coordinates) -
-            haversineDistanceMiles(nearbyOrigin, b.coordinates),
-        )
-        .slice(0, NEARBY_COUNT)
+    ? lounges.filter(l => l.id !== featuredLounge?.id).slice(0, NEARBY_COUNT)
     : [];
 
   const trendingLounges = lounges

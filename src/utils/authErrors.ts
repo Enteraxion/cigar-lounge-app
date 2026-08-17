@@ -31,6 +31,17 @@ const BAD_CREDENTIAL_CODES = [
   'auth/user-not-found',
 ];
 
+/**
+ * The generic message, shown only for codes we haven't special-cased.
+ *
+ * Kept as a named constant because a member reporting "it says something went
+ * wrong" needs to be distinguishable from every other failure, and because the
+ * fallback used to be a dead end for diagnosis: it discarded the code, so the
+ * one piece of information worth having never reached anybody. See the warn in
+ * getAuthErrorMessage.
+ */
+const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
+
 export function getAuthErrorMessage(error: unknown): string {
   const code = (error as { code?: string } | null)?.code ?? '';
 
@@ -67,6 +78,28 @@ export function getAuthErrorMessage(error: unknown): string {
     case 'auth/requires-recent-login':
       return 'Please sign in again to continue.';
     default:
-      return 'Something went wrong. Please try again.';
+      // An unmapped code is the only case worth logging. Reaching here means
+      // the member is told "something went wrong" and nobody — not them, not
+      // us — can see what. That is how a real sign-in failure went
+      // undiagnosable: the message named no cause and the code was dropped on
+      // the floor. Logged rather than shown, because a raw `auth/...` string
+      // in the UI helps nobody using the app.
+      console.warn(
+        '[auth] unmapped error, falling back to the generic message.',
+        JSON.stringify({
+          code: code || '(no code property)',
+          message: (error as { message?: string } | null)?.message,
+          name: (error as { name?: string } | null)?.name,
+        }),
+      );
+      // In a development build, put the code on screen too. Asking someone to
+      // reproduce a failure and then read a terminal is a round trip that
+      // usually loses the detail; showing it means one screenshot identifies
+      // the cause. Never in a release build — a member has no use for
+      // `auth/internal-error`, and it would look broken.
+      if (__DEV__) {
+        return `${GENERIC_MESSAGE} [dev: ${code || 'no code'}]`;
+      }
+      return GENERIC_MESSAGE;
   }
 }

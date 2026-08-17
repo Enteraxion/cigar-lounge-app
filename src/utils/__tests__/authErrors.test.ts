@@ -64,9 +64,30 @@ describe('getAuthErrorMessage', () => {
   });
 
   it('falls back only for codes it genuinely does not know', () => {
-    expect(getAuthErrorMessage(err('auth/some-future-code'))).toBe(
+    expect(getAuthErrorMessage(err('auth/some-future-code'))).toContain(
       'Something went wrong. Please try again.',
     );
+  });
+
+  it('shows the unmapped code in a development build, so one screenshot identifies it', () => {
+    // The fallback used to discard the code, which is how a real sign-in
+    // failure became undiagnosable — the member sees "something went wrong"
+    // and nobody can see why.
+    const dev = (global as { __DEV__?: boolean }).__DEV__;
+    (global as { __DEV__?: boolean }).__DEV__ = true;
+    expect(getAuthErrorMessage(err('auth/internal-error'))).toContain('auth/internal-error');
+    (global as { __DEV__?: boolean }).__DEV__ = dev;
+  });
+
+  it('never leaks a raw code in a release build', () => {
+    // The rule the dev suffix is an explicit exception to: a member has no use
+    // for `auth/internal-error` and it makes the app look broken.
+    const dev = (global as { __DEV__?: boolean }).__DEV__;
+    (global as { __DEV__?: boolean }).__DEV__ = false;
+    const message = getAuthErrorMessage(err('auth/internal-error'));
+    expect(message).toBe('Something went wrong. Please try again.');
+    expect(message).not.toContain('auth/');
+    (global as { __DEV__?: boolean }).__DEV__ = dev;
   });
 
   it('survives anything that is not a Firebase error', () => {
@@ -78,6 +99,10 @@ describe('getAuthErrorMessage', () => {
   });
 
   it('every message is a complete sentence a member can read', () => {
+    // Release behaviour: no raw codes, no fragments. Checked with __DEV__ off
+    // because the development build deliberately appends the code (above).
+    const dev = (global as { __DEV__?: boolean }).__DEV__;
+    (global as { __DEV__?: boolean }).__DEV__ = false;
     const codes = [
       'auth/invalid-login-credentials',
       'auth/invalid-email',
@@ -90,5 +115,6 @@ describe('getAuthErrorMessage', () => {
       expect(message).toMatch(/[.!]$/);
       expect(message).not.toMatch(/auth\//);
     }
+    (global as { __DEV__?: boolean }).__DEV__ = dev;
   });
 });

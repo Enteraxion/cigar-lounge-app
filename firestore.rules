@@ -265,7 +265,9 @@ service cloud.firestore {
           && request.resource.data.read == false
           && (
             request.resource.data.type in ['review_helpful', 'new_review_on_favorite']
-            || (isAdmin() && request.resource.data.type in ['claim_approved', 'claim_rejected'])
+            || (isAdmin() && request.resource.data.type in [
+                 'claim_approved', 'claim_rejected', 'ownership_revoked'
+               ])
           );
       }
     }

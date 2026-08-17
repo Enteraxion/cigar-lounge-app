@@ -121,6 +121,12 @@ export type LoungeDocument = {
    * header comment); it only creates a `claimStatus: 'pending'` claim for
    * a human to review (see claimStatus below) while sales follows up
    * separately.
+   *
+   * Removable, not permanent: ownerService.revokeLoungeOwnership clears it
+   * (along with every other claim field) when a subscription lapses or a
+   * claim turns out to have been fraudulent, returning the lounge to
+   * claimable. Anything that decides what an owner may do should read this
+   * field rather than caching the answer.
    */
   ownerId?: string;
   ownerName?: string;
@@ -415,7 +421,8 @@ export type NotificationType =
   | 'review_helpful'
   | 'new_review_on_favorite'
   | 'claim_approved'
-  | 'claim_rejected';
+  | 'claim_rejected'
+  | 'ownership_revoked';
 
 export type NotificationDocument = {
   id: string;

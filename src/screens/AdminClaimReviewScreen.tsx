@@ -7,6 +7,15 @@
  * lounge with a claim currently awaiting review (ownerService.
  * getPendingClaims) and lets the admin approve (grants ownership) or
  * reject (reverts the lounge to unclaimed) each one.
+ *
+ * It also lists lounges that are *already* approved, so ownership can be
+ * taken back. That half exists because approval was accidentally
+ * irreversible: approveLoungeClaim deletes `claimStatus`, which is the field
+ * getPendingClaims filters on, so an approved lounge dropped off this screen
+ * and nothing in the app could reach it again. For a listing that is sold as
+ * a $399/month subscription, ownership has to end when the subscription does
+ * — and a claim that turns out to be fraudulent has to be reversible after
+ * the fact, since that is exactly the case first-pass review can miss.
  */
 
 import React, { useCallback, useState } from 'react';
@@ -16,7 +25,15 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft, ShieldCheck } from 'lucide-react-native';
 import { theme } from '../theme';
-import { approveLoungeClaim, getPendingClaims, rejectLoungeClaim, type PendingClaim } from '../services/ownerService';
+import {
+  approveLoungeClaim,
+  getApprovedLounges,
+  getPendingClaims,
+  rejectLoungeClaim,
+  revokeLoungeOwnership,
+  type PendingClaim,
+} from '../services/ownerService';
+import type { OwnedLounge } from '../utils/ownedLounges';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
@@ -26,13 +43,17 @@ export default function AdminClaimReviewScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [claims, setClaims] = useState<PendingClaim[]>([]);
+  const [approved, setApproved] = useState<OwnedLounge[]>([]);
   const [actioningId, setActioningId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     setLoadError(false);
-    getPendingClaims()
-      .then(setClaims)
+    Promise.all([getPendingClaims(), getApprovedLounges()])
+      .then(([pending, owned]) => {
+        setClaims(pending);
+        setApproved(owned);
+      })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
@@ -44,6 +65,9 @@ export default function AdminClaimReviewScreen() {
     try {
       await approveLoungeClaim(claim.id);
       setClaims(current => current.filter(c => c.id !== claim.id));
+      // Moved rather than removed, so the screen immediately shows that
+      // ownership now exists and can be taken back.
+      setApproved(current => [{ ...claim, approved: true }, ...current]);
     } catch (error) {
       Alert.alert(
         "Couldn't approve claim",
@@ -78,6 +102,37 @@ export default function AdminClaimReviewScreen() {
     ]);
   };
 
+  const revoke = (lounge: OwnedLounge) => {
+    Alert.alert(
+      'Remove this owner?',
+      `${lounge.name} will become claimable again and its current owner loses ` +
+        'access to edit it. The listing itself stays published.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove owner',
+          style: 'destructive',
+          onPress: async () => {
+            setActioningId(lounge.id);
+            try {
+              await revokeLoungeOwnership(lounge.id);
+              setApproved(current => current.filter(l => l.id !== lounge.id));
+            } catch (error) {
+              Alert.alert(
+                "Couldn't remove owner",
+                error instanceof Error ? error.message : 'Check your connection and try again.',
+              );
+            } finally {
+              setActioningId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const nothingToShow = claims.length === 0 && approved.length === 0;
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
@@ -101,13 +156,16 @@ export default function AdminClaimReviewScreen() {
             <Text style={styles.retryButtonText}>Try Again</Text>
           </Pressable>
         </View>
-      ) : claims.length === 0 ? (
+      ) : nothingToShow ? (
         <View style={styles.stateBox}>
           <ShieldCheck size={32} color={theme.colors.mutedGray} />
-          <Text style={styles.emptyText}>No pending claims right now.</Text>
+          <Text style={styles.emptyText}>No claims or claimed listings yet.</Text>
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {claims.length > 0 ? (
+            <Text style={styles.sectionHeading}>Pending review</Text>
+          ) : null}
           {claims.map(claim => (
             <View key={claim.id} style={styles.card}>
               <Text style={styles.loungeName}>{claim.name}</Text>
@@ -148,6 +206,50 @@ export default function AdminClaimReviewScreen() {
               </View>
             </View>
           ))}
+
+          {approved.length > 0 ? (
+            <>
+              <Text style={styles.sectionHeading}>Claimed listings</Text>
+              {approved.map(lounge => (
+                <View key={lounge.id} style={styles.card}>
+                  <Text style={styles.loungeName}>{lounge.name}</Text>
+                  <Text style={styles.loungeAddress}>{lounge.address}</Text>
+
+                  {/* Contact details survive approval, so they are still the
+                      useful thing to show when deciding whether to revoke. */}
+                  {lounge.ownerName ? (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Owner</Text>
+                      <Text style={styles.detailValue}>{lounge.ownerName}</Text>
+                    </View>
+                  ) : null}
+                  {lounge.ownerContactEmail ? (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Email</Text>
+                      <Text style={styles.detailValue}>{lounge.ownerContactEmail}</Text>
+                    </View>
+                  ) : null}
+
+                  <View style={styles.actionRow}>
+                    <Pressable
+                      style={[
+                        styles.rejectButton,
+                        actioningId === lounge.id && styles.buttonDisabled,
+                      ]}
+                      onPress={() => revoke(lounge)}
+                      disabled={actioningId === lounge.id}
+                    >
+                      {actioningId === lounge.id ? (
+                        <ActivityIndicator color={theme.colors.white} />
+                      ) : (
+                        <Text style={styles.rejectButtonText}>Remove owner</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -155,6 +257,15 @@ export default function AdminClaimReviewScreen() {
 }
 
 const styles = StyleSheet.create({
+  sectionHeading: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 13,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: theme.colors.mutedGray,
+    marginBottom: theme.spacing.sm,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,

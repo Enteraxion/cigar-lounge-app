@@ -138,6 +138,29 @@ export async function approveLoungeClaim(loungeId: string): Promise<void> {
 }
 
 /**
+ * Every field that records a claim or its outcome, cleared together.
+ *
+ * Shared between reject and revoke because the failure mode of *not* sharing
+ * it was already latent here: rejectLoungeClaim cleared the six claim fields
+ * and left `ownerId` untouched. That was invisible while reject could only
+ * ever reach a pending lounge (which has no ownerId), and would have become a
+ * silent disaster the moment it could reach an approved one — wiping the
+ * contact and audit trail while leaving the person a permanent owner with
+ * listing-edit rights and no record of who they were.
+ *
+ * `ownerId` belongs in this list, not in one caller's object literal.
+ */
+const CLAIM_FIELDS = {
+  ownerId: deleteField(),
+  claimStatus: deleteField(),
+  claimantUserId: deleteField(),
+  ownerName: deleteField(),
+  ownerContactEmail: deleteField(),
+  ownerContactPhone: deleteField(),
+  claimedAt: deleteField(),
+} as const;
+
+/**
  * Rejects the pending claim on `loungeId`. Clears every claim-related
  * field so the lounge reverts to unclaimed and can be claimed again —
  * there's no claims history collection to preserve the rejected attempt
@@ -166,14 +189,65 @@ export async function rejectLoungeClaim(loungeId: string): Promise<void> {
     });
   }
 
-  await updateDoc(loungeRef, {
-    claimStatus: deleteField(),
-    claimantUserId: deleteField(),
-    ownerName: deleteField(),
-    ownerContactEmail: deleteField(),
-    ownerContactPhone: deleteField(),
-    claimedAt: deleteField(),
+  await updateDoc(loungeRef, { ...CLAIM_FIELDS });
+}
+
+/**
+ * Takes ownership of an already-approved lounge back off its owner, returning
+ * it to unclaimed so it can be claimed again.
+ *
+ * Approval used to be irreversible, and not by design — `approveLoungeClaim`
+ * deletes `claimStatus`, which is the field getPendingClaims filters on, so an
+ * approved lounge dropped out of Admin Claim Review and nothing in the app
+ * could reach it again. `ownerId` was permanent.
+ *
+ * That is not a tenable end state for a paid product. Ownership is what a shop
+ * gets for a $399/month subscription closed by a sales rep, so it has to come
+ * back when the subscription lapses. It also has to come back when a claim
+ * turns out to have been made by someone who didn't own the business — which
+ * is exactly the case admin review exists to catch and cannot always catch on
+ * the first pass.
+ *
+ * Distinct from rejectLoungeClaim rather than folded into it: the member on
+ * the other end had a claim *granted* and is losing something they've been
+ * using, which deserves a different message from "we couldn't verify this".
+ */
+export async function revokeLoungeOwnership(loungeId: string): Promise<void> {
+  const loungeRef = doc(db, 'lounges', loungeId);
+  const snapshot = await getDoc(loungeRef);
+  if (!snapshot.exists()) {
+    throw new Error('This lounge no longer exists.');
+  }
+  const lounge = snapshot.data() as LoungeDocument;
+  if (!lounge.ownerId) {
+    throw new Error('This lounge has no owner to remove.');
+  }
+
+  // Notified before the write, for the same reason reject is: the write is
+  // what destroys the record of who to tell.
+  await notifyClaimant(lounge.ownerId, {
+    type: 'ownership_revoked',
+    title: 'Your business listing access has ended',
+    body:
+      `You no longer manage ${lounge.name} in The Reserve. Its listing stays ` +
+      'published — only your access to edit it has been removed. If you think ' +
+      'this is a mistake, reply to our team and we’ll look into it.',
+    data: { loungeId },
   });
+
+  await updateDoc(loungeRef, { ...CLAIM_FIELDS });
+}
+
+/** Every lounge with an approved owner — for the admin review screen's revoke list. */
+export async function getApprovedLounges(): Promise<OwnedLounge[]> {
+  const snapshot = await getDocs(
+    query(collection(db, 'lounges'), where('ownerId', '!=', null)),
+  );
+  return snapshot.docs.map(document => ({
+    id: document.id,
+    ...(document.data() as LoungeDocument),
+    approved: true,
+  }));
 }
 
 /**

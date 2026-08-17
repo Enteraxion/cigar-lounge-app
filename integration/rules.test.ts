@@ -111,14 +111,19 @@ describe('notification create rules', () => {
     );
   });
 
-  it('lets an admin write claim decisions', async () => {
+  it('refuses a member forging an ownership-revoked notification', async () => {
+    await assertFails(
+      addDoc(collection(member(), 'users', target, 'notifications'), notification('ownership_revoked')),
+    );
+  });
+
+  it('lets an admin write every claim decision', async () => {
     const db = admin();
-    await assertSucceeds(
-      addDoc(collection(db, 'users', target, 'notifications'), notification('claim_approved')),
-    );
-    await assertSucceeds(
-      addDoc(collection(db, 'users', target, 'notifications'), notification('claim_rejected')),
-    );
+    for (const type of ['claim_approved', 'claim_rejected', 'ownership_revoked']) {
+      await assertSucceeds(
+        addDoc(collection(db, 'users', target, 'notifications'), notification(type)),
+      );
+    }
   });
 
   it('refuses an unknown notification type from anyone', async () => {
@@ -308,6 +313,43 @@ describe('lounge claim lifecycle rules', () => {
       updateDoc(doc(member(CLAIMANT, 'claimant@example.com'), 'lounges', LOUNGE), {
         description: 'Updated',
       }),
+    );
+  });
+
+  it('lets an admin revoke — the exact write revokeLoungeOwnership makes', async () => {
+    // Approval used to be irreversible. This is the write that undoes it, and
+    // it must clear ownerId specifically: leaving it behind is what would let
+    // a removed owner keep passing isOwnListingEdit forever.
+    await seedLounge({ ownerId: CLAIMANT, claimantUserId: CLAIMANT, ownerName: 'A Owner' });
+    await assertSucceeds(
+      updateDoc(doc(admin(), 'lounges', LOUNGE), {
+        ownerId: deleteField(),
+        claimStatus: deleteField(),
+        claimantUserId: deleteField(),
+        ownerName: deleteField(),
+        ownerContactEmail: deleteField(),
+        ownerContactPhone: deleteField(),
+        claimedAt: deleteField(),
+      }),
+    );
+  });
+
+  it('refuses a member revoking somebody else’s ownership', async () => {
+    await seedLounge({ ownerId: 'real-owner' });
+    await assertFails(
+      updateDoc(doc(member(), 'lounges', LOUNGE), { ownerId: deleteField() }),
+    );
+  });
+
+  it('leaves a revoked lounge claimable again', async () => {
+    // The point of clearing rather than flagging: the shop can come back.
+    await seedLounge();
+    await assertSucceeds(
+      setDoc(
+        doc(member(CLAIMANT, 'claimant@example.com'), 'lounges', LOUNGE),
+        { claimStatus: 'pending', claimantUserId: CLAIMANT },
+        { merge: true },
+      ),
     );
   });
 

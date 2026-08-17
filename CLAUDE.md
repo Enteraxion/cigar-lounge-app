@@ -203,3 +203,50 @@ a travel "passport" feature, and an AI concierge.
   the provisioning profile — neither obtainable from here. Concierge
   Inspiration/Results/SavedConversations and the AI Settings toggles are
   still mock (they hang off the concierge feature set, not data wiring).
+- 2026-08-17: Performance, the owner flow, and the black/gold rebrand.
+  * **Every tab was downloading all 8,294 lounges.** `getAllLounges` fetched
+    the whole collection (~6.8 MB, 7.4s wired) and nine call sites across five
+    tabs called it; SearchScreen's four loaders each re-fetched, ~33k doc reads
+    per tap. Fixed with `src/utils/asyncCache.ts` (TTL + **in-flight
+    de-duplication** — the dedup is what fixes Search, since all four loaders
+    miss before any resolves) and `src/utils/geoQuery.ts` (Firestore can range
+    one field, so narrow to a latitude band server-side and finish the circle
+    in JS). Home/Map 8,294 -> 961 docs; Search reads one pre-computed doc
+    (`aggregates/cityStats`, built by `npm run build:city-stats` — **re-run it
+    after any import that adds lounges** or the city counts drift).
+    `getLoungesNear` escalates 60 -> 180 -> 480 -> 500mi rather than falling
+    back to a full scan. MapScreen capped at 150 markers (it was mounting a
+    native view per lounge).
+  * **Claim flow: approval was silent and irreversible.** Added
+    `claim_approved`/`claim_rejected`/`ownership_revoked` notifications,
+    `MyShopsScreen` (the only route to the long-existing EditListingScreen),
+    and `revokeLoungeOwnership` — approval used to delete `claimStatus`, the
+    field getPendingClaims filters on, so an approved lounge fell off the admin
+    screen forever. `rejectLoungeClaim` never cleared `ownerId`; the claim
+    fields are now one shared `CLAIM_FIELDS` constant so that can't recur.
+    Claim notification types are **admin-only in firestore.rules** — a member
+    able to forge "your business has been approved" is a ready-made scam.
+  * **New `rules` jest project**: `npm run test:rules` runs firestore.rules
+    against the real engine in the Firestore emulator (needs Java). 24 cases.
+    Excluded from `test:all`, which needs credentials rather than an emulator.
+  * **Theme is now black/gold/silver**, per Dr. Brinkley ("only the theme, logo
+    and theme"). Values sampled from `design-reference/kiosk-v1/`:
+    background `#0a0a0c`, surface `#18181c`, gold `#c8a868`. Silver `#c0c0c0`
+    unchanged — it's already the logo's silver. `primaryNavy`/`surfaceNavy`
+    renamed to `primaryBlack`/`surface`. **The palette was previously
+    unchangeable in practice**: 93 translucent shades were hand-written as raw
+    `rgba(...)` literals across 61 files, so `withAlpha(token, opacity)` now
+    exists and every one goes through it. Login/SignUp/ForgotPassword had no
+    theme import at all before this. owner-portal repointed to match.
+  * **App icon** regenerated from the Lounge Locator logo —
+    `design-reference/logo/` holds the source and `make-app-icon.swift`, which
+    handles the baked border/corners iOS would otherwise clip. See that
+    folder's README before touching the icon.
+  * **Not done, deliberately:** primary buttons are still white-on-black (the
+    kiosk design uses gold; it changes hierarchy everywhere, so it wants a
+    look first), and MapScreen's `userInterfaceStyle="dark"` does **not** work
+    — the map renders light even on a dark device, and the header comment
+    claiming otherwise is wrong. Much more visible against black than navy.
+  * The kiosk V1 designs are for an **in-shop 43" kiosk**, a separate product
+    (attract loop, "Start Over" session model, QR send-to-phone, staff
+    assistance, live humidor stock) — not a restyle of this app.

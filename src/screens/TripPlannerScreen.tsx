@@ -44,6 +44,7 @@ import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { loungeImageUri } from '../utils/loungeImage';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
@@ -168,7 +169,7 @@ export default function TripPlannerScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <Pressable style={styles.headerButton} onPress={() => navigation.goBack()}

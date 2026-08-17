@@ -30,6 +30,7 @@ import { useLoungeNameLookup } from '../hooks/useLoungeNameLookup';
 import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
@@ -92,7 +93,7 @@ export default function ConciergeHomeScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           {/* This screen is the root of the AIConcierge modal stack (see

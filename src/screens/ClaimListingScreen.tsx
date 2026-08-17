@@ -23,6 +23,7 @@ import { theme, withAlpha } from '../theme';
 import { submitLoungeClaim } from '../services/ownerService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type ClaimListingNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 type ClaimListingRouteProp = RouteProp<SearchStackParamList, 'ClaimListing'>;
@@ -138,7 +139,7 @@ export default function ClaimListingScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.intro}>
           Are you the owner or manager of this business? Claim your listing to edit its details —
           hours, description, amenities, and pricing.

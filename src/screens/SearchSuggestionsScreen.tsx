@@ -46,6 +46,7 @@ import { auth } from '../services/firebaseAuth';
 import { searchUsCities } from '../utils/cityAutocomplete';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 const RECENT_VISIBLE_LIMIT = 5;
 
@@ -222,7 +223,7 @@ export default function SearchSuggestionsScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+      <ScrollView {...keyboardAwareScrollProps} style={styles.content} contentContainerStyle={styles.contentInner}>
         {/* ---------------- Search this query ---------------- */}
         {/* Always available, regardless of whether the query matches the
             small local suggestion lists below — those are mock/curated

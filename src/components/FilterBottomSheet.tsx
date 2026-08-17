@@ -59,6 +59,7 @@ import {
   type FilterOption,
 } from '../data/mockFilters';
 import type { Lounge } from '../services/loungeService';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 import {
   deleteSavedSearchFilter,
   getSavedSearchFilters,
@@ -349,7 +350,7 @@ export default function FilterBottomSheet({
         )}
 
         {savedFilters.length > 0 ? (
-          <ScrollView
+          <ScrollView {...keyboardAwareScrollProps}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.savedFilterScroll}

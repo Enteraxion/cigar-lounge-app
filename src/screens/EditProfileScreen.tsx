@@ -59,6 +59,7 @@ import { searchLounges } from '../services/loungeService';
 import { searchUsCities } from '../utils/cityAutocomplete';
 import { CIGAR_BRANDS } from '../data/cigarBrands';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type EditProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -276,7 +277,7 @@ export default function EditProfileScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Profile Photo ---------------- */}
         <View style={styles.avatarField}>
           <Pressable style={styles.avatarArea} onPress={pickAvatar}>

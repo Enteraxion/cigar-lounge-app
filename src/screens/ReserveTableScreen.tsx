@@ -32,6 +32,7 @@ import { theme, withAlpha } from '../theme';
 import { createReservation } from '../services/reservationService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 const functions = getFunctions();
 
@@ -182,7 +183,7 @@ export default function ReserveTableScreen() {
         style={styles.keyboardAvoider}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.loungeName}>{loungeName}</Text>
 
         <View style={styles.field}>

@@ -42,6 +42,7 @@ import {
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 import { theme, withAlpha } from '../theme';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
 const FONT_SERIF_SEMIBOLD = 'PlayfairDisplay-SemiBold';
@@ -107,7 +108,7 @@ export default function SignUpScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <ScrollView
+      <ScrollView {...keyboardAwareScrollProps}
         style={styles.main}
         contentContainerStyle={styles.mainContent}
         showsVerticalScrollIndicator={false}

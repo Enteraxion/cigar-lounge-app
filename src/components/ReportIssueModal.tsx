@@ -9,7 +9,16 @@
  */
 
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 
@@ -34,7 +43,12 @@ export default function ReportIssueModal({ visible, onClose, onSubmit }: Props) 
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={cancel}>
-      <View style={styles.overlay}>
+      {/* A centred card, not a scroll view — so the card itself has to move out
+          of the keyboard's way. Everywhere else uses keyboardAwareScrollProps. */}
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={cancel} />
         <View style={styles.card}>
           <View style={styles.iconBox}>
@@ -62,7 +76,7 @@ export default function ReportIssueModal({ visible, onClose, onSubmit }: Props) 
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

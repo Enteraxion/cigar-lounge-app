@@ -42,6 +42,7 @@ import { createCollection as createCollectionInFirestore } from '../services/use
 import { uploadImage } from '../services/storageService';
 import { auth } from '../services/firebaseAuth';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type CreateCollectionNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
@@ -145,7 +146,7 @@ export default function CreateCollectionScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Cover Photo ---------------- */}
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Collection Cover</Text>

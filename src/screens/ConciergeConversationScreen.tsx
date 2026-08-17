@@ -66,6 +66,7 @@ import { displayTags } from '../utils/displayTags';
 import type { Lounge } from '../services/loungeService';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
 import { loungeImageUri } from '../utils/loungeImage';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 /**
  * Defined here rather than imported from mockConcierge because a real
@@ -484,7 +485,7 @@ export default function ConciergeConversationScreen() {
       {isLoading ? (
         <LoadingOverlay />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {messages.map(message => {
             if (message.role === 'user') {
               return (

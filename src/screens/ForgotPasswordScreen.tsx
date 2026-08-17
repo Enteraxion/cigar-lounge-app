@@ -30,6 +30,7 @@ import FlameIcon from '../components/FlameIcon';
 import { auth, getAuthErrorMessage } from '../services/firebaseAuth';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 import { theme, withAlpha } from '../theme';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
 const FONT_SERIF_SEMIBOLD = 'PlayfairDisplay-SemiBold';
@@ -78,7 +79,7 @@ export default function ForgotPasswordScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <ScrollView
+      <ScrollView {...keyboardAwareScrollProps}
         style={styles.main}
         contentContainerStyle={styles.mainContent}
         showsVerticalScrollIndicator={false}

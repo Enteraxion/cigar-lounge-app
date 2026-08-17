@@ -23,6 +23,7 @@ import { getLoungeById } from '../services/loungeService';
 import { updateLoungeDetails } from '../services/ownerService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type EditListingNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 type EditListingRouteProp = RouteProp<SearchStackParamList, 'EditListing'>;
@@ -125,7 +126,7 @@ export default function EditListingScreen() {
           </Pressable>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Description</Text>
             <TextInput

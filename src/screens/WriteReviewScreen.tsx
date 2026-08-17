@@ -52,6 +52,7 @@ import { auth } from '../services/firebaseAuth';
 import type { ReviewCategoryRatings } from '../types/firestore';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type WriteReviewNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 type WriteReviewRouteProp = RouteProp<SearchStackParamList, 'WriteReview'>;
@@ -205,7 +206,7 @@ export default function WriteReviewScreen() {
         style={styles.keyboardAvoider}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <ScrollView
+      <ScrollView {...keyboardAwareScrollProps}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >

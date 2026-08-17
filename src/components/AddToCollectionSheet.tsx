@@ -28,6 +28,7 @@ import {
 import { Check, Plus, Search as SearchIcon, X } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 import {
   addLoungeToCollection,
   getUserCollections,
@@ -177,7 +178,7 @@ export default function AddToCollectionSheet({
             </Text>
           </View>
         ) : (
-          <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+          <ScrollView {...keyboardAwareScrollProps} style={styles.list} showsVerticalScrollIndicator={false}>
             {filteredCollections.map(collection => {
               const selected = selectedIds.includes(collection.id);
               return (

@@ -1,0 +1,12 @@
+# Build output — never source, and linting it produces hundreds of phantom
+# errors that drown the real ones. `npx eslint .` reported 155 errors before
+# this file existed; 143 of them were in owner-portal/dist.
+node_modules/
+owner-portal/dist/
+owner-portal/node_modules/
+functions/lib/
+functions/node_modules/
+ios/
+android/
+vendor/
+coverage/

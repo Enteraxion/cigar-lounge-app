@@ -326,7 +326,10 @@ export const refreshCityLounges = onCall(
     // never does. This value reaches an outbound HTTP query string, so
     // "present" was never a sufficient check.
     const city = requireString(request.data?.city, 'city', 100);
-    if (!/^[\p{L}\p{M}\s.,'’&()-]+$/u.test(city)) {
+    // A literal space rather than \s: \s matches newlines and tabs, and a
+    // city name containing either is not a city name — it is someone
+    // probing what this field forwards.
+    if (!/^[\p{L}\p{M} .,'’&()-]+$/u.test(city)) {
       throw new HttpsError('invalid-argument', 'city contains unsupported characters.');
     }
 

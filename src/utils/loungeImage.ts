@@ -32,6 +32,8 @@ const FALLBACKS = [...loungeInteriors, ...whiskeyBars, ...cigarDetails, ...rooft
 function hash(id: string): number {
   let value = 0;
   for (let i = 0; i < id.length; i += 1) {
+    // eslint-disable-next-line no-bitwise -- |0 coerces to int32, which is
+    // the point: it keeps the hash bounded without a modulo on every step.
     value = (value * 31 + id.charCodeAt(i)) | 0;
   }
   return Math.abs(value);

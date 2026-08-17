@@ -159,7 +159,12 @@ async function fetchGooglePlaces(apiKey: string, location: string): Promise<Goog
         // trade: without them the app's Amenities/Entertainment filters
         // cannot work at all.
         'places.outdoorSeating,places.liveMusic,places.servesCocktails,places.servesCoffee,' +
-        'places.goodForWatchingSports,places.goodForGroups,places.reservable,places.parkingOptions',
+        'places.goodForWatchingSports,places.goodForGroups,places.reservable,places.parkingOptions,' +
+        // Rating and review count: until now these came only from Yelp, so a
+        // Google-only lounge stored 0 and looked unrated everywhere the app
+        // ranks by rating. That was survivable while Yelp covered most
+        // cities; it stops being survivable when Yelp goes away.
+        'places.rating,places.userRatingCount',
     },
     body: JSON.stringify({
       textQuery: `cigar lounge in ${location}`,
@@ -295,8 +300,8 @@ function toLoungeDocumentFromGoogle(
     // filterable — displayTags strips the internal imported-from-* marker.
     tags: ['imported-from-google', ...amenities],
     priceRange: '',
-    ratings: ratingsFromYelp(undefined),
-    reviewCount: 0,
+    ratings: ratingsFromYelp(place.rating),
+    reviewCount: place.userRatingCount ?? 0,
     humidorItems: [] as never[],
     createdAt: now,
     updatedAt: now,
@@ -343,15 +348,31 @@ export const refreshCityLounges = onCall(
       return { refreshed: false, reason: 'cached', city };
     }
 
+    // Both sources are best-effort and independent.
+    //
+    // Yelp used to be un-caught here while Google was wrapped, which meant a
+    // Yelp failure rejected the whole Promise.all and no city could be
+    // refreshed at all — even though Google alone produces a perfectly good
+    // result. That mattered the moment the Yelp key was due to expire: the
+    // feature would have died completely rather than degrading.
     const [businesses, googlePlaces] = await Promise.all([
-      fetchAllYelpResults(yelpApiKey.value(), city),
-      // Best-effort — a Google Places outage/quota issue shouldn't block
-      // the Yelp-only refresh that already worked fine before this merge.
+      fetchAllYelpResults(yelpApiKey.value(), city).catch(error => {
+        logger.error('Yelp fetch failed', { city, error: String(error) });
+        return [] as YelpBusiness[];
+      }),
       fetchGooglePlaces(googlePlacesApiKey.value(), city).catch(error => {
         logger.error('Google Places fetch failed', { city, error: String(error) });
         return [];
       }),
     ]);
+
+    // Neither source answered. Do NOT stamp the 30-day cache marker here —
+    // doing so would lock the city out of retrying for a month over what is
+    // usually a transient outage or an expired key.
+    if (businesses.length === 0 && googlePlaces.length === 0) {
+      logger.error('Both lounge sources returned nothing', { city });
+      return { refreshed: false, reason: 'sources-unavailable', city };
+    }
     // Drop results that each API's own categories say aren't cigar venues,
     // before any matching or writing happens.
     const relevantBusinesses = businesses.filter(isRelevantYelpBusiness);

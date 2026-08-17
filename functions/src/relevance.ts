@@ -32,6 +32,9 @@ export type GooglePlace = {
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   photos?: { name: string }[];
   primaryType?: string;
+  /** Google's own rating and review count — the only source once Yelp goes. */
+  rating?: number;
+  userRatingCount?: number;
   // Structured attributes — these are what make the app's Amenities and
   // Entertainment filters work. Without them every lounge stored an empty
   // `amenities` array, so selecting any of those chips returned zero

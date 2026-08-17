@@ -87,10 +87,14 @@ export default function ConciergeInspirationScreen() {
   }, []);
 
   // Only themes that actually have lounges behind them.
-  const experiences = EXPERIENCE_THEMES.map(theme => {
-    const matches = lounges.filter(theme.match);
-    return { ...theme, matches, image: matches[0] ? loungeImageUri(matches[0]) : null };
-  }).filter(theme => theme.matches.length > 0);
+  const experiences = EXPERIENCE_THEMES.map(experienceTheme => {
+    const matches = lounges.filter(experienceTheme.match);
+    return {
+      ...experienceTheme,
+      matches,
+      image: matches[0] ? loungeImageUri(matches[0]) : null,
+    };
+  }).filter(entry => entry.matches.length > 0);
 
   const nextEvent = events[0] ?? null;
   // "VIP exclusive" means the highest-rated premium lounge we actually have.

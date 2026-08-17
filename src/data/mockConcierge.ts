@@ -13,7 +13,7 @@
  * exactly.
  */
 
-import { cigarDetails, loungeInteriors, memberPortrait, rooftopBars, whiskeyBars } from './mockImages';
+import { loungeInteriors, rooftopBars, memberPortrait } from './mockImages';
 
 export const conciergeUser = {
   name: 'Julian Rossi',

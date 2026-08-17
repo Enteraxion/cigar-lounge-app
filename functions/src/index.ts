@@ -785,7 +785,22 @@ export const askConcierge = onCall(
       preferenceBrief(preferences) +
       `\n\nMEMBER:\n${last.content}`;
 
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey.value() });
+    // The secret must exist for this function to deploy at all, so during
+    // the "built but not switched on" phase it holds a placeholder. Saying
+    // so plainly beats a generic failure: a tester who sees "something went
+    // wrong" files a bug, and a tester who sees this does not.
+    const apiKey = anthropicApiKey.value();
+    if (!apiKey || apiKey.startsWith('placeholder')) {
+      logger.info('Concierge called with no API key configured');
+      return {
+        reply:
+          "The concierge isn't switched on yet — it's built and waiting on an API key. " +
+          'Everything else in the app works; try Search or the Map to find a lounge.',
+        loungeIds: [],
+      };
+    }
+
+    const anthropic = new Anthropic({ apiKey });
 
     let message;
     try {

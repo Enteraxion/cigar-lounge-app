@@ -33,7 +33,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NavigationProp } from '@react-navigation/native';
@@ -55,6 +55,7 @@ import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { displayTags } from '../utils/displayTags';
 import { loungeImageUri } from '../utils/loungeImage';
+import { tabBarClearance } from '../utils/tabBarLayout';
 
 type WishlistNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
@@ -99,6 +100,7 @@ function TimelineRow({ visit, onPress }: { visit: Visit; onPress: () => void }) 
 }
 
 export default function TravelWishlistScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<WishlistNavigationProp>();
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   const { profile } = useUserProfile();
@@ -348,7 +350,7 @@ export default function TravelWishlistScreen() {
 
       {/* ---------------- Floating Action Button ---------------- */}
       <Pressable
-        style={styles.fab}
+        style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]}
         onPress={() => Alert.alert('Coming Soon', 'Adding new destinations is coming soon.')}
       >
         <Plus size={22} color={theme.colors.primaryNavy} />
@@ -666,7 +668,9 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: theme.spacing.lg,
-    bottom: 96,
+    // bottom is applied at render from the safe-area inset — see
+    // tabBarClearance. A literal 96 sat behind the tab bar on any
+    // device with a home indicator, which is where the bar now ends.
     width: 56,
     height: 56,
     borderRadius: theme.radius.full,

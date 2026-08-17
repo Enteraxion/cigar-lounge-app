@@ -151,6 +151,13 @@ describe('tabBarLayout', () => {
     expect(tabBarClearance(34)).toBeGreaterThan(tabBarTop(34));
     expect(tabBarClearance(0)).toBeGreaterThan(tabBarTop(0));
   });
+
+  it('clears the bar on a home-indicator device, where a literal 96 did not', () => {
+    // The regression this pins, three times over: floating buttons were
+    // hardcoded to bottom:96 while the bar ends at 98 on any device with a
+    // home indicator, so they rendered behind it.
+    expect(tabBarClearance(34)).toBeGreaterThan(96);
+  });
 });
 
 describe('displayTags', () => {

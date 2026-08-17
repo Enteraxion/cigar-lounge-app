@@ -28,7 +28,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -45,6 +45,7 @@ import type { MainTabParamList } from '../navigation/MainNavigator';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import { displayTags } from '../utils/displayTags';
 import { loungeImageUri } from '../utils/loungeImage';
+import { tabBarClearance } from '../utils/tabBarLayout';
 
 type FavoritesNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
@@ -62,6 +63,7 @@ function FavoriteLoungeCard({ lounge, onPress }: { lounge: Lounge; onPress: () =
 }
 
 export default function FavoritesScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<FavoritesNavigationProp>();
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   const userId = auth.currentUser?.uid;
@@ -288,7 +290,7 @@ export default function FavoritesScreen() {
         </View>
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('CreateCollection')}>
+      <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => navigation.navigate('CreateCollection')}>
         <Plus size={22} color={theme.colors.primaryNavy} />
       </Pressable>
     </SafeAreaView>
@@ -483,7 +485,9 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: theme.spacing.lg,
-    bottom: 96,
+    // bottom is applied at render from the safe-area inset — see
+    // tabBarClearance. A literal 96 sat behind the tab bar on any
+    // device with a home indicator, which is where the bar now ends.
     width: 56,
     height: 56,
     borderRadius: theme.radius.full,

@@ -29,7 +29,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import {
   Bell,
@@ -65,6 +65,7 @@ import {
   type MemberEvent,
 } from '../services/eventService';
 import { loungeImageUri } from '../utils/loungeImage';
+import { tabBarClearance } from '../utils/tabBarLayout';
 
 const NEARBY_COUNT = 4;
 const TRENDING_COUNT = 3;
@@ -96,6 +97,7 @@ const QUICK_ACTIONS: {
 ];
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   const { profile } = useUserProfile();
   const { count: unreadNotificationCount } = useUnreadNotificationCount();
@@ -476,7 +478,7 @@ export default function HomeScreen() {
           screen that already exists, so this is a real shortcut rather
           than a new feature — the fastest routes into the three things a
           member actually opens this app to do. */}
-      <Pressable style={styles.fab} onPress={() => setQuickActionsOpen(true)}>
+      <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => setQuickActionsOpen(true)}>
         <Plus size={22} color={theme.colors.primaryNavy} />
       </Pressable>
 
@@ -821,7 +823,9 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: theme.spacing.lg,
-    bottom: 96,
+    // bottom is applied at render from the safe-area inset — see
+    // tabBarClearance. A literal 96 sat behind the tab bar on any
+    // device with a home indicator, which is where the bar now ends.
     width: 56,
     height: 56,
     borderRadius: theme.radius.full,

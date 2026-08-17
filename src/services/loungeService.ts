@@ -115,20 +115,48 @@ const nearbyCache = createKeyedAsyncCache(async (key: string) => {
   return withinRadius(inBand, { lat, lng }, radiusMiles);
 }, LOUNGE_CACHE_TTL_MS);
 
+/**
+ * Widest radius worth asking about. Comfortably spans the continental US from
+ * any point inside it, so failing at this distance means the member really is
+ * nowhere near a lounge we list, and an empty answer is the true one.
+ */
+const MAX_SEARCH_RADIUS_MILES = 500;
+
+/**
+ * Radii to try in order, when the requested one finds nothing.
+ *
+ * This escalation replaced a fallback that read the whole collection, and it
+ * is worth explaining why that fallback was wrong. A sparse origin — the
+ * static one this app uses before it knows where you are is the geographic
+ * centre of the US, which has **zero** lounges within 60 miles — made the
+ * "nothing nearby" branch fire on a normal cold start, so the very screen
+ * the proximity query exists to speed up went straight back to downloading
+ * 8,294 documents. Worse, it then showed the 150 lounges nearest to rural
+ * Kansas as "Trending Now".
+ *
+ * Widening in steps keeps every attempt a bounded band query, and each one is
+ * cached independently. Three steps reach 500 miles from a 60-mile request.
+ */
+function escalatingRadii(radiusMiles: number): number[] {
+  const ladder = [radiusMiles, radiusMiles * 3, radiusMiles * 8, MAX_SEARCH_RADIUS_MILES];
+  const capped = ladder.filter(radius => radius <= MAX_SEARCH_RADIUS_MILES);
+  return Array.from(new Set(capped.length > 0 ? capped : [MAX_SEARCH_RADIUS_MILES]));
+}
+
 export async function getLoungesNear(
   center: { lat: number; lng: number },
   radiusMiles: number,
   max = 150,
 ): Promise<Lounge[]> {
-  const nearby = await nearbyCache.get(nearbyCacheKey(center, radiusMiles));
-  if (nearby.length > 0) {
-    return nearby.slice(0, max);
+  for (const radius of escalatingRadii(radiusMiles)) {
+    const nearby = await nearbyCache.get(nearbyCacheKey(center, radius));
+    if (nearby.length > 0) {
+      return nearby.slice(0, max);
+    }
   }
-  // Nothing in the band. Rather than claim there are no lounges, answer from
-  // the whole collection sorted by distance — expensive, but this is the
-  // "member is far from anywhere we cover" path, not the common one.
-  const all = await allLoungesCache.get();
-  return withinRadius(all, center, Number.POSITIVE_INFINITY).slice(0, max);
+  // Genuinely nothing within 500 miles. Empty is the honest answer, and it is
+  // reached without ever having read the full collection.
+  return [];
 }
 
 /** Fetches a single lounge by id, or null if it doesn't exist. */

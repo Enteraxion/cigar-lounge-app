@@ -119,7 +119,7 @@ const QUICK_ACTIONS: {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
-  const { profile } = useUserProfile();
+  const { profile, loading: profileLoading } = useUserProfile();
   const { count: unreadNotificationCount } = useUnreadNotificationCount();
   const { location: currentLocation } = useCurrentLocation();
   const [lounges, setLounges] = useState<Lounge[] | null>(null);
@@ -176,12 +176,26 @@ export default function HomeScreen() {
     }
   }, [userId, originLat, originLng]);
 
-  // Deliberately does not reset `lounges` to null: a GPS fix arriving after
-  // first paint changes the origin and re-runs this, and blanking the screen
-  // back to its skeleton for that second load reads as a bug.
+  // Waits for the profile before the first fetch.
+  //
+  // The origin depends on the member's home city, which arrives asynchronously.
+  // Firing immediately meant every cold start ran one query anchored to
+  // defaultRegion — a coordinate with no lounges within 60 miles — and then a
+  // second, real one a moment later once the profile landed. The first was
+  // pure waste, and for the instant it was on screen it showed lounges from
+  // the middle of the country as "Nearby".
+  //
+  // Bounded by a single document read, and `profileLoading` is already false
+  // for a signed-out member, so nothing waits indefinitely. A GPS fix landing
+  // later still changes the origin and re-runs this — which is why `lounges`
+  // is deliberately not reset to null here: blanking the screen back to its
+  // skeleton for that second load reads as a bug.
   useEffect(() => {
+    if (profileLoading) {
+      return;
+    }
     loadLounges();
-  }, [loadLounges]);
+  }, [profileLoading, loadLounges]);
 
   // Events load independently of lounges: an events failure (or simply
   // no shop having posted one) must not take the whole Home screen down.

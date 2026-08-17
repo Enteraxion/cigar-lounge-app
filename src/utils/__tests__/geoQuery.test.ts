@@ -149,3 +149,65 @@ describe('radiusForViewport', () => {
     }
   });
 });
+
+/**
+ * The radius escalation that replaced a full-collection fallback.
+ *
+ * Mirrors loungeService.escalatingRadii, which is not exported (it exists only
+ * to drive getLoungesNear's loop). Kept in step deliberately: the property that
+ * matters is arithmetic, and it is what stopped a sparse origin from reading
+ * all 8,294 documents.
+ */
+const MAX_SEARCH_RADIUS_MILES = 500;
+function escalatingRadii(radiusMiles: number): number[] {
+  const ladder = [radiusMiles, radiusMiles * 3, radiusMiles * 8, MAX_SEARCH_RADIUS_MILES];
+  const capped = ladder.filter(radius => radius <= MAX_SEARCH_RADIUS_MILES);
+  return Array.from(new Set(capped.length > 0 ? capped : [MAX_SEARCH_RADIUS_MILES]));
+}
+
+describe('escalatingRadii', () => {
+  it('tries the requested radius first', () => {
+    expect(escalatingRadii(60)[0]).toBe(60);
+  });
+
+  it('widens rather than giving up, for a sparse origin', () => {
+    // The real case: the static fallback origin has zero lounges within 60
+    // miles, so a single attempt found nothing and the old code read the
+    // entire collection.
+    const radii = escalatingRadii(60);
+    expect(radii.length).toBeGreaterThan(1);
+    expect(radii).toEqual([...radii].sort((a, b) => a - b));
+  });
+
+  it('reaches far enough to cross the continental US', () => {
+    expect(Math.max(...escalatingRadii(60))).toBe(MAX_SEARCH_RADIUS_MILES);
+  });
+
+  it('never exceeds the cap, so no attempt becomes a full scan', () => {
+    for (const requested of [25, 60, 100, 300, 500]) {
+      for (const radius of escalatingRadii(requested)) {
+        expect(radius).toBeLessThanOrEqual(MAX_SEARCH_RADIUS_MILES);
+      }
+    }
+  });
+
+  it('has no duplicate attempts to waste a query on', () => {
+    for (const requested of [25, 60, 500, 1000]) {
+      const radii = escalatingRadii(requested);
+      expect(new Set(radii).size).toBe(radii.length);
+    }
+  });
+
+  it('still returns something to try when the request already exceeds the cap', () => {
+    // A fully zoomed-out map can ask for more than the cap; that must not
+    // produce an empty ladder and therefore an unconditional empty result.
+    expect(escalatingRadii(900).length).toBeGreaterThan(0);
+    expect(escalatingRadii(900)).toEqual([MAX_SEARCH_RADIUS_MILES]);
+  });
+
+  it('is bounded — a handful of queries, not an open loop', () => {
+    for (const requested of [25, 60, 100, 300]) {
+      expect(escalatingRadii(requested).length).toBeLessThanOrEqual(4);
+    }
+  });
+});

@@ -1,0 +1,400 @@
+    export INSTALLAPI_IGNORE_SKIP_INSTALL\=YES
+    export INSTALLHDRS_COPY_PHASE\=NO
+    export INSTALLHDRS_SCRIPT_PHASE\=NO
+    export INSTALL_DIR\=/tmp/CigarLoungeApp.dst/Applications
+    export INSTALL_GROUP\=staff
+    export INSTALL_MODE_FLAG\=u+w,go-w,a+rX
+    export INSTALL_OWNER\=rohithreddy
+    export INSTALL_PATH\=/Applications
+    export INSTALL_ROOT\=/tmp/CigarLoungeApp.dst
+    export IPHONEOS_DEPLOYMENT_TARGET\=15.1
+    export IS_UNOPTIMIZED_BUILD\=YES
+    export JAVAC_DEFAULT_FLAGS\=-J-Xms64m\ -J-XX:NewSize\=4M\ -J-Dfile.encoding\=UTF8
+    export JAVA_APP_STUB\=/System/Library/Frameworks/JavaVM.framework/Resources/MacOS/JavaApplicationStub
+    export JAVA_ARCHIVE_CLASSES\=YES
+    export JAVA_ARCHIVE_TYPE\=JAR
+    export JAVA_COMPILER\=/usr/bin/javac
+    export JAVA_FOLDER_PATH\=CigarLoungeApp.app/Java
+    export JAVA_FRAMEWORK_RESOURCES_DIRS\=Resources
+    export JAVA_JAR_FLAGS\=cv
+    export JAVA_SOURCE_SUBDIR\=.
+    export JAVA_USE_DEPENDENCIES\=YES
+    export JAVA_ZIP_FLAGS\=-urg
+    export JIKES_DEFAULT_FLAGS\=+E\ +OLDCSO
+    export KEEP_PRIVATE_EXTERNS\=NO
+    export LD_DEPENDENCY_INFO_FILE\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/undefined_arch/CigarLoungeApp_dependency_info.dat
+    export LD_EXPORT_SYMBOLS\=YES
+    export LD_GENERATE_MAP_FILE\=NO
+    export LD_MAP_FILE_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/CigarLoungeApp-LinkMap-normal-undefined_arch.txt
+    export LD_NO_PIE\=NO
+    export LD_QUOTE_LINKER_ARGUMENTS_FOR_COMPILER_DRIVER\=YES
+    export LD_RUNPATH_SEARCH_PATHS\=/usr/lib/swift\ \ /usr/lib/swift\ \'@executable_path/Frameworks\'\ \'@loader_path/Frameworks\'\ @executable_path/Frameworks
+    export LD_RUNPATH_SEARCH_PATHS_YES\=@loader_path/../Frameworks
+    export LD_SHARED_CACHE_ELIGIBLE\=Automatic
+    export LD_WARN_DUPLICATE_LIBRARIES\=NO
+    export LD_WARN_UNUSED_DYLIBS\=NO
+    export LEGACY_DEVELOPER_DIR\=/Applications/Xcode.app/Contents/PlugIns/Xcode3Core.ideplugin/Contents/SharedSupport/Developer
+    export LEX\=lex
+    export LIBRARY_DEXT_INSTALL_PATH\=/Library/DriverExtensions
+    export LIBRARY_FLAG_NOSPACE\=YES
+    export LIBRARY_FLAG_PREFIX\=-l
+    export LIBRARY_KEXT_INSTALL_PATH\=/Library/Extensions
+    export LIBRARY_SEARCH_PATHS\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/usr/lib/swift\ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator\ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/usr/lib/swift
+    export LINKER_DISPLAYS_MANGLED_NAMES\=NO
+    export LINK_FILE_LIST_normal_arm64\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/arm64/CigarLoungeApp.LinkFileList
+    export LINK_OBJC_RUNTIME\=YES
+    export LINK_WITH_STANDARD_LIBRARIES\=YES
+    export LLVM_TARGET_TRIPLE_OS_VERSION\=ios15.1
+    export LLVM_TARGET_TRIPLE_SUFFIX\=-simulator
+    export LLVM_TARGET_TRIPLE_VENDOR\=apple
+    export LM_AUX_CONST_METADATA_LIST_PATH_normal_arm64\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/arm64/CigarLoungeApp.SwiftConstValuesFileList
+    export LOCALIZATION_EXPORT_SUPPORTED\=YES
+    export LOCALIZATION_PREFERS_STRING_CATALOGS\=NO
+    export LOCALIZED_RESOURCES_FOLDER_PATH\=CigarLoungeApp.app/en.lproj
+    export LOCALIZED_STRING_CODE_COMMENTS\=NO
+    export LOCALIZED_STRING_MACRO_NAMES\=NSLocalizedString\ CFCopyLocalizedString
+    export LOCALIZED_STRING_SWIFTUI_SUPPORT\=YES
+    export LOCAL_ADMIN_APPS_DIR\=/Applications/Utilities
+    export LOCAL_APPS_DIR\=/Applications
+    export LOCAL_DEVELOPER_DIR\=/Library/Developer
+    export LOCAL_LIBRARY_DIR\=/Library
+    export LOCROOT\=/Users/rohithreddy/cigar-lounge-app/ios
+    export LOCSYMROOT\=/Users/rohithreddy/cigar-lounge-app/ios
+    export MACH_O_TYPE\=mh_execute
+    export MAC_OS_X_PRODUCT_BUILD_VERSION\=25F80
+    export MAC_OS_X_VERSION_ACTUAL\=260501
+    export MAC_OS_X_VERSION_MAJOR\=260000
+    export MAC_OS_X_VERSION_MINOR\=260500
+    export MAKE_MERGEABLE\=NO
+    export MARKETING_VERSION\=1.0
+    export MERGEABLE_LIBRARY\=NO
+    export MERGED_BINARY_TYPE\=none
+    export MERGE_LINKED_LIBRARIES\=NO
+    export METAL_LIBRARY_FILE_BASE\=default
+    export METAL_LIBRARY_OUTPUT_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app
+    export MODULES_FOLDER_PATH\=CigarLoungeApp.app/Modules
+    export MODULE_CACHE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/ModuleCache.noindex
+    export MTL_ENABLE_DEBUG_INFO\=YES
+    export NATIVE_ARCH\=arm64
+    export NATIVE_ARCH_32_BIT\=arm
+    export NATIVE_ARCH_64_BIT\=arm64
+    export NATIVE_ARCH_ACTUAL\=arm64
+    export NO_COMMON\=YES
+    export OBJC_ABI_VERSION\=2
+    export OBJECT_FILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects
+    export OBJECT_FILE_DIR_normal\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal
+    export OBJROOT\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex
+    export ONLY_ACTIVE_ARCH\=YES
+    export OS\=MACOS
+    export OSAC\=/usr/bin/osacompile
+    export OTHER_CFLAGS\=\ -DRCT_REMOVE_LEGACY_ARCH\=1\ \ -DREACT_NATIVE_MINOR_VERSION\=86\ \ -DRCT_REMOVE_LEGACY_ARCH\=1\ -DREACT_NATIVE_MINOR_VERSION\=86\ -ivfsoverlay\ \"/Users/rohithreddy/cigar-lounge-app/ios/Pods/React-Core-prebuilt/React-VFS.yaml\"
+    export OTHER_CPLUSPLUSFLAGS\=\ -DRCT_REMOVE_LEGACY_ARCH\=1\ \ -DREACT_NATIVE_MINOR_VERSION\=86\ \ -DRCT_REMOVE_LEGACY_ARCH\=1\ -DREACT_NATIVE_MINOR_VERSION\=86\ -ivfsoverlay\ \"/Users/rohithreddy/cigar-lounge-app/ios/Pods/React-Core-prebuilt/React-VFS.yaml\"\ -DFOLLY_NO_CONFIG\ -DFOLLY_MOBILE\=1\ -DFOLLY_USE_LIBCPP\=1\ -DFOLLY_CFG_NO_COROUTINES\=1\ -DFOLLY_HAVE_CLOCK_GETTIME\=1\ -DRCT_REMOVE_LEGACY_ARCH\=1\ -ivfsoverlay\ \"/Users/rohithreddy/cigar-lounge-app/ios/Pods/React-Core-prebuilt/React-VFS.yaml\"\ -DRCT_NEW_ARCH_ENABLED\=1
+    export OTHER_LDFLAGS\=\ -ObjC\ -l\"c++\"\ -l\"z\"\ -framework\ \"AVFoundation\"\ -framework\ \"Accelerate\"\ -framework\ \"AudioToolbox\"\ -framework\ \"BVLinearGradient\"\ -framework\ \"CoreGraphics\"\ -framework\ \"CoreLocation\"\ -framework\ \"CoreMedia\"\ -framework\ \"FirebaseAppCheckInterop\"\ -framework\ \"FirebaseAuth\"\ -framework\ \"FirebaseAuthInterop\"\ -framework\ \"FirebaseCore\"\ -framework\ \"FirebaseCoreExtension\"\ -framework\ \"FirebaseCoreInternal\"\ -framework\ \"FirebaseFirestore\"\ -framework\ \"FirebaseFirestoreInternal\"\ -framework\ \"FirebaseFunctions\"\ -framework\ \"FirebaseMessagingInterop\"\ -framework\ \"FirebaseSharedSwift\"\ -framework\ \"FirebaseStorage\"\ -framework\ \"Foundation\"\ -framework\ \"GTMSessionFetcher\"\ -framework\ \"GoogleUtilities\"\ -framework\ \"ImageIO\"\ -framework\ \"MobileCoreServices\"\ -framework\ \"Photos\"\ -framework\ \"PhotosUI\"\ -framework\ \"QuartzCore\"\ -framework\ \"RNFBApp\"\ -framework\ \"RNFBAuth\"\ -framework\ \"RNFBFirestore\"\ -framework\ \"RNFBFunctions\"\ -framework\ \"RNFBStorage\"\ -framework\ \"RNGestureHandler\"\ -framework\ \"RNSVG\"\ -framework\ \"RNScreens\"\ -framework\ \"RNVectorIcons\"\ -framework\ \"React\"\ -framework\ \"ReactAppDependencyProvider\"\ -framework\ \"ReactCodegen\"\ -framework\ \"ReactNativeDependencies\"\ -framework\ \"ReactNativeMaps\"\ -framework\ \"RecaptchaInterop\"\ -framework\ \"SafariServices\"\ -framework\ \"Security\"\ -framework\ \"SystemConfiguration\"\ -framework\ \"UIKit\"\ -framework\ \"absl\"\ -framework\ \"grpc\"\ -framework\ \"grpcpp\"\ -framework\ \"hermesvm\"\ -framework\ \"leveldb\"\ -framework\ \"nanopb\"\ -framework\ \"openssl_grpc\"\ -framework\ \"react_native_geolocation\"\ -framework\ \"react_native_image_picker\"\ -framework\ \"react_native_safe_area_context\"\ -weak_framework\ \"FirebaseFirestoreInternal\"\ -weak_framework\ \"JavaScriptCore\"\ -ObjC\ -lc++
+    export OTHER_MODULE_VERIFIER_FLAGS\=\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/BVLinearGradient\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/BoringSSL-GRPC\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FBLazyVector\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/Firebase\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseAppCheckInterop\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseAuth\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseAuthInterop\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseCore\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseCoreExtension\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseCoreInternal\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseFirestore\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseFirestoreInternal\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseFunctions\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseMessagingInterop\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseSharedSwift\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/FirebaseStorage\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/GTMSessionFetcher\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/GoogleUtilities\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RCTDeprecation\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RCTRequired\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RCTSwiftUI\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RCTSwiftUIWrapper\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RCTTypeSafety\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNFBApp\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNFBAuth\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNFBFirestore\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNFBFunctions\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNFBStorage\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNGestureHandler\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNSVG\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNScreens\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RNVectorIcons\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-Core\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-Core-prebuilt\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-CoreModules\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-Fabric\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-FabricComponents\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-FabricImage\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-ImageManager\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-Mapbuffer\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-NativeModulesApple\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTActionSheet\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTAnimation\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTAppDelegate\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTBlob\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTFBReactNativeSpec\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTFabric\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTImage\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTLinking\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTNetwork\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTRuntime\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTSettings\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTText\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RCTVibration\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RuntimeApple\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RuntimeCore\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-RuntimeHermes\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-callinvoker\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-cxxreact\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-debug\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-defaultsnativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-domnativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-featureflags\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-featureflagsnativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-graphics\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-hermes\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-idlecallbacksnativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-intersectionobservernativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jserrorhandler\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsi\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsiexecutor\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsinspector\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsinspectorcdp\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsinspectornetwork\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsinspectortracing\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsitooling\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-jsitracing\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-logger\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-microtasksnativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-mutationobservernativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-networking\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-oscompat\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-perflogger\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-performancecdpmetrics\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-performancetimeline\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-rendererconsistency\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-renderercss\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-rendererdebug\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-runtimeexecutor\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-runtimescheduler\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-timing\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-utils\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-viewtransitionnativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/React-webperformancenativemodule\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/ReactAppDependencyProvider\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/ReactCodegen\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/ReactCommon\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/ReactNativeDependencies\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/RecaptchaInterop\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/Yoga\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/abseil\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/gRPC-C++\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/gRPC-Core\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/hermes-engine\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/leveldb-library\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/nanopb\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/react-native-geolocation\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/react-native-image-picker\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/react-native-maps\"\ \"-F/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/react-native-safe-area-context\"
+    export OTHER_SWIFT_FLAGS\=\ -D\ COCOAPODS\ -Xcc\ -ivfsoverlay\ -Xcc\ \"/Users/rohithreddy/cigar-lounge-app/ios/Pods/React-Core-prebuilt/React-VFS.yaml\"\ -Xcc\ -Wno-incomplete-umbrella
+    export PACKAGE_TYPE\=com.apple.package-type.wrapper.application
+    export PASCAL_STRINGS\=YES
+    export PATH\=/Applications/Xcode.app/Contents/SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/PlugIns/SWBUniversalPlatformPlugin.bundle/Contents/Frameworks/SWBUniversalPlatform.framework/Resources:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/bin:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/usr/bin:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/usr/local/bin:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/local/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/opt/anaconda3/bin:/opt/anaconda3/condabin
+    export PATH_PREFIXES_EXCLUDED_FROM_HEADER_DEPENDENCIES\=/usr/include\ /usr/local/include\ /System/Library/Frameworks\ /System/Library/PrivateFrameworks\ /Applications/Xcode.app/Contents/Developer/Headers\ /Applications/Xcode.app/Contents/Developer/SDKs\ /Applications/Xcode.app/Contents/Developer/Platforms
+    export PBDEVELOPMENTPLIST_PATH\=CigarLoungeApp.app/pbdevelopment.plist
+    export PER_ARCH_MODULE_FILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/undefined_arch
+    export PER_ARCH_OBJECT_FILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/undefined_arch
+    export PER_VARIANT_OBJECT_FILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal
+    export PKGINFO_FILE_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/PkgInfo
+    export PKGINFO_PATH\=CigarLoungeApp.app/PkgInfo
+    export PLATFORM_DEVELOPER_APPLICATIONS_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications
+    export PLATFORM_DEVELOPER_BIN_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/bin
+    export PLATFORM_DEVELOPER_LIBRARY_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library
+    export PLATFORM_DEVELOPER_SDK_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs
+    export PLATFORM_DEVELOPER_TOOLS_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Tools
+    export PLATFORM_DEVELOPER_USR_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr
+    export PLATFORM_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform
+    export PLATFORM_DISPLAY_NAME\=iOS\ Simulator
+    export PLATFORM_FAMILY_NAME\=iOS
+    export PLATFORM_NAME\=iphonesimulator
+    export PLATFORM_PREFERRED_ARCH\=x86_64
+    export PLATFORM_PRODUCT_BUILD_VERSION\=23F73
+    export PLATFORM_REQUIRES_SWIFT_AUTOLINK_EXTRACT\=NO
+    export PLATFORM_REQUIRES_SWIFT_MODULEWRAP\=NO
+    export PLATFORM_USES_DSYMS\=YES
+    export PLIST_FILE_OUTPUT_FORMAT\=binary
+    export PLUGINS_FOLDER_PATH\=CigarLoungeApp.app/PlugIns
+    export PODFILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios
+    export PODS_BUILD_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products
+    export PODS_CONFIGURATION_BUILD_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator
+    export PODS_PODFILE_DIR_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/.
+    export PODS_ROOT\=/Users/rohithreddy/cigar-lounge-app/ios/Pods
+    export PODS_XCFRAMEWORKS_BUILD_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/XCFrameworkIntermediates
+    export PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR\=YES
+    export PRECOMP_DESTINATION_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/PrefixHeaders
+    export PRIVATE_HEADERS_FOLDER_PATH\=CigarLoungeApp.app/PrivateHeaders
+    export PROCESSED_INFOPLIST_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/undefined_arch/Processed-Info.plist
+    export PRODUCT_BUNDLE_IDENTIFIER\=com.enteraxion.thereserve
+    export PRODUCT_BUNDLE_PACKAGE_TYPE\=APPL
+    export PRODUCT_MODULE_NAME\=CigarLoungeApp
+    export PRODUCT_NAME\=CigarLoungeApp
+    export PRODUCT_SETTINGS_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/CigarLoungeApp/Info.plist
+    export PRODUCT_TYPE\=com.apple.product-type.application
+    export PROFILING_CODE\=NO
+    export PROJECT\=CigarLoungeApp
+    export PROJECT_DERIVED_FILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/DerivedSources
+    export PROJECT_DIR\=/Users/rohithreddy/cigar-lounge-app/ios
+    export PROJECT_FILE_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/CigarLoungeApp.xcodeproj
+    export PROJECT_GUID\=ad25f78f506cfcb31f9cbe7636193d76
+    export PROJECT_NAME\=CigarLoungeApp
+    export PROJECT_TEMP_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build
+    export PROJECT_TEMP_ROOT\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex
+    export PROVISIONING_PROFILE_REQUIRED\=NO
+    export PROVISIONING_PROFILE_REQUIRED_YES_YES\=YES
+    export PROVISIONING_PROFILE_SUPPORTED\=YES
+    export PUBLIC_HEADERS_FOLDER_PATH\=CigarLoungeApp.app/Headers
+    export REACT_NATIVE_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/Pods/../../node_modules/react-native
+    export RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET\=15.0
+    export RECURSIVE_SEARCH_PATHS_FOLLOW_SYMLINKS\=YES
+    export REMOVE_CVS_FROM_RESOURCES\=YES
+    export REMOVE_GIT_FROM_RESOURCES\=YES
+    export REMOVE_HEADERS_FROM_EMBEDDED_BUNDLES\=YES
+    export REMOVE_HG_FROM_RESOURCES\=YES
+    export REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES\=YES
+    export REMOVE_SVN_FROM_RESOURCES\=YES
+    export RESCHEDULE_INDEPENDENT_HEADERS_PHASES\=YES
+    export REZ_COLLECTOR_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/ResourceManagerResources
+    export REZ_OBJECTS_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/ResourceManagerResources/Objects
+    export REZ_SEARCH_PATHS\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator\ 
+    export RPATH_ORIGIN\=@loader_path
+    export RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES\=NO
+    export RUNTIME_EXCEPTION_ALLOW_JIT\=NO
+    export RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY\=NO
+    export RUNTIME_EXCEPTION_DEBUGGING_TOOL\=NO
+    export RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION\=NO
+    export RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION\=NO
+    export SCANNING_PCM_KEEP_CACHE_DIRECTORY\=YES
+    export SCAN_ALL_SOURCE_FILES_FOR_INCLUDES\=NO
+    export SCRIPTS_FOLDER_PATH\=CigarLoungeApp.app/Scripts
+    export SCRIPT_INPUT_FILE_0\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Info.plist
+    export SCRIPT_INPUT_FILE_COUNT\=1
+    export SCRIPT_INPUT_FILE_LIST_COUNT\=0
+    export SCRIPT_OUTPUT_FILE_COUNT\=0
+    export SCRIPT_OUTPUT_FILE_LIST_COUNT\=0
+    export SDKROOT\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk
+    export SDK_DIR\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk
+    export SDK_DIR_iphonesimulator\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk
+    export SDK_DIR_iphonesimulator26_5\=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk
+    export SDK_NAME\=iphonesimulator26.5
+    export SDK_NAMES\=iphonesimulator26.5
+    export SDK_PRODUCT_BUILD_VERSION\=23F73
+    export SDK_STAT_CACHE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim
+    export SDK_STAT_CACHE_ENABLE\=YES
+    export SDK_STAT_CACHE_PATH\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    export SDK_VERSION\=26.5
+    export SDK_VERSION_ACTUAL\=260500
+    export SDK_VERSION_MAJOR\=260000
+    export SDK_VERSION_MINOR\=260500
+    export SED\=/usr/bin/sed
+    export SEPARATE_STRIP\=NO
+    export SEPARATE_SYMBOL_EDIT\=NO
+    export SET_DIR_MODE_OWNER_GROUP\=YES
+    export SET_FILE_MODE_OWNER_GROUP\=NO
+    export SHALLOW_BUNDLE\=YES
+    export SHALLOW_BUNDLE_TRIPLE\=ios-simulator
+    export SHALLOW_BUNDLE_ios_macabi\=NO
+    export SHALLOW_BUNDLE_macos\=NO
+    export SHARED_DERIVED_FILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/DerivedSources
+    export SHARED_FRAMEWORKS_FOLDER_PATH\=CigarLoungeApp.app/SharedFrameworks
+    export SHARED_PRECOMPS_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/PrecompiledHeaders
+    export SHARED_SUPPORT_FOLDER_PATH\=CigarLoungeApp.app/SharedSupport
+    export SKIP_INSTALL\=NO
+    export SKIP_MERGEABLE_LIBRARY_BUNDLE_HOOK\=NO
+    export SOURCE_ROOT\=/Users/rohithreddy/cigar-lounge-app/ios
+    export SRCROOT\=/Users/rohithreddy/cigar-lounge-app/ios
+    export STRINGSDATA_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/undefined_arch
+    export STRINGSDATA_ROOT\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build
+    export STRINGS_FILE_INFOPLIST_RENAME\=YES
+    export STRINGS_FILE_OUTPUT_ENCODING\=binary
+    export STRING_CATALOG_GENERATE_SYMBOLS\=NO
+    export STRIP_BITCODE_FROM_COPIED_FILES\=NO
+    export STRIP_INSTALLED_PRODUCT\=NO
+    export STRIP_STYLE\=all
+    export STRIP_SWIFT_SYMBOLS\=YES
+    export SUPPORTED_DEVICE_FAMILIES\=1,2
+    export SUPPORTED_PLATFORMS\=iphoneos\ iphonesimulator
+    export SUPPORTS_MACCATALYST\=NO
+    export SUPPORTS_ON_DEMAND_RESOURCES\=YES
+    export SUPPORTS_TEXT_BASED_API\=NO
+    export SUPPRESS_WARNINGS\=NO
+    export SWIFT_ACTIVE_COMPILATION_CONDITIONS\=\ DEBUG
+    export SWIFT_EMIT_CONST_VALUE_PROTOCOLS\=AnyResolverProviding\ AppEntity\ AppEnum\ AppExtension\ AppIntent\ AppIntentsPackage\ AppShortcutProviding\ AppShortcutsProvider\ AppUnionValue\ AppUnionValueCasesProviding\ DynamicOptionsProvider\ EntityQuery\ ExtensionPointDefining\ IntentValueQuery\ Resolver\ TransientEntity\ _AssistantIntentsProvider\ _GenerativeFunctionExtractable\ _IntentValueRepresentable
+    export SWIFT_EMIT_LOC_STRINGS\=NO
+    export SWIFT_ENABLE_EXPLICIT_MODULES\=NO
+    export SWIFT_OPTIMIZATION_LEVEL\=-Onone
+    export SWIFT_PLATFORM_TARGET_PREFIX\=ios
+    export SWIFT_RESPONSE_FILE_PATH_normal_arm64\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/arm64/CigarLoungeApp.SwiftFileList
+    export SWIFT_VERSION\=5.0
+    export SYMROOT\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products
+    export SYSTEM_ADMIN_APPS_DIR\=/Applications/Utilities
+    export SYSTEM_APPS_DIR\=/Applications
+    export SYSTEM_CORE_SERVICES_DIR\=/System/Library/CoreServices
+    export SYSTEM_DEMOS_DIR\=/Applications/Extras
+    export SYSTEM_DEVELOPER_APPS_DIR\=/Applications/Xcode.app/Contents/Developer/Applications
+    export SYSTEM_DEVELOPER_BIN_DIR\=/Applications/Xcode.app/Contents/Developer/usr/bin
+    export SYSTEM_DEVELOPER_DEMOS_DIR\=/Applications/Xcode.app/Contents/Developer/Applications/Utilities/Built\ Examples
+    export SYSTEM_DEVELOPER_DIR\=/Applications/Xcode.app/Contents/Developer
+    export SYSTEM_DEVELOPER_DOC_DIR\=/Applications/Xcode.app/Contents/Developer/ADC\ Reference\ Library
+    export SYSTEM_DEVELOPER_GRAPHICS_TOOLS_DIR\=/Applications/Xcode.app/Contents/Developer/Applications/Graphics\ Tools
+    export SYSTEM_DEVELOPER_JAVA_TOOLS_DIR\=/Applications/Xcode.app/Contents/Developer/Applications/Java\ Tools
+    export SYSTEM_DEVELOPER_PERFORMANCE_TOOLS_DIR\=/Applications/Xcode.app/Contents/Developer/Applications/Performance\ Tools
+    export SYSTEM_DEVELOPER_RELEASENOTES_DIR\=/Applications/Xcode.app/Contents/Developer/ADC\ Reference\ Library/releasenotes
+    export SYSTEM_DEVELOPER_TOOLS\=/Applications/Xcode.app/Contents/Developer/Tools
+    export SYSTEM_DEVELOPER_TOOLS_DOC_DIR\=/Applications/Xcode.app/Contents/Developer/ADC\ Reference\ Library/documentation/DeveloperTools
+    export SYSTEM_DEVELOPER_TOOLS_RELEASENOTES_DIR\=/Applications/Xcode.app/Contents/Developer/ADC\ Reference\ Library/releasenotes/DeveloperTools
+    export SYSTEM_DEVELOPER_USR_DIR\=/Applications/Xcode.app/Contents/Developer/usr
+    export SYSTEM_DEVELOPER_UTILITIES_DIR\=/Applications/Xcode.app/Contents/Developer/Applications/Utilities
+    export SYSTEM_DEXT_INSTALL_PATH\=/System/Library/DriverExtensions
+    export SYSTEM_DOCUMENTATION_DIR\=/Library/Documentation
+    export SYSTEM_EXTENSIONS_FOLDER_PATH\=CigarLoungeApp.app/SystemExtensions
+    export SYSTEM_EXTENSIONS_FOLDER_PATH_SHALLOW_BUNDLE_NO\=CigarLoungeApp.app/Library/SystemExtensions
+    export SYSTEM_EXTENSIONS_FOLDER_PATH_SHALLOW_BUNDLE_YES\=CigarLoungeApp.app/SystemExtensions
+    export SYSTEM_KEXT_INSTALL_PATH\=/System/Library/Extensions
+    export SYSTEM_LIBRARY_DIR\=/System/Library
+    export TAPI_DEMANGLE\=YES
+    export TAPI_ENABLE_PROJECT_HEADERS\=NO
+    export TAPI_LANGUAGE\=objective-c
+    export TAPI_LANGUAGE_STANDARD\=compiler-default
+    export TAPI_USE_SRCROOT\=YES
+    export TAPI_VERIFY_MODE\=Pedantic
+    export TARGETED_DEVICE_FAMILY\=1,2
+    export TARGETNAME\=CigarLoungeApp
+    export TARGET_BUILD_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator
+    export TARGET_DEVICE_IDENTIFIER\=48A4BA1C-03D7-478C-8BAF-2984135E8947
+    export TARGET_DEVICE_MODEL\=iPhone18,1
+    export TARGET_DEVICE_OS_VERSION\=26.5
+    export TARGET_DEVICE_PLATFORM_NAME\=iphonesimulator
+    export TARGET_NAME\=CigarLoungeApp
+    export TARGET_TEMP_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build
+    export TEMP_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build
+    export TEMP_FILES_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build
+    export TEMP_FILE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build
+    export TEMP_ROOT\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex
+    export TEMP_SANDBOX_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/TemporaryTaskSandboxes
+    export TEST_FRAMEWORK_SEARCH_PATHS\=\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks
+    export TEST_LIBRARY_SEARCH_PATHS\=\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib
+    export TOOLCHAINS\=com.apple.dt.toolchain.XcodeDefault
+    export TOOLCHAIN_DIR\=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain
+    export TREAT_MISSING_BASELINES_AS_TEST_FAILURES\=NO
+    export TREAT_MISSING_SCRIPT_PHASE_OUTPUTS_AS_ERRORS\=NO
+    export UID\=501
+    export UNINSTALLED_PRODUCTS_DIR\=/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/UninstalledProducts
+    export UNLOCALIZED_RESOURCES_FOLDER_PATH\=CigarLoungeApp.app
+    export UNLOCALIZED_RESOURCES_FOLDER_PATH_SHALLOW_BUNDLE_NO\=CigarLoungeApp.app/Resources
+    export UNLOCALIZED_RESOURCES_FOLDER_PATH_SHALLOW_BUNDLE_YES\=CigarLoungeApp.app
+    export UNSTRIPPED_PRODUCT\=NO
+    export USER\=rohithreddy
+    export USER_APPS_DIR\=/Users/rohithreddy/Applications
+    export USER_LIBRARY_DIR\=/Users/rohithreddy/Library
+    export USE_DYNAMIC_NO_PIC\=YES
+    export USE_HEADERMAP\=YES
+    export USE_HEADER_SYMLINKS\=NO
+    export USE_HERMES\=true
+    export USE_RECURSIVE_SCRIPT_INPUTS_IN_SCRIPT_PHASES\=YES
+    export VALIDATE_DEVELOPMENT_ASSET_PATHS\=YES_ERROR
+    export VALIDATE_PRODUCT\=NO
+    export VALID_ARCHS\=arm64\ x86_64
+    export VERBOSE_PBXCP\=NO
+    export VERSIONING_SYSTEM\=apple-generic
+    export VERSIONPLIST_PATH\=CigarLoungeApp.app/version.plist
+    export VERSION_INFO_BUILDER\=rohithreddy
+    export VERSION_INFO_FILE\=CigarLoungeApp_vers.c
+    export VERSION_INFO_STRING\=\"@\(\#\)PROGRAM:CigarLoungeApp\ \ PROJECT:CigarLoungeApp-2\"
+    export WARNING_CFLAGS\=-Wno-comma\ -Wno-shorten-64-to-32
+    export WORKSPACE_DIR\=/Users/rohithreddy/cigar-lounge-app/ios
+    export WRAPPER_EXTENSION\=app
+    export WRAPPER_NAME\=CigarLoungeApp.app
+    export WRAPPER_SUFFIX\=.app
+    export WRAP_ASSET_PACKS_IN_SEPARATE_DIRECTORIES\=NO
+    export XCODE_APP_SUPPORT_DIR\=/Applications/Xcode.app/Contents/Developer/Library/Xcode
+    export XCODE_PRODUCT_BUILD_VERSION\=17F42
+    export XCODE_VERSION_ACTUAL\=2650
+    export XCODE_VERSION_MAJOR\=2600
+    export XCODE_VERSION_MINOR\=2650
+    export XPCSERVICES_FOLDER_PATH\=CigarLoungeApp.app/XPCServices
+    export YACC\=yacc
+    export _DISCOVER_COMMAND_LINE_LINKER_INPUTS\=YES
+    export _DISCOVER_COMMAND_LINE_LINKER_INPUTS_INCLUDE_WL\=YES
+    export _LD_MULTIARCH\=YES
+    export _WRAPPER_CONTENTS_DIR_SHALLOW_BUNDLE_NO\=/Contents
+    export _WRAPPER_PARENT_PATH_SHALLOW_BUNDLE_NO\=/..
+    export _WRAPPER_RESOURCES_DIR_SHALLOW_BUNDLE_NO\=/Resources
+    export __DIAGNOSE_DEPRECATED_ARCHS\=YES
+    export __IS_NOT_MACOS\=YES
+    export __IS_NOT_MACOS_macosx\=NO
+    export __IS_NOT_SIMULATOR\=NO
+    export __IS_NOT_SIMULATOR_simulator\=NO
+    export __ORIGINAL_SDK_DEFINED_LLVM_TARGET_TRIPLE_SYS\=ios
+    export arch\=undefined_arch
+    export variant\=normal
+    /bin/sh -c /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Script-06D2CA2741BFEEBCC8CE041B.sh
+note: -> RNFB build script started
+note: 1) Locating firebase.json file:
+note:      (1 of 2) Searching in '/Users/rohithreddy/cigar-lounge-app' for a firebase.json file.
+note:      firebase.json found at /Users/rohithreddy/cigar-lounge-app/firebase.json
+note: 2) Injecting Info.plist entries: 
+    ->  0) firebase_json_raw string e30=
+    ->  1) FirebaseCrashlyticsCollectionEnabled bool NO
+note:      setting plist entry 'firebase_json_raw' of type 'string' in file '/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Info.plist'
+note:      setting plist entry 'FirebaseCrashlyticsCollectionEnabled' of type 'bool' in file '/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Info.plist'
+note:      setting plist entry 'firebase_json_raw' of type 'string' in file '/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app.dSYM/Contents/Info.plist'
+note:      setting plist entry 'FirebaseCrashlyticsCollectionEnabled' of type 'bool' in file '/Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app.dSYM/Contents/Info.plist'
+note: <- RNFB build script finished
+
+CopySwiftLibs /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+    cd /Users/rohithreddy/cigar-lounge-app/ios
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/CigarLoungeApp.debug.dylib --scan-folder /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Frameworks --scan-folder /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/PlugIns --scan-folder /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/SystemExtensions --scan-folder /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Extensions --scan-folder /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/Pods_CigarLoungeApp.framework --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+    cd /Users/rohithreddy/cigar-lounge-app/ios
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name CigarLoungeApp --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F42 --platform-family iOS --deployment-target 15.1 --bundle-identifier com.enteraxion.thereserve --output /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app --target-triple arm64-apple-ios15.1-simulator --binary-file /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/CigarLoungeApp --dependency-file /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/arm64/CigarLoungeApp_dependency_info.dat --stringsdata-file /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/arm64/CigarLoungeApp.SwiftFileList --metadata-file-list /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/CigarLoungeApp.DependencyMetadataFileList --static-metadata-file-list /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/CigarLoungeApp.DependencyStaticMetadataFileList --swift-const-vals-list /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/Objects-normal/arm64/CigarLoungeApp.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-08-17 13:46:11.556 appintentsmetadataprocessor[6757:14782400] Starting appintentsmetadataprocessor export
+2026-08-17 13:46:11.565 appintentsmetadataprocessor[6757:14782400] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+AppIntentsSSUTraining (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+    cd /Users/rohithreddy/cigar-lounge-app/ios
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Info.plist --temp-dir-path /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/ssu --bundle-id com.enteraxion.thereserve --product-path /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app --extracted-metadata-path /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Metadata.appintents --metadata-file-list /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Intermediates.noindex/CigarLoungeApp.build/Debug-iphonesimulator/CigarLoungeApp.build/CigarLoungeApp.DependencyMetadataFileList --source-file /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app/Info.plist --archive-ssu-assets
+2026-08-17 13:46:11.598 appintentsnltrainingprocessor[6758:14782403] Parsing options for appintentsnltrainingprocessor
+2026-08-17 13:46:11.599 appintentsnltrainingprocessor[6758:14782403] Starting AppIntents SSU YAML Generation
+2026-08-17 13:46:11.600 appintentsnltrainingprocessor[6758:14782403] No AppShortcuts found - Skipping.
+
+RegisterExecutionPolicyException /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+    cd /Users/rohithreddy/cigar-lounge-app/ios
+    builtin-RegisterExecutionPolicyException /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app
+
+Validate /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+    cd /Users/rohithreddy/cigar-lounge-app/ios
+    builtin-validationUtility /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+    cd /Users/rohithreddy/cigar-lounge-app/ios
+    /usr/bin/touch -c /Users/rohithreddy/cigar-lounge-app/ios/build/sim/Build/Products/Debug-iphonesimulator/CigarLoungeApp.app
+
+warning: Run script build phase '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'hermes-engine' from project 'Pods')
+note: Run script build phase '[CP-User] [RNDeps] Replace React Native Dependencies for the right configuration, if needed' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'ReactNativeDependencies' from project 'Pods')
+note: Run script build phase '[CP-User] [RN]Check FBReactNativeSpec' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'React-RCTFBReactNativeSpec' from project 'Pods')
+note: Run script build phase '[CP-User] [RNCore] Replace React Native Core for the right configuration, if needed' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'React-Core-prebuilt' from project 'Pods')
+warning: Run script build phase '[CP-User] react-native-maps patches' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'react-native-maps' from project 'Pods')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 9.0, but the range of supported deployment target versions is 12.0 to 26.5.99. (in target 'react-native-image-picker-RNImagePickerPrivacyInfo' from project 'Pods')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 11.0, but the range of supported deployment target versions is 12.0 to 26.5.99. (in target 'leveldb-library-leveldb_Privacy' from project 'Pods')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 11.0, but the range of supported deployment target versions is 12.0 to 26.5.99. (in target 'gRPC-Core-grpc' from project 'Pods')
+warning: Run script build phase 'Create Symlinks to Header Folders' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'gRPC-Core' from project 'Pods')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 11.0, but the range of supported deployment target versions is 12.0 to 26.5.99. (in target 'gRPC-C++-grpcpp' from project 'Pods')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 11.0, but the range of supported deployment target versions is 12.0 to 26.5.99. (in target 'gRPC-C++-gRPCCertificates-Cpp' from project 'Pods')
+warning: Run script build phase 'Create Symlinks to Header Folders' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'gRPC-C++' from project 'Pods')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 9.0, but the range of supported deployment target versions is 12.0 to 26.5.99. (in target 'abseil-xcprivacy' from project 'Pods')
+warning: Run script build phase 'Create Symlinks to Header Folders' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'abseil' from project 'Pods')
+warning: Run script build phase 'Create Symlinks to Header Folders' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'ReactCodegen' from project 'Pods')
+warning: Run script build phase '[CP-User] [RNFB] Core Configuration' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+warning: Run script build phase 'Bundle React Native code and images' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'CigarLoungeApp' from project 'CigarLoungeApp')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: MODULEMAP_FILE has no effect if DEFINES_MODULE is not set (in target 'RNFBApp' from project 'Pods')
+/Users/rohithreddy/cigar-lounge-app/ios/Pods/Pods.xcodeproj: warning: The iOS Simulator deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 10.0, but the range of supported deployment target versions is 12.0 to 26.5.99. (in target 'BoringSSL-GRPC-openssl_grpc' from project 'Pods')
+warning: Run script build phase 'Create Symlinks to Header Folders' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'BoringSSL-GRPC' from project 'Pods')
+** BUILD SUCCEEDED **
+

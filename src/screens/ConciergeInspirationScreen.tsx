@@ -9,16 +9,102 @@
  * no real AI/backend wired up yet.
  */
 
-import React from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Plus } from 'lucide-react-native';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
+import { ChevronLeft } from 'lucide-react-native';
 import { theme } from '../theme';
 import SectionHeader from '../components/SectionHeader';
-import { conciergeUser, curatedExperiences, luxuryExperience, tonightEvent } from '../data/mockConcierge';
+import { conciergeUser } from '../data/mockConcierge';
+import { getAllLounges, type Lounge } from '../services/loungeService';
+import { getUpcomingEventsAcrossLounges, type MemberEvent } from '../services/eventService';
+import { isPremiumLounge } from '../utils/loungeSearch';
+import { loungeImageUri } from '../utils/loungeImage';
+import type { MainTabParamList } from '../navigation/MainNavigator';
+
+/**
+ * Curated experiences, built from the directory rather than invented.
+ *
+ * Each theme is a real query over real lounges — "Perfect for Remote Work"
+ * is lounges tagged for wifi/quiet, "Hidden Gems" is well-rated places
+ * almost nobody has reviewed. A theme with nothing behind it is dropped
+ * rather than shown as an empty promise, so this section shrinks honestly
+ * as the data thins instead of offering four cards that lead nowhere.
+ */
+const EXPERIENCE_THEMES: {
+  id: string;
+  title: string;
+  subtitle: string;
+  match: (lounge: Lounge) => boolean;
+}[] = [
+  {
+    id: 'remote-work',
+    title: 'Perfect for Remote Work',
+    subtitle: 'Quiet • Reliable Wi-Fi',
+    match: l => /wi-?fi|quiet|work/i.test([...l.tags, ...l.amenities].join(' ')),
+  },
+  {
+    id: 'whiskey-pairings',
+    title: 'Whiskey Pairings',
+    subtitle: 'Full bar, rare pours',
+    match: l => /whiske?y|bourbon|scotch|full bar|cocktail/i.test([...l.tags, ...l.amenities].join(' ')),
+  },
+  {
+    id: 'hidden-gems',
+    title: 'Hidden Gems',
+    subtitle: 'Well rated, rarely reviewed',
+    match: l => l.ratings.overall >= 4.5 && l.reviewCount > 0 && l.reviewCount <= 15,
+  },
+  {
+    id: 'outdoor',
+    title: 'Outdoor & Terrace',
+    subtitle: 'Somewhere to sit outside',
+    match: l => /patio|outdoor|terrace|rooftop/i.test([...l.tags, ...l.amenities].join(' ')),
+  },
+];
 
 export default function ConciergeInspirationScreen() {
+  const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
+  const [lounges, setLounges] = useState<Lounge[]>([]);
+  const [events, setEvents] = useState<MemberEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getAllLounges().catch(() => []), getUpcomingEventsAcrossLounges(3).catch(() => [])])
+      .then(([allLounges, upcoming]) => {
+        if (cancelled) return;
+        setLounges(allLounges);
+        setEvents(upcoming);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Only themes that actually have lounges behind them.
+  const experiences = EXPERIENCE_THEMES.map(theme => {
+    const matches = lounges.filter(theme.match);
+    return { ...theme, matches, image: matches[0] ? loungeImageUri(matches[0]) : null };
+  }).filter(theme => theme.matches.length > 0);
+
+  const nextEvent = events[0] ?? null;
+  // "VIP exclusive" means the highest-rated premium lounge we actually have.
+  const luxury =
+    [...lounges].filter(isPremiumLounge).sort((a, b) => b.ratings.overall - a.ratings.overall)[0] ??
+    null;
+
+  const openLounge = (loungeId: string) =>
+    (tabNavigation.navigate as (n: string, p?: object) => void)('Search', {
+      screen: 'LoungeDetail',
+      params: { loungeId },
+    });
+
+
   const navigation = useNavigation();
 
   return (
@@ -40,83 +126,126 @@ export default function ConciergeInspirationScreen() {
         {/* ---------------- Curated Experiences ---------------- */}
         <View style={styles.field}>
           <SectionHeader title="Curated Experiences" />
+          {loading ? (
+            <ActivityIndicator color={theme.colors.secondarySilver} />
+          ) : experiences.length === 0 ? (
+            <Text style={styles.emptyHint}>
+              Nothing to feature yet — lounges need tags before themes can be built.
+            </Text>
+          ) : (
           <View style={styles.grid}>
-            {curatedExperiences.map(experience => (
+            {experiences.map(experience => (
               <Pressable
                 key={experience.id}
                 style={styles.gridCard}
-                onPress={() => Alert.alert('Coming Soon', 'Experience details are coming soon.')}
+                accessibilityRole="button"
+                accessibilityLabel={`${experience.title}, ${experience.matches.length} lounges`}
+                // Opens the first lounge in the theme. A dedicated
+                // theme-results screen would be better, but it would be a
+                // new screen — this uses one that already exists and works.
+                onPress={() => openLounge(experience.matches[0].id)}
               >
-                <Image source={{ uri: experience.image }} style={styles.gridImage} />
+                <Image
+                  source={{ uri: experience.image ?? undefined }}
+                  style={styles.gridImage}
+                  accessibilityLabel={experience.title}
+                />
                 <View style={styles.gridOverlay} />
                 <View style={styles.gridTextGroup}>
                   <Text style={styles.gridTitle} numberOfLines={2}>
                     {experience.title}
                   </Text>
                   <Text style={styles.gridSubtitle} numberOfLines={1}>
-                    {experience.subtitle}
+                    {experience.matches.length} {experience.matches.length === 1 ? 'lounge' : 'lounges'} • {experience.subtitle}
                   </Text>
                 </View>
               </Pressable>
             ))}
           </View>
+          )}
         </View>
 
-        {/* ---------------- Events Tonight ---------------- */}
+        {/* ---------------- Upcoming Events ---------------- */}
+        {/* Real owner-posted events. "Events Tonight" was the old title and
+            a lie on any night nobody had posted one — the section now names
+            the real next event, or says there isn't one. */}
         <View style={styles.field}>
-          <SectionHeader
-            title="Events Tonight"
-            actionLabel="View All"
-            onActionPress={() => Alert.alert('Coming Soon', 'More events are coming soon.')}
-          />
-          <View style={styles.eventRow}>
-            <View style={styles.eventDateBox}>
-              <Text style={styles.eventDateLabel}>{tonightEvent.dayLabel}</Text>
-              <Text style={styles.eventDateNumber}>{tonightEvent.day}</Text>
-            </View>
-            <View style={styles.eventTextGroup}>
-              <Text style={styles.eventTitle} numberOfLines={2}>
-                {tonightEvent.title}
-              </Text>
-              <Text style={styles.eventSubtitle}>{tonightEvent.subtitle}</Text>
-            </View>
+          <SectionHeader title="Upcoming Events" />
+          {nextEvent ? (
             <Pressable
-              style={styles.eventJoinButton}
-              onPress={() => Alert.alert('Coming Soon', 'Event RSVPs are coming soon.')}
-              hitSlop={8}
+              style={styles.eventRow}
+              onPress={() => openLounge(nextEvent.loungeId)}
+              accessibilityRole="button"
+              accessibilityLabel={`${nextEvent.title}, opens the lounge`}
             >
-              <Plus size={16} color={theme.colors.primaryNavy} />
+              <View style={styles.eventDateBox}>
+                <Text style={styles.eventDateLabel}>
+                  {nextEvent.startsAt.toDate().toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}
+                </Text>
+                <Text style={styles.eventDateNumber}>{nextEvent.startsAt.toDate().getDate()}</Text>
+              </View>
+              <View style={styles.eventTextGroup}>
+                <Text style={styles.eventTitle} numberOfLines={2}>
+                  {nextEvent.title}
+                </Text>
+                <Text style={styles.eventSubtitle}>
+                  {nextEvent.startsAt.toDate().toLocaleTimeString(undefined, {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
             </Pressable>
-          </View>
+          ) : (
+            <Text style={styles.emptyHint}>
+              No events posted yet. Lounges announce tastings and cigar nights here.
+            </Text>
+          )}
         </View>
 
         {/* ---------------- Luxury Experiences ---------------- */}
-        <View style={[styles.field, styles.lastField]}>
-          <SectionHeader title="Luxury Experiences" />
-          <View style={styles.luxuryCard}>
-            <Image source={{ uri: luxuryExperience.image }} style={styles.luxuryImage} />
-            <View style={styles.luxuryTextGroup}>
-              <View style={styles.luxuryBadge}>
-                <Text style={styles.luxuryBadgeText}>{luxuryExperience.badge}</Text>
+        {/* The highest-rated premium lounge we actually have, rather than a
+            fictional "Presidential Private Vault" with no booking behind it. */}
+        {luxury ? (
+          <View style={styles.field}>
+            <SectionHeader title="Luxury Experiences" />
+            <Pressable
+              style={styles.luxuryCard}
+              onPress={() => openLounge(luxury.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`${luxury.name}, premium lounge`}
+            >
+              <Image
+                source={{ uri: loungeImageUri(luxury) }}
+                style={styles.luxuryImage}
+                accessibilityLabel={luxury.name}
+              />
+              <View style={styles.luxuryTextGroup}>
+                <View style={styles.luxuryBadge}>
+                  <Text style={styles.luxuryBadgeText}>PREMIUM</Text>
+                </View>
+                <Text style={styles.luxuryTitle} numberOfLines={2}>
+                  {luxury.name}
+                </Text>
+                <View style={styles.luxuryButton}>
+                  <Text style={styles.luxuryButtonText}>View lounge</Text>
+                </View>
               </View>
-              <Text style={styles.luxuryTitle} numberOfLines={2}>
-                {luxuryExperience.title}
-              </Text>
-              <Pressable
-                style={styles.luxuryButton}
-                onPress={() => Alert.alert('Coming Soon', 'This experience is not bookable yet.')}
-              >
-                <Text style={styles.luxuryButtonText}>{luxuryExperience.ctaLabel}</Text>
-              </Pressable>
-            </View>
+            </Pressable>
           </View>
-        </View>
+        ) : null}
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  emptyHint: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,

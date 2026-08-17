@@ -673,6 +673,40 @@ const CONCIERGE_SCHEMA = {
 type ConciergeTurn = { role: 'user' | 'assistant'; text: string };
 
 /**
+ * Personalisation from the member's AI Settings screen. Optional because a
+ * member who has never opened that screen has none — and an absent
+ * preference is omitted from the prompt entirely rather than defaulted,
+ * since "no stated preference" and "prefers business trips" are different
+ * instructions to give a model.
+ */
+type ConciergePreferences = {
+  experienceMode?: 'business' | 'vacation';
+  maxTravelDistanceMiles?: number;
+  atmospheres?: string[];
+};
+
+function preferenceBrief(preferences: ConciergePreferences | undefined): string {
+  if (!preferences) {
+    return '';
+  }
+  const lines: string[] = [];
+  if (preferences.experienceMode) {
+    lines.push(
+      preferences.experienceMode === 'business'
+        ? 'They are usually travelling for work — favour lounges that suit meetings and working alone.'
+        : 'They are usually travelling for leisure — favour atmosphere and somewhere worth lingering.',
+    );
+  }
+  if (typeof preferences.maxTravelDistanceMiles === 'number') {
+    lines.push(`They prefer not to travel more than ${preferences.maxTravelDistanceMiles} miles.`);
+  }
+  if (preferences.atmospheres?.length) {
+    lines.push(`Atmospheres they like: ${preferences.atmospheres.join(', ')}.`);
+  }
+  return lines.length ? `\n\nABOUT THIS MEMBER:\n${lines.join('\n')}` : '';
+}
+
+/**
  * Compact one-line-per-lounge catalog. Deliberately small: the model needs
  * enough to choose well, and every extra field is tokens on every turn.
  */
@@ -709,6 +743,7 @@ export const askConcierge = onCall(
     }
 
     const turns = (request.data?.messages ?? []) as ConciergeTurn[];
+    const preferences = request.data?.preferences as ConciergePreferences | undefined;
     const city = typeof request.data?.city === 'string' ? request.data.city.trim() : '';
     if (!Array.isArray(turns) || turns.length === 0) {
       throw new HttpsError('invalid-argument', 'messages is required.');
@@ -745,7 +780,10 @@ export const askConcierge = onCall(
     // prompt: it changes with the member's city, and the system prompt is
     // the stable, cacheable part of every request.
     const last = history[history.length - 1];
-    last.content = `CANDIDATE LOUNGES${city ? ` (near ${city})` : ''}:\n${catalog}\n\nMEMBER:\n${last.content}`;
+    last.content =
+      `CANDIDATE LOUNGES${city ? ` (near ${city})` : ''}:\n${catalog}` +
+      preferenceBrief(preferences) +
+      `\n\nMEMBER:\n${last.content}`;
 
     const anthropic = new Anthropic({ apiKey: anthropicApiKey.value() });
 

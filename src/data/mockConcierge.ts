@@ -184,54 +184,12 @@ export type ResultCard = {
   topMatch?: boolean;
 };
 
-export const recommendationResults: ResultCard[] = [
-  {
-    id: 'smoke-velvet',
-    name: 'Smoke & Velvet',
-    distance: '1.2 mi',
-    rating: 4.8,
-    location: 'Downtown',
-    tags: ['Exclusive Spirits', 'Live Jazz', 'Business Friendly'],
-    image: loungeInteriors[1],
-    insight: 'Matches your preference for quiet lounges with strong Wi-Fi and premium humidors.',
-    topMatch: true,
-  },
-  {
-    id: 'cloud-nine-skybar',
-    name: 'Cloud Nine Skybar',
-    distance: '2.8 mi',
-    rating: 4.6,
-    location: 'City Center',
-    tags: ['Outdoor Terrace', 'City View', 'Mixology'],
-    image: rooftopBars[0],
-    insight: 'Recommended for panoramic city views and a more modern, social atmosphere.',
-  },
-];
 
-export type CuratedExperience = {
-  id: string;
-  title: string;
-  subtitle: string;
-  image: string;
-};
 
-export const curatedExperiences: CuratedExperience[] = [
-  { id: 'remote-work', title: 'Perfect for Remote Work', subtitle: 'Quiet • Reliable Wi-Fi', image: whiskeyBars[0] },
-  { id: 'whiskey-pairings', title: 'Whiskey Pairings', subtitle: 'Rare Single Malts', image: whiskeyBars[1] },
-  { id: 'hidden-gems', title: 'Hidden Gems', subtitle: 'Off the Beaten Path', image: loungeInteriors[1] },
-  { id: 'historic-lounges', title: 'Historic Lounges', subtitle: 'Old World Charm', image: loungeInteriors[0] },
-];
 
-export const tonightEvent = {
-  day: '24',
-  dayLabel: 'TODAY',
-  title: 'Single Malt & Habano Night',
-  subtitle: 'The Reserve • 19:00 PM',
-};
 
-export const luxuryExperience = {
-  badge: 'VIP EXCLUSIVE',
-  title: 'The Presidential Private Vault',
-  ctaLabel: 'Member Inquiry',
-  image: cigarDetails[2],
-};
+
+
+
+
+

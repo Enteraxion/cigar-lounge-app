@@ -205,6 +205,16 @@ service cloud.firestore {
       match /issueReports/{reportId} {
         allow read, write: if isOwner(userId);
       }
+      // Saved AI Concierge conversations and the feedback a member leaves
+      // on a recommendation. Both are private to the member — nobody else,
+      // including an admin, has a reason to read someone's chat history.
+      match /conversations/{conversationId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /aiFeedback/{feedbackId} {
+        allow read, write: if isOwner(userId);
+      }
+
       match /collections/{collectionId} {
         allow read, write: if isOwner(userId);
       }

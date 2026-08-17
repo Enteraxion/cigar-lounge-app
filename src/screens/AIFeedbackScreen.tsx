@@ -10,8 +10,8 @@
  * feedback pipeline wired up yet.
  */
 
-import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -27,7 +27,11 @@ import {
 import { theme } from '../theme';
 import ReportIssueModal from '../components/ReportIssueModal';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { improvementReasons, lastRecommendation } from '../data/mockAISettings';
+import { improvementReasons } from '../data/mockAISettings';
+import { getSavedConversations, submitAiFeedback } from '../services/conciergeMemoryService';
+import { toggleFavorite } from '../services/userActionsService';
+import { getLoungesByIds, type Lounge } from '../services/loungeService';
+import { loungeImageUri } from '../utils/loungeImage';
 import { submitIssueReport } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
@@ -40,7 +44,15 @@ export default function AIFeedbackScreen() {
   const navigation = useNavigation<AIFeedbackNavigationProp>();
   const { profile } = useUserProfile();
 
-  const [vote, setVote] = useState<Vote>('helpful');
+  // No pre-selected vote: defaulting to 'helpful' meant a member who
+  // submitted without touching anything silently recorded praise.
+  const [vote, setVote] = useState<Vote>(null);
+  // The lounge the concierge most recently recommended, from the member's
+  // own saved conversations — the screen previously showed one invented
+  // lounge to everyone and asked them to rate it.
+  const [subject, setSubject] = useState<Lounge | null>(null);
+  const [loadingSubject, setLoadingSubject] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedReasonIds, setSelectedReasonIds] = useState<Set<string>>(new Set());
   const [reportModalVisible, setReportModalVisible] = useState(false);
 
@@ -54,6 +66,69 @@ export default function AIFeedbackScreen() {
       }
       return next;
     });
+  };
+
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      setLoadingSubject(false);
+      return;
+    }
+    let cancelled = false;
+    getSavedConversations(userId, 10)
+      .then(async conversations => {
+        const lastWithLounge = conversations
+          .flatMap(c => c.messages)
+          .reverse()
+          .find(turn => turn.role === 'assistant' && turn.loungeIds?.length);
+        if (!lastWithLounge?.loungeIds?.length) return;
+        const lounges = await getLoungesByIds([lastWithLounge.loungeIds[0]]);
+        if (!cancelled) setSubject(lounges[0] ?? null);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingSubject(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onSubmitFeedback = async () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId || vote === null || submitting) return;
+    setSubmitting(true);
+    try {
+      await submitAiFeedback(userId, {
+        loungeId: subject?.id ?? null,
+        loungeName: subject?.name ?? 'Unknown',
+        helpful: vote === 'helpful',
+        reasons: improvementReasons
+          .filter(reason => selectedReasonIds.has(reason.id))
+          .map(reason => reason.label),
+        note: '',
+      });
+      Alert.alert('Thanks', 'Your feedback helps the concierge get better.');
+      setSelectedReasonIds(new Set());
+      setVote(null);
+    } catch {
+      Alert.alert("Couldn't send feedback", 'Check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /** "Save Recommendation" = favorite the lounge, which is the app's real
+   *  save primitive — there is no second saved-things list to invent. */
+  const onSaveRecommendation = async () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId || !subject) return;
+    try {
+      await toggleFavorite(userId, subject.id);
+      Alert.alert('Saved', `${subject.name} is in your favorites.`);
+    } catch {
+      Alert.alert("Couldn't save", 'Check your connection and try again.');
+    }
   };
 
   const submitReport = async (description: string) => {
@@ -105,13 +180,36 @@ export default function AIFeedbackScreen() {
         </View>
 
         {/* ---------------- Last Recommendation ---------------- */}
+        {/* Nothing to rate until the concierge has actually recommended
+            something — asking for feedback on a lounge the member was never
+            shown is how this screen used to work. */}
+        {loadingSubject ? (
+          <View style={styles.section}>
+            <ActivityIndicator color={theme.colors.secondarySilver} />
+          </View>
+        ) : !subject ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Last Recommendation</Text>
+            <View style={styles.card}>
+              <Text style={styles.question}>No recommendations yet.</Text>
+              <Text style={styles.emptyHint}>
+                Ask the concierge for somewhere to go, then come back and tell us how it went.
+              </Text>
+            </View>
+          </View>
+        ) : (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Last Recommendation</Text>
           <View style={styles.card}>
             <View style={styles.imageWrap}>
-              <Image source={{ uri: lastRecommendation.image }} style={styles.image} resizeMode="cover" />
+              <Image
+                source={{ uri: loungeImageUri(subject) }}
+                style={styles.image}
+                resizeMode="cover"
+                accessibilityLabel={subject.name}
+              />
               <View style={styles.loungeBadge}>
-                <Text style={styles.loungeBadgeText}>{lastRecommendation.loungeName.toUpperCase()}</Text>
+                <Text style={styles.loungeBadgeText}>{subject.name.toUpperCase()}</Text>
               </View>
             </View>
 
@@ -168,14 +266,38 @@ export default function AIFeedbackScreen() {
                 );
               })}
             </View>
+
+            {/* Submitting is only meaningful once a vote exists — an
+                unselected form used to record a silent "helpful". */}
+            <Pressable
+              style={[styles.submitButton, (vote === null || submitting) && styles.submitButtonIdle]}
+              onPress={onSubmitFeedback}
+              disabled={vote === null || submitting}
+              accessibilityRole="button"
+              accessibilityLabel="Send feedback"
+              accessibilityState={{ disabled: vote === null || submitting }}
+            >
+              <Text
+                style={[
+                  styles.submitButtonText,
+                  (vote === null || submitting) && styles.submitButtonTextIdle,
+                ]}
+              >
+                {submitting ? 'Sending…' : 'Send feedback'}
+              </Text>
+            </Pressable>
           </View>
         </View>
+        )}
 
         {/* ---------------- Actions ---------------- */}
         <View style={[styles.section, styles.lastSection]}>
           <Pressable
             style={styles.secondaryButton}
-            onPress={() => Alert.alert('Coming Soon', 'Saving recommendations is coming soon.')}
+            onPress={onSaveRecommendation}
+            disabled={!subject}
+            accessibilityRole="button"
+            accessibilityLabel="Save this recommendation to favorites"
           >
             <Bookmark size={16} color={theme.colors.white} />
             <Text style={styles.secondaryButtonText}>Save Recommendation</Text>
@@ -203,6 +325,31 @@ export default function AIFeedbackScreen() {
 }
 
 const styles = StyleSheet.create({
+  emptyHint: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+    marginTop: theme.spacing.xs,
+  },
+  submitButton: {
+    marginTop: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.accentGold,
+    alignItems: 'center',
+  },
+  submitButtonIdle: {
+    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+  },
+  submitButtonText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.primaryNavy,
+  },
+  submitButtonTextIdle: {
+    color: theme.colors.secondarySilver,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,

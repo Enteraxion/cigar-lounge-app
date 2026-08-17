@@ -9,15 +9,21 @@
  * AI/backend wired up yet.
  */
 
-import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft, MapPin, Sparkles, Star } from 'lucide-react-native';
 import { theme } from '../theme';
-import { recommendationResults, resultTabs, type ResultCard, type ResultTabId } from '../data/mockConcierge';
-import { useLoungeNameLookup } from '../hooks/useLoungeNameLookup';
+import { resultTabs, type ResultCard, type ResultTabId } from '../data/mockConcierge';
+import { getAllLounges, type Lounge } from '../services/loungeService';
+import { haversineDistanceMiles, isPremiumLounge } from '../utils/loungeSearch';
+import { useCurrentLocation } from '../hooks/useCurrentLocation';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { findCityCoordinates } from '../utils/cityAutocomplete';
+import { loungeImageUri } from '../utils/loungeImage';
+import { displayTags } from '../utils/displayTags';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
@@ -75,10 +81,103 @@ function ResultCardView({ result, onViewDetails }: { result: ResultCard; onViewD
   );
 }
 
+/**
+ * Why a lounge is being shown, in the app's own voice.
+ *
+ * The mock shipped a hand-written sentence per lounge ("Matches your
+ * preference for quiet lounges with strong Wi-Fi"), which read well and was
+ * attached to nothing. This states only what the data supports — if all it
+ * can say is the rating, it says the rating.
+ */
+function insightFor(lounge: Lounge, distanceMiles: number | null): string {
+  const parts: string[] = [];
+  if (lounge.ratings.overall >= 4.5) {
+    parts.push(`Rated ${lounge.ratings.overall.toFixed(1)} by ${lounge.reviewCount} members`);
+  }
+  const tags = displayTags(lounge.tags).slice(0, 2);
+  if (tags.length) parts.push(tags.join(' and ').toLowerCase());
+  if (distanceMiles !== null && distanceMiles < 5) parts.push('close to you');
+  return parts.length ? `${parts.join(' • ')}.` : 'In your area.';
+}
+
 export default function ConciergeResultsScreen() {
-  const navigation = useNavigation<ConciergeNavigationProp>();
   const [activeTab, setActiveTab] = useState<ResultTabId>('relevance');
-  const { findRealLoungeId } = useLoungeNameLookup();
+  const { location } = useCurrentLocation();
+  const { profile } = useUserProfile();
+  const [lounges, setLounges] = useState<Lounge[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAllLounges()
+      .then(all => {
+        if (!cancelled) setLounges(all);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Same fallback chain as Home: real fix, then home city, then nothing —
+  // and "nothing" means the distance tab is simply unavailable rather than
+  // silently ranking by distance from a coordinate in another country.
+  const homeCoordinates = profile?.homeCity ? findCityCoordinates(profile.homeCity) : null;
+  const origin =
+    location ??
+    (homeCoordinates
+      ? { latitude: homeCoordinates.lat, longitude: homeCoordinates.lng }
+      : null);
+
+  const results: ResultCard[] = useMemo(() => {
+    const withDistance = lounges.map(lounge => ({
+      lounge,
+      distance: origin ? haversineDistanceMiles(origin, lounge.coordinates) : null,
+    }));
+
+    const sorted = [...withDistance];
+    switch (activeTab) {
+      case 'distance':
+        sorted.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+        break;
+      case 'rating':
+        sorted.sort((a, b) => b.lounge.ratings.overall - a.lounge.ratings.overall);
+        break;
+      case 'price':
+        sorted.sort(
+          (a, b) => a.lounge.priceRange.length - b.lounge.priceRange.length,
+        );
+        break;
+      default:
+        // Relevance: well-rated, actually reviewed, and near if we know where
+        // "near" is — the closest thing to a ranking this data supports.
+        sorted.sort((a, b) => {
+          const score = (e: typeof a) =>
+            e.lounge.ratings.overall * 2 +
+            Math.min(e.lounge.reviewCount, 50) / 25 -
+            (e.distance !== null ? Math.min(e.distance, 50) / 25 : 0);
+          return score(b) - score(a);
+        });
+    }
+
+    return sorted.slice(0, 20).map((entry, index) => ({
+      id: entry.lounge.id,
+      name: entry.lounge.name,
+      distance: entry.distance !== null ? `${entry.distance.toFixed(1)} mi` : '',
+      rating: entry.lounge.ratings.overall,
+      location: entry.lounge.city ?? entry.lounge.address,
+      tags: displayTags(entry.lounge.tags).slice(0, 3),
+      image: loungeImageUri(entry.lounge),
+      insight: insightFor(entry.lounge, entry.distance),
+      topMatch: index === 0 && isPremiumLounge(entry.lounge),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lounges, origin?.latitude, origin?.longitude, activeTab]);
+
+  const navigation = useNavigation<ConciergeNavigationProp>();
 
   // Concierge recommendation *content* is still mock (from
   // mockConcierge.ts) — the AI Concierge is out of scope for real backend
@@ -87,11 +186,8 @@ export default function ConciergeResultsScreen() {
   // found" LoungeDetail, best-effort match the card's name against real
   // lounges (see useLoungeNameLookup) and only navigate when it resolves.
   const openLoungeDetails = (result: ResultCard) => {
-    const realLoungeId = findRealLoungeId(result.name);
-    if (!realLoungeId) {
-      Alert.alert('Not Available', "This lounge isn't in our directory yet.");
-      return;
-    }
+    // Real Firestore ids now — no name matching needed.
+    const realLoungeId = result.id;
     // Cross-boundary navigation from this root-level modal stack into
     // Main's Search tab stack's LoungeDetail screen — see the same
     // pattern/comment in ConciergeConversationScreen.
@@ -121,6 +217,9 @@ export default function ConciergeResultsScreen() {
             key={tab.id}
             style={[styles.tab, activeTab === tab.id && styles.tabActive]}
             onPress={() => setActiveTab(tab.id)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.id }}
+            accessibilityLabel={`Sort by ${tab.label}`}
           >
             <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
               {tab.label}
@@ -130,19 +229,35 @@ export default function ConciergeResultsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {recommendationResults.map(result => (
-          <ResultCardView
-            key={result.id}
-            result={result}
-            onViewDetails={() => openLoungeDetails(result)}
-          />
-        ))}
+        {loading ? (
+          <ActivityIndicator color={theme.colors.secondarySilver} style={styles.stateBox} />
+        ) : results.length === 0 ? (
+          <Text style={styles.emptyHint}>No lounges to rank yet.</Text>
+        ) : (
+          results.map(result => (
+            <ResultCardView
+              key={result.id}
+              result={result}
+              onViewDetails={() => openLoungeDetails(result)}
+            />
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  stateBox: {
+    paddingVertical: theme.spacing.xl,
+  },
+  emptyHint: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,

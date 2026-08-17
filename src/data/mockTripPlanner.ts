@@ -38,24 +38,4 @@ export type SavedConversation = {
   isRecent?: boolean;
 };
 
-export const savedConversations: SavedConversation[] = [
-  {
-    id: 'ny-trip-planning',
-    title: 'New York Trip Planning',
-    timestamp: '2h ago',
-    summary: 'Looking for rooftop lounges near Central Park with vintage whiskeys...',
-    isRecent: true,
-  },
-  {
-    id: 'padron-vs-davidoff',
-    title: 'Padrón vs Davidoff Selection',
-    timestamp: 'Oct 22',
-    summary: 'Comparing flavor profiles of Anniversary Series vs Late Hour...',
-  },
-  {
-    id: 'london-weekend-guide',
-    title: 'London Weekend Guide',
-    timestamp: 'Oct 15',
-    summary: 'Top 5 member only clubs with available guest passes for weekend...',
-  },
-];
+

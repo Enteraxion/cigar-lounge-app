@@ -10,67 +10,84 @@
  * conversation persistence wired up yet.
  */
 
-import React from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft, Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
 import { theme } from '../theme';
 import { conciergeUser } from '../data/mockConcierge';
-import { savedConversations, type SavedConversation } from '../data/mockTripPlanner';
+import { auth } from '../services/firebaseAuth';
+import {
+  deleteConversation,
+  getSavedConversations,
+  renameConversation,
+  type SavedConversation,
+} from '../services/conciergeMemoryService';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
 function ConversationCard({
   conversation,
+  isMostRecent,
   onOpen,
+  onRename,
+  onDelete,
 }: {
   conversation: SavedConversation;
+  isMostRecent: boolean;
   onOpen: () => void;
+  onRename: () => void;
+  onDelete: () => void;
 }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeaderRow}>
         <View style={styles.cardTitleRow}>
-          {conversation.isRecent ? (
+          {isMostRecent ? (
             <Star size={13} color={theme.colors.accentGold} fill={theme.colors.accentGold} />
           ) : null}
           <Text style={styles.cardTitle} numberOfLines={1}>
             {conversation.title}
           </Text>
         </View>
-        <Text style={styles.cardTimestamp}>{conversation.timestamp.toUpperCase()}</Text>
+        <Text style={styles.cardTimestamp}>
+          {relativeTime(conversation.updatedAt?.toDate?.()).toUpperCase()}
+        </Text>
       </View>
 
       <Text style={styles.cardSummary} numberOfLines={2}>
-        Summarized: {conversation.summary}
+        {conversation.summary || 'No reply yet.'}
       </Text>
 
       <View style={styles.cardFooterRow}>
         <View style={styles.cardIconRow}>
           <Pressable
-            onPress={() => Alert.alert('Coming Soon', 'Renaming conversations is coming soon.')}
+            onPress={onRename}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Rename ${conversation.title}`}
           >
             <Pencil size={15} color={theme.colors.mutedGray} />
           </Pressable>
           <Pressable
-            onPress={() =>
-              Alert.alert('Delete Conversation', 'Deleting saved conversations is coming soon.')
-            }
+            onPress={onDelete}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${conversation.title}`}
           >
             <Trash2 size={15} color={theme.colors.mutedGray} />
           </Pressable>
         </View>
         <Pressable
-          style={conversation.isRecent ? styles.continueButton : styles.viewButton}
+          style={isMostRecent ? styles.continueButton : styles.viewButton}
           onPress={onOpen}
+          accessibilityRole="button"
         >
-          <Text style={conversation.isRecent ? styles.continueButtonText : styles.viewButtonText}>
-            {conversation.isRecent ? 'Continue' : 'View'}
+          <Text style={isMostRecent ? styles.continueButtonText : styles.viewButtonText}>
+            {isMostRecent ? 'Continue' : 'View'}
           </Text>
         </Pressable>
       </View>
@@ -78,11 +95,90 @@ function ConversationCard({
   );
 }
 
+/**
+ * "2h ago" / "Oct 22" — the mock stored these as literal strings, which is
+ * why every member saw the same ages forever. Derived from the real
+ * updatedAt instead.
+ */
+function relativeTime(date: Date | undefined): string {
+  if (!date) return 'just now';
+  const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export default function SavedConversationsScreen() {
+  const userId = auth.currentUser?.uid;
+  const [conversations, setConversations] = useState<SavedConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(false);
+    getSavedConversations(userId)
+      .then(setConversations)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const onRename = (conversation: SavedConversation) => {
+    if (!userId) return;
+    Alert.prompt?.(
+      'Rename conversation',
+      undefined,
+      async title => {
+        if (!title?.trim()) return;
+        // Optimistic: the list is the member's own data and a failed rename
+        // is recoverable, so waiting on the round trip just feels broken.
+        setConversations(prev =>
+          prev.map(c => (c.id === conversation.id ? { ...c, title: title.trim() } : c)),
+        );
+        try {
+          await renameConversation(userId, conversation.id, title);
+        } catch {
+          load();
+        }
+      },
+      'plain-text',
+      conversation.title,
+    );
+  };
+
+  const onDelete = (conversation: SavedConversation) => {
+    if (!userId) return;
+    Alert.alert('Delete conversation', `Delete "${conversation.title}"? This can't be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setConversations(prev => prev.filter(c => c.id !== conversation.id));
+          try {
+            await deleteConversation(userId, conversation.id);
+          } catch {
+            load();
+          }
+        },
+      },
+    ]);
+  };
+
   const navigation = useNavigation<ConciergeNavigationProp>();
 
-  const openConversation = () => {
-    navigation.navigate('ConciergeConversation');
+  const openConversation = (conversationId?: string) => {
+    navigation.navigate('ConciergeConversation', conversationId ? { conversationId } : undefined);
   };
 
   return (
@@ -98,28 +194,74 @@ export default function SavedConversationsScreen() {
           <Text style={styles.headerCaption}>Archive</Text>
           <Text style={styles.headerTitle}>History</Text>
         </View>
-        <Pressable style={styles.newButton} onPress={openConversation} hitSlop={8}>
+        <Pressable style={styles.newButton} onPress={() => openConversation()} hitSlop={8} accessibilityRole="button" accessibilityLabel="New conversation">
           <Plus size={18} color={theme.colors.primaryNavy} />
         </Pressable>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionTitle}>Conversations</Text>
-        <View style={styles.list}>
-          {savedConversations.map(conversation => (
-            <ConversationCard
-              key={conversation.id}
-              conversation={conversation}
-              onOpen={openConversation}
-            />
-          ))}
-        </View>
+        {loading ? (
+          <ActivityIndicator color={theme.colors.secondarySilver} style={styles.stateBox} />
+        ) : error ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>Couldn't load your conversations.</Text>
+            <Pressable onPress={load} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.retryText}>Try Again</Text>
+            </Pressable>
+          </View>
+        ) : conversations.length === 0 ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>No saved conversations yet.</Text>
+            <Text style={styles.stateHint}>
+              Ask the concierge something and it will be kept here.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {conversations.map((conversation, index) => (
+              <ConversationCard
+                key={conversation.id}
+                conversation={conversation}
+                // The list is ordered by updatedAt, so "most recent" is
+                // simply the first row — no stored flag to go stale.
+                isMostRecent={index === 0}
+                onOpen={() => openConversation(conversation.id)}
+                onRename={() => onRename(conversation)}
+                onDelete={() => onDelete(conversation)}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  stateBox: {
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.xl,
+  },
+  stateText: {
+    ...theme.typography.medium,
+    fontSize: 15,
+    color: theme.colors.secondarySilver,
+    textAlign: 'center',
+  },
+  stateHint: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+  },
+  retryText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.accentGold,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,

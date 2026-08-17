@@ -21,7 +21,7 @@ import SavedConversationsScreen from '../screens/SavedConversationsScreen';
 
 export type ConciergeStackParamList = {
   ConciergeHome: undefined;
-  ConciergeConversation: { initialQuery?: string } | undefined;
+  ConciergeConversation: { initialQuery?: string; conversationId?: string } | undefined;
   ConciergeResults: undefined;
   ConciergeInspiration: undefined;
   TripPlanner: undefined;

@@ -186,8 +186,7 @@ This is the section that matters most. Everything below is a known gap.
 
 | Item | Judgment |
 |---|---|
-| **~15 remaining `Coming Soon` alerts** | All in the Concierge's satellite screens (Inspiration, Results, Saved Conversations, AI Settings, AI Feedback). These are *unbuilt features*, not unwired data — making them real means designing five screens' worth of product, which is not a QA pass. Left honest rather than faked. |
-| **`mockConcierge`, `mockAISettings`, `mockTripPlanner.savedConversations`** | Same reason. Still live fiction. Three dead mock modules with zero importers also remain (`mockFavorites`, `mockHome`, `mockLoungeDetail`) — harmless, ~460 lines. |
+| ~~**Concierge satellite screens**~~ | **Now built** — see §6 below. |
 | **`defaultRegion` (London) fallback in Map/Search/FilterSheet** | Home was fixed to fall back to the member's home city and label which origin it used. The other three still silently sort by distance from London when no GPS fix exists. The pattern is established; applying it is mechanical but touches three more screens' state. |
 | **Design-system drift** | 53 hardcoded hex colours, 48 distinct unnamed `rgba()` values, 124 magic spacing numbers. Consolidating these is a large mechanical refactor with real regression risk and no behavioural benefit — wrong thing to do in the same pass as everything above. |
 | **Tablet/responsive layouts** | 4 uses of `useWindowDimensions` in the whole app. On iPad this renders as a stretched phone UI. This is a design project, not a fix. |
@@ -259,3 +258,106 @@ database; nothing here is backed by me looking at a screen.
    `cd functions && npm run build && cd .. && npx firebase-tools deploy --only functions,firestore:rules`
 5. **Apply the home-city location fallback** to Map, Search and FilterSheet.
 6. **Then** the design-system consolidation and tablet layouts.
+
+---
+
+## 6. Addendum — the "Coming Soon" screens, designed and built
+
+Added after the report above, on request. All five Concierge satellite
+screens are now real, backed by three new persisted collections.
+
+### New schema
+
+| Path | Purpose |
+|---|---|
+| `users/{uid}/conversations/{id}` | Saved concierge chats — title, summary, full transcript with the lounge ids recommended on each turn |
+| `users/{uid}/aiFeedback/{id}` | Thumbs up/down plus reasons on a real recommendation |
+| `users/{uid}.aiPreferences` | Experience mode, max travel distance, preferred atmospheres |
+
+Rules for both subcollections are owner-only — nobody else, including an
+admin, has a reason to read someone's chat history. Deployed and verified.
+
+### Screen by screen
+
+**Saved Conversations** — was three invented chats with hardcoded ages
+("2h ago") that never changed. Now lists the member's real conversations,
+newest first, with working rename and delete (optimistic, reverting on
+failure) and real loading/error/empty states. "Most recent" is derived from
+sort order rather than a stored flag that would go stale. Opening one
+rehydrates the full transcript **including the lounge cards** — a saved chat
+that came back as text only would lose the half of the answer a member acts
+on.
+
+**AI Settings** — the toggles now persist, hydrate on open, and are **sent to
+the model on every concierge request**. That last part is what separates a
+settings screen that steers from one that decorates: `askConcierge` builds an
+"ABOUT THIS MEMBER" brief from them. A preference the member has not set is
+omitted from the prompt entirely rather than defaulted, because "no stated
+preference" and "prefers business travel" are different instructions. The
+save button reports dirty/saving/saved/error rather than autosaving silently.
+
+**AI Feedback** — previously rated one invented lounge and discarded the
+result behind a success message. Now rates the lounge the concierge most
+recently recommended *to that member*, and persists. Two real defects fixed
+while wiring it: the vote defaulted to `helpful`, so submitting without
+touching anything silently recorded praise (now no default, and submit is
+disabled until a vote exists); and "Save Recommendation" was a Coming Soon —
+it now favorites the lounge, which is the app's real save primitive rather
+than a second saved-things list invented for the occasion.
+
+**Concierge Inspiration** — curated experiences are now real queries over the
+directory (remote work, whiskey pairings, hidden gems, outdoor), each showing
+its true lounge count, and a theme with nothing behind it is dropped rather
+than shown as an empty promise. "Events Tonight" became "Upcoming Events"
+reading real owner-posted events — the old title was a lie on any night
+nobody had posted one. The fictional "Presidential Private Vault" is now the
+highest-rated genuinely premium lounge in the directory.
+
+**Concierge Results** — the four tabs (Relevance / Distance / Rating / Price)
+now actually sort real lounges. Distance uses the same fallback chain as
+Home: real GPS, then home city, then unavailable — never a silent London
+default. The per-card "insight" states only what the data supports; the
+mock's hand-written "Matches your preference for quiet lounges with strong
+Wi-Fi" read well and was attached to nothing.
+
+### Cleanup
+
+Deleted `mockFavorites.ts`, `mockHome.ts`, `mockLoungeDetail.ts` (zero
+importers) and the dead exports from `mockConcierge`/`mockTripPlanner`.
+Mock data is down from 1,391 lines to 1,002, and every remaining line is
+either curated real-world reference data (cigars, cities, photography) or a
+chip vocabulary that drives real queries.
+
+`Coming Soon` alerts: **17 → 11**, and 4 of the 11 are comments describing
+what a screen *replaced*, not live alerts. The real remainder is 7:
+social sign-in (blocked on OAuth credentials, §3), three trip-planning
+actions on the Saved tab, a Journey Map filter, a conversation-options menu,
+and a saved-lounges list view.
+
+### Verified
+
+```
+$ npx jest
+Test Suites: 8 passed, 8 total
+Tests:       119 passed, 119 total
+
+$ npx eslint .          → 0 errors
+$ npx tsc --noEmit      → exit 0  (app and functions)
+$ react-native bundle --dev false   → succeeds
+```
+
+### Judgment calls in this addendum
+
+1. **Preferences are sent per-request rather than stored server-side.** The
+   concierge function is stateless; giving it a Firestore read on every call
+   to fetch preferences would add latency and a failure mode for no benefit.
+2. **A curated experience opens the first matching lounge** rather than a
+   dedicated theme-results screen. Building that screen is a bigger product
+   decision; this uses a screen that already exists and works.
+3. **Rename uses `Alert.prompt`, which is iOS-only.** On Android the rename
+   button will do nothing. Flagged rather than hidden — a cross-platform
+   rename needs a small modal, which is a UI task worth doing properly.
+4. **Feedback is write-only.** Nothing reads `aiFeedback` yet; it accumulates
+   for later analysis. Persisting it is still the minimum bar for asking
+   someone to rate something.
+

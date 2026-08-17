@@ -11,7 +11,7 @@
  * backend/real AI personalization wired up yet.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, View, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -32,6 +32,8 @@ import { theme } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
 import { auth, signOut } from '../services/firebaseAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { saveAiPreferences } from '../services/conciergeMemoryService';
+import type { AiExperienceMode } from '../types/firestore';
 import {
   atmosphereOptions,
   defaultExperienceMode,
@@ -53,10 +55,14 @@ const MODE_ICON: Record<ExperienceMode['id'], React.ComponentType<{ size?: numbe
 
 export default function AISettingsScreen() {
   const navigation = useNavigation<AISettingsNavigationProp>();
-  const { profile } = useUserProfile();
+  const { profile, reload } = useUserProfile();
+
+  const userId = auth.currentUser?.uid;
+  const saved = profile?.aiPreferences;
 
   const [experienceMode, setExperienceMode] = useState<ExperienceMode['id']>(defaultExperienceMode);
   const [maxDistance, setMaxDistance] = useState(defaultMaxTravelDistance);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [selectedAtmosphereIds, setSelectedAtmosphereIds] = useState<Set<string>>(
     new Set(defaultSelectedAtmosphereIds),
   );
@@ -64,6 +70,48 @@ export default function AISettingsScreen() {
     defaultSystemPreferences.accessibilityMode,
   );
   const [loungeAlerts, setLoungeAlerts] = useState(defaultSystemPreferences.loungeAlerts);
+
+  // Hydrate from the member's stored preferences once the profile arrives.
+  // Without this the screen always opened on the defaults and quietly
+  // discarded whatever they had chosen last time.
+  useEffect(() => {
+    if (!saved) return;
+    setExperienceMode(saved.experienceMode);
+    setMaxDistance(saved.maxTravelDistanceMiles);
+    setSelectedAtmosphereIds(new Set(saved.atmospheres));
+  }, [saved]);
+
+  const atmosphereLabels = useMemo(
+    () =>
+      atmosphereOptions
+        .filter(option => selectedAtmosphereIds.has(option.id))
+        // The model reads labels, not our internal ids.
+        .map(option => option.label),
+    [selectedAtmosphereIds],
+  );
+
+  const dirty =
+    !!saved &&
+    (saved.experienceMode !== experienceMode ||
+      saved.maxTravelDistanceMiles !== maxDistance ||
+      saved.atmospheres.join('|') !== atmosphereLabels.join('|'));
+  const neverSaved = !saved;
+
+  const onSave = async () => {
+    if (!userId || saveState === 'saving') return;
+    setSaveState('saving');
+    try {
+      await saveAiPreferences(userId, {
+        experienceMode: experienceMode as AiExperienceMode,
+        maxTravelDistanceMiles: maxDistance,
+        atmospheres: atmosphereLabels,
+      });
+      await reload?.();
+      setSaveState('saved');
+    } catch {
+      setSaveState('error');
+    }
+  };
 
   const handleLogOut = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -166,6 +214,9 @@ export default function AISettingsScreen() {
                     key={option.id}
                     style={[styles.chip, selected && styles.chipSelected]}
                     onPress={() => toggleAtmosphere(option.id)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={option.label}
                   >
                     <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                       {option.label}
@@ -174,6 +225,42 @@ export default function AISettingsScreen() {
                 );
               })}
             </View>
+
+            {/* These preferences are sent to the concierge on every request,
+                so an unsaved change is a real difference in the answers the
+                member gets — the button says so rather than autosaving
+                silently. */}
+            <Pressable
+              style={[
+                styles.saveButton,
+                (!dirty && !neverSaved) || saveState === 'saving' ? styles.saveButtonIdle : null,
+              ]}
+              onPress={onSave}
+              disabled={(!dirty && !neverSaved) || saveState === 'saving'}
+              accessibilityRole="button"
+              accessibilityLabel="Save concierge preferences"
+              accessibilityState={{ disabled: (!dirty && !neverSaved) || saveState === 'saving' }}
+            >
+              <Text
+                style={[
+                  styles.saveButtonText,
+                  (!dirty && !neverSaved) || saveState === 'saving'
+                    ? styles.saveButtonTextIdle
+                    : null,
+                ]}
+              >
+                {saveState === 'saving'
+                  ? 'Saving…'
+                  : dirty || neverSaved
+                    ? 'Save preferences'
+                    : 'Preferences saved'}
+              </Text>
+            </Pressable>
+            {saveState === 'error' ? (
+              <Text style={styles.saveError}>
+                Couldn't save. Check your connection and try again.
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -242,6 +329,32 @@ export default function AISettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  saveButton: {
+    marginTop: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.accentGold,
+    alignItems: 'center',
+  },
+  saveButtonIdle: {
+    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+  },
+  saveButtonText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.primaryNavy,
+  },
+  saveButtonTextIdle: {
+    color: theme.colors.secondarySilver,
+  },
+  saveError: {
+    ...theme.typography.body,
+    fontSize: 12,
+    color: theme.colors.mutedGray,
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { auth } from '../services/firebaseAuth';
 import { getUserProfile } from '../services/userActionsService';
-import type { UserDocument } from '../types/firestore';
+import type { AiPreferences, UserDocument } from '../types/firestore';
 
 export const NOT_SET = 'Not set';
 
@@ -32,6 +32,8 @@ export type DisplayProfile = {
   favoriteBrand: string;
   favoriteLounge: string;
   memberSince: string;
+  /** Concierge personalisation; absent until the member opens AI Settings. */
+  aiPreferences?: AiPreferences;
 };
 
 function formatMonthYear(date: Date): string {
@@ -58,6 +60,7 @@ function buildDisplayProfile(
     favoriteBrand: firestoreProfile?.favoriteBrand || NOT_SET,
     favoriteLounge: firestoreProfile?.favoriteLounge || NOT_SET,
     memberSince,
+    aiPreferences: firestoreProfile?.aiPreferences,
   };
 }
 

@@ -54,6 +54,13 @@ import {
   type RecommendationCard,
 } from '../data/mockConcierge';
 import { askConcierge, type ConciergeTurn } from '../services/conciergeService';
+import {
+  DEFAULT_AI_PREFERENCES,
+  getSavedConversations,
+  saveConversation,
+} from '../services/conciergeMemoryService';
+import { auth } from '../services/firebaseAuth';
+import { getLoungesByIds } from '../services/loungeService';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { displayTags } from '../utils/displayTags';
 import type { Lounge } from '../services/loungeService';
@@ -290,6 +297,10 @@ export default function ConciergeConversationScreen() {
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
   const handledInitialQuery = useRef(false);
   const { profile } = useUserProfile();
+  const userId = auth.currentUser?.uid;
+  // Kept in a ref so every save after the first updates the same document
+  // instead of scattering one-turn fragments through the member's list.
+  const conversationId = useRef<string | undefined>(route.params?.conversationId);
 
   const sendMessage = (text: string) => {
     const trimmed = text.trim();
@@ -316,8 +327,22 @@ export default function ConciergeConversationScreen() {
       .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }));
 
     const key = `ai-${messages.length}-${trimmed.slice(0, 8)}`;
-    askConcierge(turns, profile?.homeCity)
+    askConcierge(turns, profile?.homeCity, profile?.aiPreferences ?? DEFAULT_AI_PREFERENCES)
       .then(({ reply, lounges }) => {
+        // Persist the exchange. Best-effort and deliberately not awaited by
+        // the UI: a failed save must not swallow an answer the member is
+        // already reading.
+        if (userId) {
+          const persisted = [
+            ...turns,
+            { role: 'assistant' as const, text: reply, loungeIds: lounges.map(l => l.id) },
+          ];
+          saveConversation(userId, persisted, conversationId.current)
+            .then(id => {
+              conversationId.current = id;
+            })
+            .catch(() => {});
+        }
         setMessages(prev => [
           ...prev,
           lounges.length > 0
@@ -336,6 +361,51 @@ export default function ConciergeConversationScreen() {
       })
       .finally(() => setIsLoading(false));
   };
+
+  // Reopening a saved conversation rehydrates the transcript, including the
+  // lounge cards — a saved chat that comes back as text only would lose the
+  // half of the answer the member actually acts on.
+  useEffect(() => {
+    const savedId = route.params?.conversationId;
+    if (!savedId || !userId) {
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    getSavedConversations(userId, 50)
+      .then(async saved => {
+        const match = saved.find(c => c.id === savedId);
+        if (!match || cancelled) return;
+        const rehydrated: ConversationMessage[] = [];
+        for (const [index, turn] of match.messages.entries()) {
+          if (turn.role === 'user') {
+            rehydrated.push({
+              id: `saved-u-${index}`,
+              role: 'user',
+              text: turn.text,
+              timestamp: '',
+            });
+          } else {
+            const lounges = turn.loungeIds?.length ? await getLoungesByIds(turn.loungeIds) : [];
+            rehydrated.push({
+              id: `saved-a-${index}`,
+              role: 'ai',
+              text: turn.text,
+              recommendation: lounges[0] ? toRecommendationCard(lounges[0]) : null,
+              moreSuggestion: lounges[1] ? toCompactSuggestion(lounges[1]) : undefined,
+            });
+          }
+        }
+        if (!cancelled) setMessages(rehydrated);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [route.params?.conversationId, userId]);
 
   useEffect(() => {
     if (route.params?.initialQuery && !handledInitialQuery.current) {

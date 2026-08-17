@@ -15,6 +15,7 @@
 
 import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import { getLoungesByIds, type Lounge } from './loungeService';
+import type { AiPreferences } from '../types/firestore';
 
 const functions = getFunctions();
 
@@ -39,13 +40,17 @@ type AskConciergeResult = { reply: string; loungeIds: string[] };
 export async function askConcierge(
   messages: ConciergeTurn[],
   city?: string,
+  preferences?: AiPreferences,
 ): Promise<ConciergeAnswer> {
   const callable = httpsCallable<
-    { messages: ConciergeTurn[]; city?: string },
+    { messages: ConciergeTurn[]; city?: string; preferences?: AiPreferences },
     AskConciergeResult
   >(functions, 'askConcierge');
 
-  const { data } = await callable({ messages, city });
+  // Preferences ride on every request: the concierge is stateless
+  // server-side, so this is the only thing that makes AI Settings change an
+  // answer rather than decorate a screen.
+  const { data } = await callable({ messages, city, preferences });
 
   // A recommendation the member can't open is worse than none, so the ids
   // are resolved to real documents before they reach the UI; anything that

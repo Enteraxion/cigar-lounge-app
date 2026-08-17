@@ -272,7 +272,23 @@ export type UserStats = {
   milesTraveled: number;
 };
 
+export type AiExperienceMode = 'business' | 'vacation';
+
+/**
+ * Concierge personalisation. Stored on the user document rather than in a
+ * new collection because it is a handful of scalars always read with the
+ * profile — and because these values are *sent to the model* on every
+ * concierge request, so they must load with the member, not after them.
+ */
+export type AiPreferences = {
+  experienceMode: AiExperienceMode;
+  maxTravelDistanceMiles: number;
+  atmospheres: string[];
+};
+
 export type UserDocument = {
+  /** Absent for members who have never opened AI Settings. */
+  aiPreferences?: AiPreferences;
   name: string;
   email: string;
   avatarUrl: string;
@@ -417,3 +433,58 @@ export type IssueReportDocument = {
   description: string;
   createdAt: Timestamp;
 };
+
+// ---------------------------------------------------------------------------
+// users/{userId}/conversations/{conversationId}
+// ---------------------------------------------------------------------------
+
+/**
+ * A saved AI Concierge conversation.
+ *
+ * Saved Conversations was a screen listing three invented chats ("New York
+ * Trip Planning", "Padrón vs Davidoff Selection") that no member had ever
+ * had. Persisting the real thing is what makes the screen honest — and it
+ * makes the Concierge itself materially more useful, since a chat is
+ * otherwise lost the moment the screen unmounts.
+ *
+ * `messages` is stored inline rather than as a subcollection: a concierge
+ * conversation is short, always read whole, and never queried across.
+ */
+export type ConversationTurn = {
+  role: 'user' | 'assistant';
+  text: string;
+  /** Lounge ids the concierge recommended on this turn, if any. */
+  loungeIds?: string[];
+};
+
+export type ConversationDocument = {
+  /** First user message, trimmed — the list needs a human-readable handle. */
+  title: string;
+  /** Latest assistant reply, trimmed, for the list preview. */
+  summary: string;
+  messages: ConversationTurn[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
+
+// ---------------------------------------------------------------------------
+// users/{userId}/aiFeedback/{feedbackId}
+// ---------------------------------------------------------------------------
+
+/**
+ * A thumbs-up/down on a concierge recommendation, plus why.
+ *
+ * AIFeedbackScreen previously collected this and threw it away — the submit
+ * button showed a success message and wrote nothing. Persisting it is the
+ * minimum bar for asking someone to rate something.
+ */
+export type AiFeedbackDocument = {
+  loungeId: string | null;
+  loungeName: string;
+  helpful: boolean;
+  /** Chosen improvement reasons, only meaningful when helpful is false. */
+  reasons: string[];
+  note: string;
+  createdAt: Timestamp;
+};
+

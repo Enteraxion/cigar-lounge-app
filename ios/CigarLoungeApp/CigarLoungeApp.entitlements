@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Keychain access group for Firebase Auth.
+
+	  Firebase Auth persists the signed-in session in the iOS Keychain. Without
+	  an explicit access group the app relies on the implicit default, which is
+	  derived from the team prefix and bundle identifier — and BOTH of those
+	  changed on 2026-08-17 (bundle com.cigarloungeapp.app ->
+	  com.enteraxion.thereserve, team -> Enteraxion 9MSD728TMT). On a real
+	  device that left the app unable to reach its own keychain items, and every
+	  sign-in failed with `auth/keychain-error` while the credentials themselves
+	  were perfectly valid — the account authenticated fine against Firebase
+	  directly.
+
+	  Declaring the group explicitly is what Firebase's iOS setup expects, and
+	  it means a future bundle-id or team change is a one-line edit here rather
+	  than a mystery sign-in failure.
+
+	  Both halves are build settings rather than literals on purpose:
+	  $(AppIdentifierPrefix) expands to the team ID and $(CFBundleIdentifier) to
+	  the bundle id, so this is always the app's own default access group. That
+	  matters because hardcoding either one is what turns the *next* bundle-id
+	  or team change back into this same mystery.
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+	</array>
+</dict>
+</plist>

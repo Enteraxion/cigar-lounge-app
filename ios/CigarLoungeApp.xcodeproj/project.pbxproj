@@ -334,6 +334,7 @@
 					"-ObjC",
 					"-lc++",
 				);
+				CODE_SIGN_ENTITLEMENTS = CigarLoungeApp/CigarLoungeApp.entitlements;
 				PRODUCT_BUNDLE_IDENTIFIER = com.enteraxion.thereserve;
 				PRODUCT_NAME = CigarLoungeApp;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -364,6 +365,7 @@
 					"-ObjC",
 					"-lc++",
 				);
+				CODE_SIGN_ENTITLEMENTS = CigarLoungeApp/CigarLoungeApp.entitlements;
 				PRODUCT_BUNDLE_IDENTIFIER = com.enteraxion.thereserve;
 				PRODUCT_NAME = CigarLoungeApp;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

@@ -248,10 +248,25 @@ service cloud.firestore {
         // user's notifications (e.g. notifying everyone who favorited a
         // lounge about a new review) — so this can't be owner-only.
         // Restricted to the exact shape createNotification writes.
+        //
+        // Split by type on purpose. The two member-action types are things
+        // any signed-in member's own activity legitimately triggers. The two
+        // claim-decision types are not: they are written by ownerService's
+        // approveLoungeClaim/rejectLoungeClaim, which only an admin can
+        // successfully perform (the accompanying lounge update requires
+        // isAdmin()). Leaving them in the general list would let any member
+        // write "Your business has been approved" into any other member's
+        // notifications — a convincing scam, and one that would point the
+        // victim at a listing they don't actually own.
+        //
+        // Mirrors NotificationType in src/types/firestore.ts — keep in sync.
         allow create: if isSignedIn()
           && request.resource.data.keys().hasOnly(['type', 'title', 'body', 'read', 'createdAt', 'data'])
-          && request.resource.data.type in ['review_helpful', 'new_review_on_favorite']
-          && request.resource.data.read == false;
+          && request.resource.data.read == false
+          && (
+            request.resource.data.type in ['review_helpful', 'new_review_on_favorite']
+            || (isAdmin() && request.resource.data.type in ['claim_approved', 'claim_rejected'])
+          );
       }
     }
 

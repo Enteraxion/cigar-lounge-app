@@ -33,6 +33,10 @@ import {
   Timestamp,
 } from '@react-native-firebase/firestore';
 import type { LoungeDocument } from '../types/firestore';
+import type { Lounge } from './loungeService';
+import { createNotification } from './userActionsService';
+import { OWNER_PORTAL_URL } from '../config/ownerPortal';
+import { mergeOwnedLounges, type OwnedLounge } from '../utils/ownedLounges';
 
 const db = getFirestore();
 
@@ -90,7 +94,21 @@ export async function getPendingClaims(): Promise<PendingClaim[]> {
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as LoungeDocument) }));
 }
 
-/** Approves the pending claim on `loungeId`, granting ownership to its claimant. */
+/**
+ * Approves the pending claim on `loungeId`, granting ownership to its
+ * claimant and telling them so.
+ *
+ * The notification is the point of the whole flow from the claimant's side.
+ * Before this existed, approval was silent: the member filled in a claim
+ * form, saw an "under review" screen, and then nothing ever happened in the
+ * app — the only observable change was a `ownerId` field they couldn't see.
+ * They had no way to know they could now edit their listing.
+ *
+ * Ordered deliberately: ownership is granted first and the notification sent
+ * second, so a failed notification cannot leave a lounge unapproved. If the
+ * notification write fails the approval still stands, which is the right way
+ * round — being told late beats being approved never.
+ */
 export async function approveLoungeClaim(loungeId: string): Promise<void> {
   const loungeRef = doc(db, 'lounges', loungeId);
   const snapshot = await getDoc(loungeRef);
@@ -101,10 +119,21 @@ export async function approveLoungeClaim(loungeId: string): Promise<void> {
   if (!lounge.claimantUserId) {
     throw new Error('This lounge has no pending claim to approve.');
   }
+  const claimantUserId = lounge.claimantUserId;
 
   await updateDoc(loungeRef, {
-    ownerId: lounge.claimantUserId,
+    ownerId: claimantUserId,
     claimStatus: deleteField(),
+  });
+
+  await notifyClaimant(claimantUserId, {
+    type: 'claim_approved',
+    title: 'Your business has been approved',
+    body:
+      `You're now the verified owner of ${lounge.name}. You can edit your ` +
+      'listing from My Shops in your profile, or manage events, inventory ' +
+      `and reservations at ${OWNER_PORTAL_URL}`,
+    data: { loungeId },
   });
 }
 
@@ -113,9 +142,30 @@ export async function approveLoungeClaim(loungeId: string): Promise<void> {
  * field so the lounge reverts to unclaimed and can be claimed again —
  * there's no claims history collection to preserve the rejected attempt
  * in (matches the rest of this file's no-history trust model).
+ *
+ * Notifies the claimant *before* clearing, because clearing is what destroys
+ * the record of who to notify — and because a rejection is otherwise
+ * completely invisible: `claimantUserId` is what the Owner Portal queries on,
+ * so a rejected claim simply vanished from the claimant's dashboard with no
+ * explanation anywhere.
  */
 export async function rejectLoungeClaim(loungeId: string): Promise<void> {
   const loungeRef = doc(db, 'lounges', loungeId);
+  const snapshot = await getDoc(loungeRef);
+  const lounge = snapshot.exists() ? (snapshot.data() as LoungeDocument) : null;
+
+  if (lounge?.claimantUserId) {
+    await notifyClaimant(lounge.claimantUserId, {
+      type: 'claim_rejected',
+      title: 'Your business claim wasn’t approved',
+      body:
+        `We couldn't verify your claim on ${lounge.name}. If you own this ` +
+        'lounge, you can submit a new claim with your business details, or ' +
+        'reply to our team and we’ll help sort it out.',
+      data: { loungeId },
+    });
+  }
+
   await updateDoc(loungeRef, {
     claimStatus: deleteField(),
     claimantUserId: deleteField(),
@@ -124,6 +174,49 @@ export async function rejectLoungeClaim(loungeId: string): Promise<void> {
     ownerContactPhone: deleteField(),
     claimedAt: deleteField(),
   });
+}
+
+/**
+ * Sends a claim decision, swallowing failures.
+ *
+ * A notification that doesn't send must not surface as "approval failed" to
+ * the admin, who would then reasonably press Approve again on a lounge that
+ * is already approved. The decision itself is the durable record; this is
+ * how the member finds out about it.
+ */
+async function notifyClaimant(
+  userId: string,
+  notification: Parameters<typeof createNotification>[1],
+): Promise<void> {
+  try {
+    await createNotification(userId, notification);
+  } catch {
+    // Intentionally ignored — see above.
+  }
+}
+
+/**
+ * Every lounge this member owns or has a claim pending on, for the My Shops
+ * screen.
+ *
+ * Two queries rather than one because approval doesn't clear
+ * `claimantUserId` (the Owner Portal relies on that too), so an approved
+ * lounge matches both fields and a pending one matches only the second. The
+ * merge that reconciles them is pure and tested — see
+ * src/utils/ownedLounges.ts.
+ */
+export async function getLoungesForOwner(userId: string): Promise<OwnedLounge[]> {
+  const [owned, claimed] = await Promise.all([
+    getDocs(query(collection(db, 'lounges'), where('ownerId', '==', userId))),
+    getDocs(query(collection(db, 'lounges'), where('claimantUserId', '==', userId))),
+  ]);
+
+  const lounges: Lounge[] = [...owned.docs, ...claimed.docs].map(document => ({
+    id: document.id,
+    ...(document.data() as LoungeDocument),
+  }));
+
+  return mergeOwnedLounges(lounges, userId);
 }
 
 export type LoungeDetailsInput = {

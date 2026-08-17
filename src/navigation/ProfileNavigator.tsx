@@ -17,6 +17,7 @@ import AISettingsScreen from '../screens/AISettingsScreen';
 import AIFeedbackScreen from '../screens/AIFeedbackScreen';
 import MyReviewsScreen from '../screens/MyReviewsScreen';
 import AdminClaimReviewScreen from '../screens/AdminClaimReviewScreen';
+import MyShopsScreen from '../screens/MyShopsScreen';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -29,6 +30,11 @@ export type ProfileStackParamList = {
   MyReviews: undefined;
   /** Only reachable from ProfileScreen's admin-only entry card — see src/config/admins.ts. */
   AdminClaimReview: undefined;
+  /**
+   * Owner-facing. ProfileScreen only shows the entry card to members who own
+   * or have claimed a lounge, so most members never see this exists.
+   */
+  MyShops: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -45,6 +51,7 @@ export default function ProfileNavigator() {
       <Stack.Screen name="AIFeedback" component={AIFeedbackScreen} />
       <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
       <Stack.Screen name="AdminClaimReview" component={AdminClaimReviewScreen} />
+      <Stack.Screen name="MyShops" component={MyShopsScreen} />
     </Stack.Navigator>
   );
 }

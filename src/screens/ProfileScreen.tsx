@@ -65,11 +65,13 @@ import {
   Plane,
   Settings,
   ShieldCheck,
+  Store,
   User,
 } from 'lucide-react-native';
 import { theme } from '../theme';
 import { isAdminEmail } from '../config/admins';
 import { auth } from '../services/firebaseAuth';
+import { getLoungesForOwner } from '../services/ownerService';
 import {
   getUserCollections,
   getUserReviews,
@@ -197,19 +199,28 @@ export default function ProfileScreen() {
     }
   }, [userId]);
 
+  // Whether to show the My Shops card at all. Most members own nothing, and
+  // an owner-facing entry point on every member's profile would be noise —
+  // so this is driven by real ownership rather than shown-and-empty.
+  const [ownsShops, setOwnsShops] = useState(false);
+
   const loadProfileSections = useCallback(async () => {
     if (!userId) return;
     try {
       // Favorites are no longer fetched here: the Travel History card was
       // their only reader and now counts real visits instead, and the
       // headline "Favorites Saved" figure comes from getUserStats.
-      const [userCollections, recentlyViewed, reviews, passportBundle] = await Promise.all([
+      const [userCollections, recentlyViewed, reviews, passportBundle, shops] = await Promise.all([
         getUserCollections(userId),
         getRecentlyViewedLounges(userId, 1),
         getUserReviews(userId),
         getPassport(userId),
+        // Never fails the profile over it: a member who owns nothing is the
+        // common case and looks identical to a failed lookup here.
+        getLoungesForOwner(userId).catch(() => []),
       ]);
       setCollections(userCollections);
+      setOwnsShops(shops.length > 0);
       setLastViewedLounge(recentlyViewed[0] ?? null);
       setPassport(passportBundle.passport);
 
@@ -349,6 +360,23 @@ export default function ProfileScreen() {
           </View>
           <ChevronRight size={18} color={theme.colors.secondarySilver} />
         </Pressable>
+
+        {/* ---------------- Owner: My Shops ---------------- */}
+        {/* Shown only to owners/claimants — see ownsShops above. This is the
+            only route in the app to EditListingScreen, which owners were
+            granted permission to use long before anything linked to it. */}
+        {ownsShops && (
+          <Pressable style={styles.passportCard} onPress={() => navigation.navigate('MyShops')}>
+            <View style={styles.passportIconBox}>
+              <Store size={20} color={theme.colors.accentGold} />
+            </View>
+            <View style={styles.passportTextGroup}>
+              <Text style={styles.passportTitle}>My Shops</Text>
+              <Text style={styles.passportSubtitle}>Edit your listing & open the Owner Portal</Text>
+            </View>
+            <ChevronRight size={18} color={theme.colors.secondarySilver} />
+          </Pressable>
+        )}
 
         {/* ---------------- Admin: Review Claims ---------------- */}
         {isAdminEmail(auth.currentUser?.email) && (

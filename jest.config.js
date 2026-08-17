@@ -12,9 +12,20 @@
  * production: a query that is syntactically perfect and fails on a missing
  * index. Run with `npm run test:integration`.
  *
+ * `rules` runs firestore.rules against the real rules engine in the Firestore
+ * emulator. Separate from `integration` because it needs the emulator (and
+ * therefore Java) rather than credentials, and because `npm run test:rules`
+ * has to start that emulator around it. It exists for security properties
+ * that cannot be checked by reading the rules file — see integration/
+ * rules.test.ts.
+ *
  * React component rendering is not covered here — see REPORT.md for why that
  * is a deliberate, documented gap rather than an oversight.
  */
+const typescriptTransform = {
+  '^.+\\.tsx?$': ['babel-jest', { presets: ['module:@react-native/babel-preset'] }],
+};
+
 module.exports = {
   projects: [
     {
@@ -33,7 +44,16 @@ module.exports = {
       displayName: 'integration',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/integration/**/*.test.ts'],
-      transform: { '^.+\\.tsx?$': ['babel-jest', { presets: ['module:@react-native/babel-preset'] }] },
+      // The rules suite needs an emulator, not credentials — excluded so
+      // `npm run test:integration` doesn't fail on a machine without one.
+      testPathIgnorePatterns: ['<rootDir>/integration/rules\\.test\\.ts$'],
+      transform: typescriptTransform,
+    },
+    {
+      displayName: 'rules',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/integration/rules.test.ts'],
+      transform: typescriptTransform,
     },
   ],
 };

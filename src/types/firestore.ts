@@ -404,7 +404,18 @@ export type CollectionDocument = {
  * userActionsService.ts (toggleReviewHelpful / submitReview), never by a
  * background job.
  */
-export type NotificationType = 'review_helpful' | 'new_review_on_favorite';
+/**
+ * `claim_approved` / `claim_rejected` are the only types written by an admin
+ * rather than by an ordinary member action, and firestore.rules restricts
+ * them to admins for that reason — a member able to write "your business has
+ * been approved" into someone else's notifications is a convincing scam.
+ * Keep this union and the rules' allow-list in sync.
+ */
+export type NotificationType =
+  | 'review_helpful'
+  | 'new_review_on_favorite'
+  | 'claim_approved'
+  | 'claim_rejected';
 
 export type NotificationDocument = {
   id: string;

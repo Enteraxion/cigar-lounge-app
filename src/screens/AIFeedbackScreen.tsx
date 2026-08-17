@@ -6,7 +6,9 @@
  * and "How can we improve?" chips, then Save Recommendation, Report
  * Issues, and Update Preferences actions. Reached via the message-square
  * icon on AISettingsScreen; "Update Preferences" navigates back there.
- * Mock data only (see src/data/mockAISettings.ts) — no backend/real AI
+ * Real: rates the lounge the concierge most recently recommended to this
+ * member, and persists to users/{uid}/aiFeedback. Only the improvement
+ * reason chips are a curated list — no other
  * feedback pipeline wired up yet.
  */
 

@@ -683,6 +683,8 @@ type ConciergePreferences = {
   experienceMode?: 'business' | 'vacation';
   maxTravelDistanceMiles?: number;
   atmospheres?: string[];
+  cigarBrands?: string[];
+  drinks?: string[];
 };
 
 function preferenceBrief(preferences: ConciergePreferences | undefined): string {
@@ -702,6 +704,12 @@ function preferenceBrief(preferences: ConciergePreferences | undefined): string 
   }
   if (preferences.atmospheres?.length) {
     lines.push(`Atmospheres they like: ${preferences.atmospheres.join(', ')}.`);
+  }
+  if (preferences.cigarBrands?.length) {
+    lines.push(`Cigars they smoke: ${preferences.cigarBrands.join(', ')}.`);
+  }
+  if (preferences.drinks?.length) {
+    lines.push(`What they drink alongside: ${preferences.drinks.join(', ')}.`);
   }
   return lines.length ? `\n\nABOUT THIS MEMBER:\n${lines.join('\n')}` : '';
 }

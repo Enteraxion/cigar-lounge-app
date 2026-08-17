@@ -36,10 +36,6 @@ export const atmosphereOptions: AtmosphereOption[] = [
 
 export const defaultSelectedAtmosphereIds = ['lively-jazz'];
 
-export const detailedProfiles = {
-  cigarBrands: 'Padrón, Davidoff, Arturo Fuente',
-  favoriteDrinks: 'Single Malt, Old Fashioned',
-};
 
 export const defaultSystemPreferences = {
   accessibilityMode: false,

@@ -284,6 +284,10 @@ export type AiPreferences = {
   experienceMode: AiExperienceMode;
   maxTravelDistanceMiles: number;
   atmospheres: string[];
+  /** Brands the member smokes — from src/data/cigarBrands.ts. */
+  cigarBrands: string[];
+  /** What they drink alongside — from src/data/drinks.ts. */
+  drinks: string[];
 };
 
 export type UserDocument = {

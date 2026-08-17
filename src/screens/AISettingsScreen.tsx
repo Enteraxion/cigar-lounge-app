@@ -7,12 +7,15 @@
  * cards (Cigar Brands, Favorite Drinks), and System Preferences switches
  * (Accessibility Mode, Lounge Alerts). Reached via the gear icon on
  * ProfileScreen; the message-square icon in the header opens
- * AIFeedbackScreen. Mock data only (see src/data/mockAISettings.ts) — no
+ * AIFeedbackScreen. Every preference on this screen is real: it persists to
+ * the member's profile and is sent to the concierge on every request, so
+ * what they choose here changes the recommendations they get. Only the
+ * option vocabularies (atmospheres, brands, drinks) are curated lists — no
  * backend/real AI personalization wired up yet.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View, Image, Pressable } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, View, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -27,12 +30,15 @@ import {
   TreePalm,
   User,
   Wine,
+  ChevronRight,
 } from 'lucide-react-native';
 import { theme } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
 import { auth, signOut } from '../services/firebaseAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { saveAiPreferences } from '../services/conciergeMemoryService';
+import { CIGAR_BRANDS } from '../data/cigarBrands';
+import { DRINK_OPTIONS } from '../data/drinks';
 import type { AiExperienceMode } from '../types/firestore';
 import {
   atmosphereOptions,
@@ -40,7 +46,6 @@ import {
   defaultMaxTravelDistance,
   defaultSelectedAtmosphereIds,
   defaultSystemPreferences,
-  detailedProfiles,
   experienceModes,
   type ExperienceMode,
 } from '../data/mockAISettings';
@@ -63,6 +68,11 @@ export default function AISettingsScreen() {
   const [experienceMode, setExperienceMode] = useState<ExperienceMode['id']>(defaultExperienceMode);
   const [maxDistance, setMaxDistance] = useState(defaultMaxTravelDistance);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [cigarBrands, setCigarBrands] = useState<string[]>([]);
+  const [drinks, setDrinks] = useState<string[]>([]);
+  // Which multi-select sheet is open, if any. One sheet serves both rows —
+  // they differ only in their option list.
+  const [picker, setPicker] = useState<null | 'brands' | 'drinks'>(null);
   const [selectedAtmosphereIds, setSelectedAtmosphereIds] = useState<Set<string>>(
     new Set(defaultSelectedAtmosphereIds),
   );
@@ -79,6 +89,8 @@ export default function AISettingsScreen() {
     setExperienceMode(saved.experienceMode);
     setMaxDistance(saved.maxTravelDistanceMiles);
     setSelectedAtmosphereIds(new Set(saved.atmospheres));
+    setCigarBrands(saved.cigarBrands ?? []);
+    setDrinks(saved.drinks ?? []);
   }, [saved]);
 
   const atmosphereLabels = useMemo(
@@ -94,7 +106,9 @@ export default function AISettingsScreen() {
     !!saved &&
     (saved.experienceMode !== experienceMode ||
       saved.maxTravelDistanceMiles !== maxDistance ||
-      saved.atmospheres.join('|') !== atmosphereLabels.join('|'));
+      saved.atmospheres.join('|') !== atmosphereLabels.join('|') ||
+      (saved.cigarBrands ?? []).join('|') !== cigarBrands.join('|') ||
+      (saved.drinks ?? []).join('|') !== drinks.join('|'));
   const neverSaved = !saved;
 
   const onSave = async () => {
@@ -105,6 +119,8 @@ export default function AISettingsScreen() {
         experienceMode: experienceMode as AiExperienceMode,
         maxTravelDistanceMiles: maxDistance,
         atmospheres: atmosphereLabels,
+        cigarBrands,
+        drinks,
       });
       await reload?.();
       setSaveState('saved');
@@ -267,24 +283,44 @@ export default function AISettingsScreen() {
         {/* ---------------- Detailed Profiles ---------------- */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Detailed Profiles</Text>
-          <View style={styles.infoRow}>
+          {/* These were static text showing three invented brands to every
+              member. They are real preferences now, and they go to the model
+              with the rest — so what a member picks here changes what the
+              concierge recommends. */}
+          <Pressable
+            style={styles.infoRow}
+            onPress={() => setPicker('brands')}
+            accessibilityRole="button"
+            accessibilityLabel="Edit your cigar brands"
+          >
             <View style={styles.infoIconBox}>
               <Cigarette size={18} color={theme.colors.accentGold} />
             </View>
             <View style={styles.infoTextGroup}>
               <Text style={styles.infoTitle}>Cigar Brands</Text>
-              <Text style={styles.infoSubtitle}>{detailedProfiles.cigarBrands}</Text>
+              <Text style={styles.infoSubtitle}>
+                {cigarBrands.length ? cigarBrands.join(', ') : 'Tap to choose'}
+              </Text>
             </View>
-          </View>
-          <View style={styles.infoRow}>
+            <ChevronRight size={16} color={theme.colors.mutedGray} />
+          </Pressable>
+          <Pressable
+            style={styles.infoRow}
+            onPress={() => setPicker('drinks')}
+            accessibilityRole="button"
+            accessibilityLabel="Edit your favorite drinks"
+          >
             <View style={styles.infoIconBox}>
               <Wine size={18} color={theme.colors.accentGold} />
             </View>
             <View style={styles.infoTextGroup}>
               <Text style={styles.infoTitle}>Favorite Drinks</Text>
-              <Text style={styles.infoSubtitle}>{detailedProfiles.favoriteDrinks}</Text>
+              <Text style={styles.infoSubtitle}>
+                {drinks.length ? drinks.join(', ') : 'Tap to choose'}
+              </Text>
             </View>
-          </View>
+            <ChevronRight size={16} color={theme.colors.mutedGray} />
+          </Pressable>
         </View>
 
         {/* ---------------- System Preferences ---------------- */}
@@ -324,11 +360,88 @@ export default function AISettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <Modal
+        visible={picker !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPicker(null)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setPicker(null)}>
+          <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
+            <Text style={styles.sheetTitle}>
+              {picker === 'brands' ? 'Cigar Brands' : 'Favorite Drinks'}
+            </Text>
+            <Text style={styles.sheetHint}>
+              The concierge uses these when it recommends somewhere.
+            </Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.chipRow}>
+                {(picker === 'brands' ? CIGAR_BRANDS : DRINK_OPTIONS).map(option => {
+                  const list = picker === 'brands' ? cigarBrands : drinks;
+                  const setList = picker === 'brands' ? setCigarBrands : setDrinks;
+                  const selected = list.includes(option);
+                  return (
+                    <Pressable
+                      key={option}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                      onPress={() =>
+                        setList(
+                          selected ? list.filter(item => item !== option) : [...list, option],
+                        )
+                      }
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={option}
+                    >
+                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            <Pressable
+              style={styles.saveButton}
+              onPress={() => setPicker(null)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.saveButtonText}>Done</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 10, 24, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    maxHeight: '80%',
+    backgroundColor: theme.colors.surfaceNavy,
+    borderTopLeftRadius: theme.radius.large,
+    borderTopRightRadius: theme.radius.large,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+  },
+  sheetTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 16,
+    color: theme.colors.white,
+  },
+  sheetHint: {
+    ...theme.typography.body,
+    fontSize: 12,
+    color: theme.colors.mutedGray,
+    marginTop: 2,
+    marginBottom: theme.spacing.md,
+  },
   saveButton: {
     marginTop: theme.spacing.lg,
     paddingVertical: theme.spacing.md,

@@ -133,6 +133,8 @@ export const DEFAULT_AI_PREFERENCES: AiPreferences = {
   experienceMode: 'business',
   maxTravelDistanceMiles: 25,
   atmospheres: [],
+  cigarBrands: [],
+  drinks: [],
 };
 
 export async function saveAiPreferences(

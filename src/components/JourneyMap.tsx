@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.12),
+    borderColor: withAlpha(theme.colors.accentGold, 0.12),
     backgroundColor: theme.colors.surface,
   },
   centered: {
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },

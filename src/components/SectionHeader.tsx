@@ -61,6 +61,6 @@ const styles = StyleSheet.create({
   },
   action: {
     ...theme.typography.caption,
-    color: theme.colors.secondarySilver,
+    color: theme.colors.accentGold,
   },
 });

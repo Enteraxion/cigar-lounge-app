@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   headerCaption: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   headerTitle: {
     ...theme.typography.headingMedium,
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     height: 36,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

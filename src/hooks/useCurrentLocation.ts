@@ -106,6 +106,21 @@ export function useCurrentLocation() {
 
   useEffect(() => load(), [load]);
 
+  /**
+   * True once we know the answer either way — a fix arrived, or we gave up.
+   *
+   * Screens that fetch data anchored to the member's position need this. Firing
+   * on first render instead means one query against the static fallback region
+   * and then a second, real one a moment later; the first is wasted, and while
+   * it is on screen it shows the wrong place. MapScreen was rendering pins and
+   * a selected-lounge card for Kansas while the map animated to the member's
+   * actual city.
+   *
+   * Always resolves: `fail()` also runs on the geolocation timeout, not only on
+   * a denied permission, so nothing waits on this indefinitely.
+   */
+  const settled = location !== null || permissionDenied;
+
   /** Lets a screen offer a "try again" after the member enables location. */
-  return { location, permissionDenied, retry: load };
+  return { location, permissionDenied, settled, retry: load };
 }

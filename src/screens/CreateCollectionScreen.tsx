@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Cover photo ----
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
   },
   coverImage: {
     ...StyleSheet.absoluteFill,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
   textArea: {
     ...theme.typography.body,
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
 
   // ---- Category ----
@@ -395,10 +395,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   categoryChipActive: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.secondarySilver,
   },
   categoryChipText: {
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   submitButtonDisabled: {
     opacity: 0.7,

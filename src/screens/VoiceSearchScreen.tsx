@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.4),
+    borderColor: withAlpha(theme.colors.accentGold, 0.4),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   suggestionsLabel: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
     textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   recentLabel: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   recentRow: {
     gap: theme.spacing.sm,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   recentChipText: {
     ...theme.typography.medium,

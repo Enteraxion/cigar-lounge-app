@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   statLabel: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Footer ----
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   primaryButtonText: {
     ...theme.typography.medium,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   secondaryButtonText: {
     ...theme.typography.medium,

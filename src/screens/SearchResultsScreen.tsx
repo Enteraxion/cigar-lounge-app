@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
   },
   searchText: {
     ...theme.typography.body,
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   toolbarButtonText: {
     ...theme.typography.medium,
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.small,
   },
   toggleOptionActive: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   toggleText: {
     ...theme.typography.medium,
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     gap: theme.spacing.md,
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     fontSize: 11,
     letterSpacing: 0.5,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   suggestionRow: {
     flexDirection: 'row',
@@ -779,7 +779,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     marginBottom: theme.spacing.sm,
   },
   primaryButtonText: {
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   secondaryButtonText: {
     ...theme.typography.medium,

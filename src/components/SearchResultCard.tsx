@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   directionsButtonText: {
     ...theme.typography.medium,

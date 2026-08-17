@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: withAlpha(theme.colors.surface, 0.5),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     backgroundColor: withAlpha(theme.colors.surface, 0.5),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: theme.colors.secondarySilver,
+    color: theme.colors.accentGold,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: withAlpha(theme.colors.surface, 0.6),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
     borderRadius: 12,
   },
   inputIconSlot: {
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     height: 52,
     borderRadius: 12,
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: theme.colors.secondarySilver,
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontFamily: FONT_SANS_SEMIBOLD,
-    color: theme.colors.white,
+    color: theme.colors.accentGold,
     textDecorationLine: 'underline',
   },
 });

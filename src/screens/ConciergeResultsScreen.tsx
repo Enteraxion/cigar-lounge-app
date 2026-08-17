@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   headerCaption: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   headerTitle: {
     ...theme.typography.headingMedium,
@@ -302,10 +302,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   tabActive: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
   },
   tabText: {
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 13,
-    color: theme.colors.white,
+    color: theme.colors.accentGold,
     textDecorationLine: 'underline',
   },
 });

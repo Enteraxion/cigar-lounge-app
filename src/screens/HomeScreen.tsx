@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   avatarPlaceholder: {
     backgroundColor: theme.colors.surface,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   },
   welcomeCaption: {
     ...theme.typography.caption,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   welcomeName: {
     ...theme.typography.headingSmall,
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
     height: 48,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
   },
   cigarStatLabel: {
     ...theme.typography.caption,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   cigarStatValue: {
     ...theme.typography.medium,
@@ -886,7 +886,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadows.deep,

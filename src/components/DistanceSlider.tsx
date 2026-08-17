@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: 4,
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
   },
   thumb: {
     position: 'absolute',
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     width: THUMB_SIZE,
     height: THUMB_SIZE,
     borderRadius: THUMB_SIZE / 2,
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     ...theme.shadows.soft,
   },
 });

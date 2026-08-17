@@ -105,6 +105,41 @@ export function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/**
+ * Gold in its supporting roles.
+ *
+ * Sampled from design-reference/kiosk-v1/: the design uses **one** gold,
+ * #C8A96A, and gets its richness from how many roles it plays rather than from
+ * a range of golds. Eyebrow labels, links and their underlines, star ratings,
+ * tag pills, callout icon badges, the active tab and its indicator are all the
+ * same value. That is why the app read as "black everywhere" after the first
+ * pass — the palette was right and the *usage* was thin.
+ *
+ * These are the roles, named so a screen says what it means:
+ *
+ *   goldLine   hairline borders on cards, inputs and pills. The single biggest
+ *              contributor to the look — every container gets a faint gold
+ *              edge instead of a grey one.
+ *   goldWash   a barely-there gold tint for callout panel backgrounds.
+ *   goldGlow   a wider, softer wash for gradient overlays and hero vignettes.
+ *   goldSoft / goldDeep
+ *              lighter and darker gold for gradient stops, so a gold fill can
+ *              read as brushed metal rather than flat paint — which is what
+ *              the logo's own gold does.
+ */
+const GOLD = '#c8a868';
+
+export const gold = {
+  line: withAlpha(GOLD, 0.28),
+  lineStrong: withAlpha(GOLD, 0.45),
+  wash: withAlpha(GOLD, 0.1),
+  glow: withAlpha(GOLD, 0.16),
+  soft: '#dcc48f',
+  deep: '#a8863f',
+  /** Gradient stops for a filled gold surface, light to dark. */
+  fillGradient: ['#dcc48f', '#c8a868', '#b3924c'] as const,
+} as const;
+
 // ---------------------------------------------------------------------------
 // Typography
 // ---------------------------------------------------------------------------
@@ -233,6 +268,7 @@ const assets = {
 
 export const theme = {
   colors,
+  gold,
   fontFamily,
   typography,
   spacing,

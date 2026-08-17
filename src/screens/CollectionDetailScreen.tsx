@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(theme.colors.white, 0.35),
   },
   dotActive: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
 
   // ---- Content ----
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

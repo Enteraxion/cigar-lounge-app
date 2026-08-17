@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   headerCaption: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   headerTitle: {
     ...theme.typography.medium,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   sectionTitle: {
     ...theme.typography.headingSmall,
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   sideFieldLabel: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   sideFieldValueRow: {
     flexDirection: 'row',
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   chipSelected: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
   },
   chipText: {
     ...theme.typography.medium,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   generateButton: {
     height: 52,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     height: 34,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -211,14 +211,14 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
   pinCircleSelected: {
     width: 52,
     height: 52,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
     ...theme.shadows.deep,
   },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(theme.colors.secondarySilver, 0.5),
   },
   pinStemSelected: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     height: 14,
   },
 
@@ -245,11 +245,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     backgroundColor: withAlpha(theme.colors.background, 0.7),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
   },
   badgeText: {
     ...theme.typography.caption,
     fontSize: 8,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 });

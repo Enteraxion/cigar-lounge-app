@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -271,10 +271,10 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   categoryChipActive: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.secondarySilver,
   },
   categoryChipText: {
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.35),
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   doneButtonText: {
     ...theme.typography.medium,

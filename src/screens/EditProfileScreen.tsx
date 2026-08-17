@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
   },
   avatarImage: {
     width: '100%',
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   textInput: {
     ...theme.typography.body,
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
 
   // ---- Autocomplete suggestions ----
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
     overflow: 'hidden',
   },
   suggestionRow: {
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   submitButtonDisabled: {
     opacity: 0.7,

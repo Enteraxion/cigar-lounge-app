@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
   },
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   detailValue: {
     ...theme.typography.medium,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   primaryButtonText: {
     ...theme.typography.medium,

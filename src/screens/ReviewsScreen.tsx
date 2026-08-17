@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 13,
-    color: theme.colors.secondarySilver,
+    color: theme.colors.accentGold,
     textDecorationLine: 'underline',
   },
 
@@ -676,10 +676,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   helpfulButtonActive: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.secondarySilver,
   },
   helpfulButtonText: {
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
     bottom: 100,
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadows.deep,

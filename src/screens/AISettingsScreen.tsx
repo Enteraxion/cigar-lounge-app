@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   avatarPlaceholder: {
     backgroundColor: theme.colors.surface,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   },
   headerCaption: {
     ...theme.typography.caption,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   headerTitle: {
     ...theme.typography.headingSmall,
@@ -548,10 +548,10 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
   modeCardSelected: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
   },
   modeLabel: {
@@ -604,10 +604,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   chipSelected: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.secondarySilver,
   },
   chipText: {

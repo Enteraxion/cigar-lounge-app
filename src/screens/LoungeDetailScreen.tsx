@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(theme.colors.white, 0.35),
   },
   dotActive: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
 
   // ---- Content ----
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     marginTop: theme.spacing.lg,
   },
   reserveButtonText: {
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   claimButtonPending: {
     opacity: 0.6,
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 12,
-    color: theme.colors.secondarySilver,
+    color: theme.colors.accentGold,
     textAlign: 'right',
   },
   description: {

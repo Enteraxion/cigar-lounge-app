@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   tagText: {
     ...theme.typography.caption,

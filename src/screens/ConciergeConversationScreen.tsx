@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   headerCaption: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   headerName: {
     ...theme.typography.medium,
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   recTagText: {
     ...theme.typography.caption,
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 42,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   directionsText: {
     ...theme.typography.medium,
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
   noResultsPrimaryButton: {
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
     alignItems: 'center',
     justifyContent: 'center',
   },

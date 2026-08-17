@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   dateRow: {
@@ -369,13 +369,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
   },
   dateChipSelected: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
   },
   dateChipWeekday: {
@@ -404,12 +404,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
   slotChipSelected: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
   },
   slotChipText: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
   textInputError: {
     borderColor: theme.colors.danger,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   submitButtonDisabled: {
     opacity: 0.7,

@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   headerCaption: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   title: {
     ...theme.typography.headingLarge,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   percentLabel: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Progress ----

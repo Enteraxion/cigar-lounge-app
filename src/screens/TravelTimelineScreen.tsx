@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   headerCaption: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   headerTitle: {
     ...theme.typography.headingMedium,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   groupLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   groupEntries: {
     gap: theme.spacing.md,

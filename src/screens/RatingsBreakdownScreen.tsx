@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   overallLabel: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   overallHeaderRow: {
     flexDirection: 'row',
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   verifiedLabel: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   distributionList: {
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Category cards ----
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   statLabel: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   statValue: {
     ...theme.typography.medium,

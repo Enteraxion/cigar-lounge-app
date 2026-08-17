@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
     marginBottom: theme.spacing.md,
   },
   searchInput: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   listHeaderLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Loading / error / empty state ----
@@ -411,12 +411,12 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: theme.radius.full,
     borderWidth: 2,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.4),
+    borderColor: withAlpha(theme.colors.accentGold, 0.4),
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectionCircleSelected: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
   },
 
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   confirmButton: {
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

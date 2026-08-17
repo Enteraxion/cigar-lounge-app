@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   statusLabel: {
     ...theme.typography.caption,
     fontSize: 10,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   fallbackText: {
     ...theme.typography.medium,

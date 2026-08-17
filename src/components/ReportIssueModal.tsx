@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.sm,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
     color: theme.colors.white,
     fontSize: 14,
     marginTop: theme.spacing.xs,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   cancelButtonText: {
     ...theme.typography.medium,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   submitButtonText: {
     ...theme.typography.medium,

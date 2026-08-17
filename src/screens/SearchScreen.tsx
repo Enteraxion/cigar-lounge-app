@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
     marginBottom: theme.spacing.md,
   },
   searchPlaceholder: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   guideButtonText: {
     ...theme.typography.medium,

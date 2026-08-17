@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   avatarPlaceholder: {
     backgroundColor: theme.colors.surface,
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   },
   welcomeCaption: {
     ...theme.typography.caption,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   welcomeName: {
     ...theme.typography.headingSmall,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.small,
   },
   segmentActive: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   segmentText: {
     ...theme.typography.medium,
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.35),
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,

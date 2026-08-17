@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   clearAllLink: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Fields ----
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Chips ----
@@ -220,14 +220,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipSelected: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     borderWidth: 1,
     borderColor: theme.colors.secondarySilver,
   },
   chipUnselected: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   chipText: {
     ...theme.typography.medium,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   starChip: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   starChipSelected: {
     borderColor: theme.colors.accentGold,
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   showResultsButton: {
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

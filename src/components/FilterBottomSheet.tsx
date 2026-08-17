@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   resetLink: {
     ...theme.typography.medium,
     fontSize: 14,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   title: {
     ...theme.typography.medium,
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 13,
-    color: theme.colors.secondarySilver,
+    color: theme.colors.accentGold,
     textDecorationLine: 'underline',
   },
 
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.small,
     backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
     fontSize: 13,
     color: theme.colors.white,
   },
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   savedFilterChipText: {
     ...theme.typography.medium,
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
   cityInputText: {
     ...theme.typography.body,
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   chipUnselected: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   chipText: {
     ...theme.typography.medium,
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
   showResultsButton: {
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
   resetFiltersLink: {
     ...theme.typography.medium,
     fontSize: 13,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
     textAlign: 'center',
   },
 });

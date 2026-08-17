@@ -88,9 +88,19 @@ export default function LoginScreen() {
       {/* Background photo placeholder + the 3-stop gradient overlay, now
           expressed against the palette rather than baked-in navy literals —
           see src/theme's withAlpha. */}
+      {/* Two layers, in the order the kiosk welcome screens use: a warm gold
+          glow at the top, then black over it. Flat black behind a black card
+          gave the screen nothing to sit on — this is what reads as lit. */}
       <LinearGradient
-        colors={[withAlpha(theme.colors.primaryBlack, 0.4), withAlpha(theme.colors.primaryBlack, 0.8), theme.colors.primaryBlack]}
-        locations={[0, 0.5, 1]}
+        colors={[theme.gold.glow, withAlpha(theme.colors.accentGold, 0.04), theme.colors.background]}
+        locations={[0, 0.35, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={[withAlpha(theme.colors.background, 0.2), withAlpha(theme.colors.background, 0.75), theme.colors.background]}
+        locations={[0, 0.55, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -103,7 +113,7 @@ export default function LoginScreen() {
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <View style={styles.logoBadge}>
-            <FlameIcon size={24} color={theme.colors.secondarySilver} />
+            <FlameIcon size={26} color={theme.colors.accentGold} />
           </View>
           <Text style={styles.heading1}>THE RESERVE</Text>
           <Text style={styles.subtitle}>CIGAR LOUNGE SOCIETY</Text>
@@ -112,7 +122,7 @@ export default function LoginScreen() {
         {/* ---------------- Member Access Card ---------------- */}
         <View style={styles.card}>
           <LinearGradient
-            colors={[withAlpha(theme.colors.white, 0.06), withAlpha(theme.colors.white, 0)]}
+            colors={[theme.gold.wash, withAlpha(theme.colors.accentGold, 0)]}
             style={styles.cardSheen}
             pointerEvents="none"
           />
@@ -125,7 +135,7 @@ export default function LoginScreen() {
               <Text style={styles.fieldLabel}>Email Address</Text>
               <View style={styles.inputWrapper}>
                 <View style={styles.inputIconSlot}>
-                  <Icon name="mail-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
+                  <Icon name="mail-outline" size={16} color={theme.colors.accentGold} />
                 </View>
                 <TextInput
         accessibilityLabel="Enter your email"
@@ -150,7 +160,7 @@ export default function LoginScreen() {
               </View>
               <View style={styles.inputWrapper}>
                 <View style={styles.inputIconSlot}>
-                  <Icon name="lock-closed-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
+                  <Icon name="lock-closed-outline" size={16} color={theme.colors.accentGold} />
                 </View>
                 <TextInput
         accessibilityLabel="••••••••"
@@ -202,7 +212,7 @@ export default function LoginScreen() {
                 )
               }
             >
-              <Icon name="logo-apple" size={18} color={theme.colors.white} />
+              <Icon name="logo-apple" size={18} color={theme.colors.accentGold} />
               <Text style={styles.socialButtonText}>Apple</Text>
             </Pressable>
             <Pressable
@@ -214,7 +224,7 @@ export default function LoginScreen() {
                 )
               }
             >
-              <Icon name="logo-google" size={14} color={theme.colors.white} />
+              <Icon name="logo-google" size={14} color={theme.colors.accentGold} />
               <Text style={styles.socialButtonText}>Google</Text>
             </Pressable>
           </View>
@@ -260,7 +270,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     backgroundColor: withAlpha(theme.colors.surface, 0.5),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -283,9 +293,9 @@ const styles = StyleSheet.create({
     fontFamily: FONT_SANS_MEDIUM,
     fontSize: 14,
     lineHeight: 20,
-    letterSpacing: 1.4,
+    letterSpacing: 3,
     textTransform: 'uppercase',
-    color: withAlpha(theme.colors.secondarySilver, 0.8),
+    color: theme.colors.accentGold,
     textAlign: 'center',
   },
 
@@ -293,8 +303,11 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 33,
     backgroundColor: withAlpha(theme.colors.primaryBlack, 0.75),
-    borderTopWidth: 1,
-    borderTopColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    // A hairline all the way round, not just the top edge. On navy the card
+    // separated from the page by tone alone; on black it needs an edge or it
+    // reads as a hole rather than a panel.
+    borderWidth: 1,
+    borderColor: theme.gold.line,
     borderRadius: 24,
     padding: 24,
     gap: 24,
@@ -333,7 +346,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: theme.colors.secondarySilver,
+    color: theme.colors.accentGold,
   },
   passwordLabelRow: {
     flexDirection: 'row',
@@ -345,7 +358,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_SANS_REGULAR,
     fontSize: 12,
     lineHeight: 16,
-    color: withAlpha(theme.colors.secondarySilver, 0.8),
+    color: theme.colors.accentGold,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -353,7 +366,7 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: withAlpha(theme.colors.surface, 0.6),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
     borderRadius: 12,
   },
   inputIconSlot: {
@@ -383,10 +396,10 @@ const styles = StyleSheet.create({
   signInButton: {
     height: 52,
     borderRadius: 12,
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.colors.secondarySilver,
+    shadowColor: theme.colors.accentGold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 14,
@@ -415,14 +428,14 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    backgroundColor: theme.gold.line,
   },
   dividerText: {
     fontFamily: FONT_SANS_REGULAR,
     fontSize: 12,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: withAlpha(theme.colors.secondarySilver, 0.5),
+    color: withAlpha(theme.colors.accentGold, 0.75),
   },
 
   // ---- Social buttons ----
@@ -439,7 +452,7 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: withAlpha(theme.colors.surface, 0.4),
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
     borderRadius: 12,
   },
   socialButtonText: {
@@ -462,7 +475,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontFamily: FONT_SANS_SEMIBOLD,
-    color: theme.colors.white,
+    color: theme.colors.accentGold,
     textDecorationLine: 'underline',
   },
 });

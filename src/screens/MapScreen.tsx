@@ -105,7 +105,7 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const infoCardStyle = [styles.infoCard, { bottom: tabBarClearance(insets.bottom) }];
   const mapRef = useRef<MapView>(null);
-  const { location } = useCurrentLocation();
+  const { location, settled: locationSettled } = useCurrentLocation();
   const initialRegion = location
     ? {
         latitude: location.latitude,
@@ -163,12 +163,22 @@ export default function MapScreen() {
     }
   }, [viewport.lat, viewport.lng, radiusMiles]);
 
+  // Waits for the location to settle before the first query, for the same
+  // reason HomeScreen does. Without it the map fetched against the static
+  // fallback region on mount and rendered pins — and a selected-lounge card —
+  // for the middle of the country, then corrected itself once the GPS fix
+  // arrived. The wrong state was brief but plainly visible: a lounge in
+  // Nebraska captioned under a map of San Francisco.
+  //
   // Does not blank `lounges` on a refetch: panning the map should not make
   // every pin vanish and reappear. Repeat queries for a nearby centre are
   // served from cache (see loungeService), so this is cheap.
   useEffect(() => {
+    if (!locationSettled) {
+      return;
+    }
     loadLounges();
-  }, [loadLounges]);
+  }, [locationSettled, loadLounges]);
 
   // initialRegion only applies at first mount; if the GPS fix resolves
   // after the map has already rendered with the fallback defaultRegion,
@@ -522,7 +532,7 @@ const styles = StyleSheet.create({
   conciergeLabel: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   conciergeMessage: {
     ...theme.typography.medium,
@@ -558,14 +568,14 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
   pinCircleSelected: {
     width: 52,
     height: 52,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
     ...theme.shadows.deep,
   },
@@ -575,7 +585,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(theme.colors.secondarySilver, 0.5),
   },
   pinStemSelected: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     height: 14,
   },
 
@@ -640,7 +650,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -654,7 +664,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

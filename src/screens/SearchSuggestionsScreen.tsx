@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    borderColor: withAlpha(theme.colors.accentGold, 0.2),
   },
   searchInput: {
     ...theme.typography.body,
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...theme.typography.caption,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   row: {
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

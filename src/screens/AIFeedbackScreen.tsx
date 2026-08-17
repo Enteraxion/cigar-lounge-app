@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   avatarPlaceholder: {
     backgroundColor: theme.colors.surface,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
   headerCaption: {
     ...theme.typography.caption,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   headerTitle: {
     ...theme.typography.headingSmall,
@@ -468,10 +468,10 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   voteButtonSelected: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.white,
   },
   voteButtonText: {
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   chipRow: {
     flexDirection: 'row',
@@ -504,10 +504,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   chipSelected: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.secondarySilver,
   },
   chipText: {
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
+    borderColor: withAlpha(theme.colors.accentGold, 0.25),
   },
   secondaryButtonText: {
     ...theme.typography.medium,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   primaryButtonText: {
     ...theme.typography.medium,

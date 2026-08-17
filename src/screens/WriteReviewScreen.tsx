@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   overallLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Fields ----
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   dateRow: {
     flexDirection: 'row',
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
   dateText: {
     ...theme.typography.medium,
@@ -472,12 +472,12 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
   toggleButtonActive: {
-    backgroundColor: theme.colors.secondarySilver,
+    backgroundColor: theme.colors.accentGold,
     borderColor: theme.colors.secondarySilver,
   },
   toggleButtonText: {
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
+    borderColor: withAlpha(theme.colors.accentGold, 0.15),
   },
 
   // ---- Photos ----
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.35),
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   submitButton: {
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
   },

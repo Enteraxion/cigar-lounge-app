@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: theme.radius.full,
     borderWidth: 2,
-    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   avatarPlaceholder: {
     backgroundColor: theme.colors.surface,
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   profileTier: {
     ...theme.typography.caption,
     fontSize: 11,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
     marginBottom: theme.spacing.md,
   },
   editButton: {
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.accentGold,
   },
   editButtonText: {
     ...theme.typography.medium,
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   statLabel: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
 
   // ---- Cigar Passport ----
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   travelStatLabel: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.mutedGray,
+    color: theme.colors.accentGold,
   },
   destinationRow: {
     flexDirection: 'row',

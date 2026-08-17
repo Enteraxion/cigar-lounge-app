@@ -81,7 +81,9 @@ export default function AdminClaimReviewScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <ChevronLeft size={20} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>Review Business Claims</Text>

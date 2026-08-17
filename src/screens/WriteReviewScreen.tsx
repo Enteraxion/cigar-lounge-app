@@ -191,7 +191,9 @@ export default function WriteReviewScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable style={styles.closeButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.closeButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <X size={18} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>{isEditMode ? 'Edit Review' : 'Write Review'}</Text>
@@ -292,6 +294,7 @@ export default function WriteReviewScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Review Details</Text>
           <TextInput
+        accessibilityLabel="Tell others about the atmosphere, the cigar selection, and the service..."
             value={reviewText}
             onChangeText={setReviewText}
             placeholder="Tell others about the atmosphere, the cigar selection, and the service..."

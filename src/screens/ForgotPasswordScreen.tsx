@@ -83,7 +83,9 @@ export default function ForgotPasswordScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ---------------- Back button ---------------- */}
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <Icon name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
 
@@ -142,6 +144,7 @@ export default function ForgotPasswordScreen() {
                       <Icon name="mail-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
                     </View>
                     <TextInput
+        accessibilityLabel="Enter your email"
                       style={styles.input}
                       placeholder="Enter your email"
                       placeholderTextColor="rgba(192, 192, 192, 0.4)"

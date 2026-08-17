@@ -50,7 +50,16 @@ export default function FavoriteButton({
   };
 
   return (
-    <Pressable style={[styles.button, style]} onPress={onPress} hitSlop={8}>
+    <Pressable
+      style={[styles.button, style]}
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      // The label carries the state because the only other cue is the fill
+      // colour of a heart, which conveys nothing to a screen reader.
+      accessibilityLabel={favorited ? 'Remove from favorites' : 'Add to favorites'}
+      accessibilityState={{ selected: favorited }}
+    >
       <Heart
         size={size}
         color={favorited ? theme.colors.accentGold : theme.colors.white}

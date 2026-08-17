@@ -127,7 +127,9 @@ export default function UploadPhotosScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={24} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>Upload Photos</Text>
@@ -208,7 +210,9 @@ export default function UploadPhotosScreen() {
           <Text style={styles.doneButtonText}>Done</Text>
           <Check size={16} color={theme.colors.primaryNavy} />
         </Pressable>
-        <Pressable style={styles.cancelButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.cancelButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </Pressable>
       </View>

@@ -126,6 +126,7 @@ export default function LoginScreen() {
                   <Icon name="mail-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
                 </View>
                 <TextInput
+        accessibilityLabel="Enter your email"
                   style={styles.input}
                   placeholder="Enter your email"
                   placeholderTextColor="rgba(192, 192, 192, 0.4)"
@@ -150,6 +151,7 @@ export default function LoginScreen() {
                   <Icon name="lock-closed-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
                 </View>
                 <TextInput
+        accessibilityLabel="••••••••"
                   style={styles.input}
                   placeholder="••••••••"
                   placeholderTextColor="rgba(192, 192, 192, 0.4)"

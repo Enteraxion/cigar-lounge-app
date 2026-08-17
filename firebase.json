@@ -1,24 +1,35 @@
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "functions": [
     {
       "source": "functions",
       "codebase": "default",
-      "predeploy": ["npm --prefix functions run build"],
+      "predeploy": [
+        "npm --prefix functions run build"
+      ],
       "runtime": "nodejs20"
     }
   ],
   "hosting": [
     {
       "public": "public",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ]
     },
     {
       "target": "owner-portal",
       "public": "owner-portal/dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ]
     }
   ]
 }

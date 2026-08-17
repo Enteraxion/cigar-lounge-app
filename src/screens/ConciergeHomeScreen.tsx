@@ -98,7 +98,9 @@ export default function ConciergeHomeScreen() {
               AppNavigator), which renders above the tab bar — so without an
               explicit close the only way out is iOS's swipe-down gesture,
               which doesn't exist on Android. */}
-          <Pressable style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={8}>
+          <Pressable style={styles.headerButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
             <X size={18} color={theme.colors.secondarySilver} />
           </Pressable>
           <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />
@@ -140,6 +142,7 @@ export default function ConciergeHomeScreen() {
         <View style={styles.searchBar}>
           <Search size={18} color={theme.colors.mutedGray} />
           <TextInput
+        accessibilityLabel="Ask anything about cigar lounges..."
             style={styles.searchInput}
             placeholder="Ask anything about cigar lounges..."
             placeholderTextColor={theme.colors.mutedGray}

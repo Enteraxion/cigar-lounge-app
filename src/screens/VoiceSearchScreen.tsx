@@ -87,10 +87,14 @@ export default function VoiceSearchScreen() {
         </View>
 
         <View style={styles.actionRow}>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+          <Pressable onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
-          <Pressable style={styles.keyboardButton} onPress={() => navigation.goBack()} hitSlop={8}>
+          <Pressable style={styles.keyboardButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
             <Keyboard size={18} color={theme.colors.white} />
           </Pressable>
         </View>

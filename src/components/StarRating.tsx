@@ -30,7 +30,14 @@ export default function StarRating({
   const filledCount = Math.round(rating);
 
   return (
-    <View style={styles.row}>
+    <View
+      style={styles.row}
+      // Read as one value when it's a display rating: five separate unlabelled
+      // icons is noise, "4 out of 5 stars" is the information.
+      accessible={!interactive}
+      accessibilityRole={interactive ? undefined : 'image'}
+      accessibilityLabel={interactive ? undefined : `${rating} out of ${count} stars`}
+    >
       {Array.from({ length: count }).map((_, index) => {
         const star = (
           <Star
@@ -44,7 +51,13 @@ export default function StarRating({
           return star;
         }
         return (
-          <Pressable key={index} onPress={() => onChange?.(index + 1)} hitSlop={4}>
+          <Pressable
+            key={index}
+            onPress={() => onChange?.(index + 1)}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={`Rate ${index + 1} out of ${count}`}
+          >
             {star}
           </Pressable>
         );

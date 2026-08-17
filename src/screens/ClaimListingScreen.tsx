@@ -129,7 +129,9 @@ export default function ClaimListingScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <ChevronLeft size={20} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>Claim This Business</Text>
@@ -159,6 +161,7 @@ export default function ClaimListingScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Your Name</Text>
           <TextInput
+        accessibilityLabel="Full name"
             value={ownerName}
             onChangeText={onChangeName}
             placeholder="Full name"
@@ -171,6 +174,7 @@ export default function ClaimListingScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Business Email</Text>
           <TextInput
+        accessibilityLabel="you@yourbusiness.com"
             value={ownerContactEmail}
             onChangeText={text => {
               setOwnerContactEmail(text);
@@ -188,6 +192,7 @@ export default function ClaimListingScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Phone Number</Text>
           <TextInput
+        accessibilityLabel="(555) 123-4567"
             value={formatPhone(phoneDigits)}
             onChangeText={onChangePhone}
             placeholder="(555) 123-4567"

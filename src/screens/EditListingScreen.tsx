@@ -104,7 +104,9 @@ export default function EditListingScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <ChevronLeft size={20} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>Edit Listing</Text>
@@ -127,6 +129,7 @@ export default function EditListingScreen() {
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Description</Text>
             <TextInput
+        accessibilityLabel="Tell customers about your business"
               value={description}
               onChangeText={text => {
                 setDescription(text);
@@ -143,6 +146,7 @@ export default function EditListingScreen() {
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Hours</Text>
             <TextInput
+        accessibilityLabel="e.g. Mon-Sat 11am-11pm"
               value={hours}
               onChangeText={text => {
                 setHours(text);
@@ -158,6 +162,7 @@ export default function EditListingScreen() {
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Price Range</Text>
             <TextInput
+        accessibilityLabel="e.g. $$$"
               value={priceRange}
               onChangeText={setPriceRange}
               placeholder="e.g. $$$"
@@ -169,6 +174,7 @@ export default function EditListingScreen() {
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Amenities</Text>
             <TextInput
+        accessibilityLabel="e.g. Full Bar, Private Rooms, Valet Parking"
               value={amenitiesText}
               onChangeText={setAmenitiesText}
               placeholder="e.g. Full Bar, Private Rooms, Valet Parking"

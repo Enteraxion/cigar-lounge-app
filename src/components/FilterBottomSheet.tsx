@@ -323,6 +323,7 @@ export default function FilterBottomSheet({
         {namingFilter ? (
           <View style={styles.namingRow}>
             <TextInput
+        accessibilityLabel="Name this filter"
               value={newFilterName}
               onChangeText={setNewFilterName}
               placeholder="Name this filter"
@@ -409,6 +410,7 @@ export default function FilterBottomSheet({
                 <View style={styles.cityInput}>
                   <SearchIcon size={16} color={theme.colors.mutedGray} />
                   <TextInput
+        accessibilityLabel="Search Another City"
                     value={cityQuery}
                     onChangeText={setCityQuery}
                     placeholder="Search Another City"

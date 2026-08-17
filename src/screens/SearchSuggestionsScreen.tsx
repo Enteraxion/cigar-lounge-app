@@ -194,12 +194,15 @@ export default function SearchSuggestionsScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       {/* ---------------- Header ---------------- */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={24} color={theme.colors.white} />
         </Pressable>
         <View style={styles.searchBar}>
           <SearchIcon size={18} color={theme.colors.accentGold} />
           <TextInput
+        accessibilityLabel="Lounges, cities, or brands..."
             value={query}
             onChangeText={setQuery}
             placeholder="Lounges, cities, or brands..."

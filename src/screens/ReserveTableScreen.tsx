@@ -169,7 +169,9 @@ export default function ReserveTableScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <ChevronLeft size={20} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>Reserve a Table</Text>
@@ -252,6 +254,7 @@ export default function ReserveTableScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Your Name</Text>
           <TextInput
+        accessibilityLabel="Full name"
             value={guestName}
             onChangeText={onChangeName}
             placeholder="Full name"
@@ -264,6 +267,7 @@ export default function ReserveTableScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Phone Number</Text>
           <TextInput
+        accessibilityLabel="(555) 123-4567"
             value={formatPhone(phoneDigits)}
             onChangeText={onChangePhone}
             placeholder="(555) 123-4567"
@@ -277,6 +281,7 @@ export default function ReserveTableScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Notes (optional)</Text>
           <TextInput
+        accessibilityLabel="e.g. celebrating a birthday, window seat preferred"
             value={notes}
             onChangeText={setNotes}
             placeholder="e.g. celebrating a birthday, window seat preferred"

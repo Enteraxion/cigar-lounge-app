@@ -24,7 +24,9 @@ export default function ConciergeInspirationScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={24} color={theme.colors.white} />
         </Pressable>
         <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />

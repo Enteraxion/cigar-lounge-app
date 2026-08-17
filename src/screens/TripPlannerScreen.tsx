@@ -170,7 +170,9 @@ export default function TripPlannerScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
-          <Pressable style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={8}>
+          <Pressable style={styles.headerButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
             <ChevronLeft size={20} color={theme.colors.white} />
           </Pressable>
           <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />

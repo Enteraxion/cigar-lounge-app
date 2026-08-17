@@ -43,6 +43,7 @@ export default function ReportIssueModal({ visible, onClose, onSubmit }: Props) 
           <Text style={styles.title}>Report an Issue</Text>
           <Text style={styles.subtitle}>Tell us what went wrong with this recommendation.</Text>
           <TextInput
+        accessibilityLabel="Describe the issue..."
             style={styles.input}
             placeholder="Describe the issue..."
             placeholderTextColor={theme.colors.mutedGray}

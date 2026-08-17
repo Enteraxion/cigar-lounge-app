@@ -116,7 +116,9 @@ export default function SignUpScreen() {
             you back to Login, but it sits below the fold on a long scrolling
             form — this matches ForgotPasswordScreen's top-left back button so
             both Auth screens behave the same way. */}
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <Icon name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
 
@@ -148,6 +150,7 @@ export default function SignUpScreen() {
                   <Icon name="person-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
                 </View>
                 <TextInput
+        accessibilityLabel="Enter your full name"
                   style={styles.input}
                   placeholder="Enter your full name"
                   placeholderTextColor="rgba(192, 192, 192, 0.4)"
@@ -166,6 +169,7 @@ export default function SignUpScreen() {
                   <Icon name="mail-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
                 </View>
                 <TextInput
+        accessibilityLabel="Enter your email"
                   style={styles.input}
                   placeholder="Enter your email"
                   placeholderTextColor="rgba(192, 192, 192, 0.4)"
@@ -185,6 +189,7 @@ export default function SignUpScreen() {
                   <Icon name="lock-closed-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
                 </View>
                 <TextInput
+        accessibilityLabel="••••••••"
                   style={styles.input}
                   placeholder="••••••••"
                   placeholderTextColor="rgba(192, 192, 192, 0.4)"
@@ -214,6 +219,7 @@ export default function SignUpScreen() {
                   <Icon name="lock-closed-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
                 </View>
                 <TextInput
+        accessibilityLabel="••••••••"
                   style={styles.input}
                   placeholder="••••••••"
                   placeholderTextColor="rgba(192, 192, 192, 0.4)"

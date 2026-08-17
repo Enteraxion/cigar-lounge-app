@@ -185,7 +185,9 @@ export default function CollectionDetailScreen() {
   if (!collection) {
     return (
       <View style={[styles.screen, styles.stateScreen, { paddingTop: insets.top }]}>
-        <Pressable style={styles.backButtonAlone} onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable style={styles.backButtonAlone} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={22} color={theme.colors.white} />
         </Pressable>
         <View style={styles.stateBox}>
@@ -226,7 +228,9 @@ export default function CollectionDetailScreen() {
           </ScrollView>
 
           <View style={[styles.headerRow, { paddingTop: insets.top + theme.spacing.sm }]}>
-            <Pressable style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={8}>
+            <Pressable style={styles.headerButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
               <ChevronLeft size={20} color={theme.colors.white} />
             </Pressable>
             <View style={styles.headerRightButtons}>

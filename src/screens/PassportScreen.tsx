@@ -227,7 +227,9 @@ export default function PassportScreen() {
           {/* Grouped with the title so the header's space-between still puts
               the bell on the right once a back button is in the row. */}
           <View style={styles.headerLeft}>
-            <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+            <Pressable onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
               <ChevronLeft size={24} color={theme.colors.white} />
             </Pressable>
             <View>

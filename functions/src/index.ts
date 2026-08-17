@@ -37,6 +37,15 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import Anthropic from '@anthropic-ai/sdk';
+import {
+  amenitiesFromGoogle,
+  isRelevantGooglePlace,
+  isRelevantYelpBusiness,
+  normalizeName,
+  type GooglePlace,
+  type YelpBusiness,
+} from './relevance';
+import { optionalString, requireEmail, requireString } from './validation';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
@@ -64,100 +73,9 @@ const MAX_RESULTS = 200;
 const MATCH_DISTANCE_MILES = 0.2;
 
 // ---------------------------------------------------------------------------
-// Relevance filtering
-//
-// A survey of the 8,285 imported lounges (2026-08-16) found ~1% that
-// aren't cigar venues at all — a sandwich shop, a Dollar General, a few
-// coffee chains. Small, but they're the first thing a member notices.
-//
-// The filters below deliberately use each API's own structured category
-// data, never the business name. Name matching looks tempting and is a
-// trap: the imported set includes Casa de Montecristo, Carnegie Club,
-// Cortez Room and Tinder Box — all real, well-known cigar venues with no
-// "cigar" anywhere in the name. Any regex broad enough to catch "Dollar
-// General" also deletes those.
-// ---------------------------------------------------------------------------
-
-/** Yelp category aliases that indicate a genuine tobacco/cigar venue. */
-const YELP_ALLOWED_CATEGORIES = new Set([
-  'cigarbars',
-  'hookah_bars',
-  'tobaccoshops',
-  'smokeshop',
-  'smokeshops',
-  'vapeshops',
-  'lounges',
-]);
-
-/**
- * Yelp's category filter is an OR over the searched aliases, but results
- * still come back carrying their real categories — a business Yelp lists
- * primarily as `sandwiches` can surface on a `cigarbars` search. Checking
- * what Yelp actually calls the business drops those.
- *
- * Businesses with no categories at all are kept: absent data is not
- * evidence against, and Yelp only reached our results via a cigar/hookah
- * category search in the first place.
- */
-function isRelevantYelpBusiness(business: YelpBusiness): boolean {
-  if (!business.categories || business.categories.length === 0) {
-    return true;
-  }
-  return business.categories.some(category => YELP_ALLOWED_CATEGORIES.has(category.alias));
-}
-
-/**
- * Google primary types that are unambiguously a different kind of
- * business. Deliberately excludes `bar`, `night_club` and `liquor_store`
- * — plenty of real cigar lounges are primarily bars, and rejecting those
- * would lose more than it saves.
- */
-const GOOGLE_REJECTED_TYPES = new Set([
-  'restaurant', 'sandwich_shop', 'pizza_restaurant', 'fast_food_restaurant',
-  'hamburger_restaurant', 'mexican_restaurant', 'chinese_restaurant',
-  'coffee_shop', 'cafe', 'bakery', 'ice_cream_shop', 'meal_takeaway', 'meal_delivery',
-  'barber_shop', 'beauty_salon', 'hair_salon', 'nail_salon', 'spa',
-  'grocery_store', 'supermarket', 'convenience_store', 'department_store', 'discount_store',
-  'gas_station', 'car_repair', 'car_wash', 'car_dealer',
-  'hotel', 'motel', 'lodging', 'casino',
-  'gym', 'fitness_center', 'bank', 'atm',
-  'pharmacy', 'drugstore', 'dentist', 'doctor', 'hospital',
-  'church', 'school', 'university',
-]);
-
-/** Name signal used ONLY to rescue a venue the type filter would reject. */
-const CIGAR_NAME_SIGNAL = /cigar|tobacco|humidor|hookah|shisha|stogie|smoke|puff/i;
-
-/**
- * Rejects a Google result only when both signals agree it's unrelated —
- * an unambiguous non-lounge primary type AND nothing cigar-ish in the
- * name. Requiring both is what keeps real venues like "High End Cigars &
- * Cafe" (primary type `cafe`) and "King Corona Cigars Bar And Cafe" in,
- * while still dropping "7 Brew Coffee" and "Dollar General".
- */
-function isRelevantGooglePlace(place: GooglePlace): boolean {
-  if (!place.primaryType || !GOOGLE_REJECTED_TYPES.has(place.primaryType)) {
-    return true;
-  }
-  return CIGAR_NAME_SIGNAL.test(place.displayName?.text ?? '');
-}
-
-// ---------------------------------------------------------------------------
 // Yelp Fusion Business Search — same shape as scripts/importYelpLounges.ts
 // ---------------------------------------------------------------------------
 
-type YelpBusiness = {
-  id: string;
-  name: string;
-  is_closed: boolean;
-  rating?: number;
-  review_count?: number;
-  price?: string;
-  coordinates: { latitude: number; longitude: number };
-  location: { display_address: string[]; city?: string; state?: string };
-  image_url?: string;
-  categories?: { alias: string; title: string }[];
-};
 
 type YelpSearchResponse = {
   businesses: YelpBusiness[];
@@ -215,60 +133,7 @@ async function fetchAllYelpResults(apiKey: string, location: string): Promise<Ye
 // catches businesses Yelp doesn't have listed (smaller towns/global).
 // ---------------------------------------------------------------------------
 
-type GooglePlace = {
-  id: string;
-  displayName?: { text: string };
-  formattedAddress?: string;
-  location?: { latitude: number; longitude: number };
-  regularOpeningHours?: { weekdayDescriptions?: string[] };
-  photos?: { name: string }[];
-  primaryType?: string;
-  // Structured attributes — these are what make the app's Amenities and
-  // Entertainment filters work. Without them every lounge stored an empty
-  // `amenities` array, so selecting any of those chips returned zero
-  // results (see src/utils/loungeSearch.ts's viableFilterOptions).
-  outdoorSeating?: boolean;
-  liveMusic?: boolean;
-  servesCocktails?: boolean;
-  servesCoffee?: boolean;
-  goodForWatchingSports?: boolean;
-  goodForGroups?: boolean;
-  reservable?: boolean;
-  restroom?: boolean;
-  parkingOptions?: {
-    freeParkingLot?: boolean;
-    paidParkingLot?: boolean;
-    valetParking?: boolean;
-    freeStreetParking?: boolean;
-  };
-};
 
-/**
- * Google's boolean attributes mapped onto the exact amenity labels the
- * app's filter chips look for (src/data/mockFilters.ts). The labels have
- * to match those chips or the filter still finds nothing — this is the
- * join between the two, and the reason it's a literal list rather than
- * something clever.
- */
-function amenitiesFromGoogle(place: GooglePlace): string[] {
-  const amenities: string[] = [];
-  if (place.outdoorSeating) amenities.push('Outdoor Patio');
-  if (place.servesCocktails) amenities.push('Full Bar');
-  if (place.servesCoffee) amenities.push('Coffee');
-  if (place.liveMusic) amenities.push('Live Music');
-  if (place.goodForWatchingSports) amenities.push('Sports Viewing');
-  if (place.goodForGroups) amenities.push('Social');
-  if (place.reservable) amenities.push('Reservations');
-  if (place.parkingOptions?.valetParking) amenities.push('Valet Parking');
-  if (
-    place.parkingOptions?.freeParkingLot ||
-    place.parkingOptions?.paidParkingLot ||
-    place.parkingOptions?.freeStreetParking
-  ) {
-    amenities.push('Parking');
-  }
-  return amenities;
-}
 
 type GoogleSearchResponse = {
   places?: GooglePlace[];
@@ -361,9 +226,6 @@ async function resolveGooglePhotoUri(
   }
 }
 
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
-}
 
 // ---------------------------------------------------------------------------
 // Mapping onto the app's LoungeDocument shape (see src/types/firestore.ts —
@@ -460,11 +322,15 @@ export const refreshCityLounges = onCall(
       throw new HttpsError('unauthenticated', 'Sign in required.');
     }
 
-    const city = String(request.data?.city ?? '').trim();
-    if (!city) {
-      throw new HttpsError('invalid-argument', 'city is required.');
+    // Bounded, and rejected outright if it contains anything a city name
+    // never does. This value reaches an outbound HTTP query string, so
+    // "present" was never a sufficient check.
+    const city = requireString(request.data?.city, 'city', 100);
+    if (!/^[\p{L}\p{M}\s.,'’&()-]+$/u.test(city)) {
+      throw new HttpsError('invalid-argument', 'city contains unsupported characters.');
     }
 
+    return guarded('refreshCityLounges', async () => {
     const citySlug = slugifyCity(city);
     const refreshRef = db.collection('cityRefreshes').doc(citySlug);
     const refreshDoc = await refreshRef.get();
@@ -572,6 +438,7 @@ export const refreshCityLounges = onCall(
         relevantBusinesses.length +
         relevantGooglePlaces.filter(p => !matchedGoogleIds.has(p.id)).length,
     };
+    });
   },
 );
 
@@ -606,15 +473,18 @@ export const sendClaimInquiryEmail = onCall(
       throw new HttpsError('unauthenticated', 'Sign in required.');
     }
 
-    const loungeId = String(request.data?.loungeId ?? '').trim();
-    const ownerName = String(request.data?.ownerName ?? '').trim();
-    const ownerContactEmail = String(request.data?.ownerContactEmail ?? '').trim();
-    const ownerContactPhone = String(request.data?.ownerContactPhone ?? '').trim();
-    if (!loungeId || !ownerName || !ownerContactEmail) {
-      throw new HttpsError('invalid-argument', 'loungeId, ownerName, and ownerContactEmail are required.');
-    }
+    const loungeId = requireString(request.data?.loungeId, 'loungeId', 128);
+    const ownerName = requireString(request.data?.ownerName, 'ownerName', 120);
+    const ownerContactEmail = requireEmail(request.data?.ownerContactEmail, 'ownerContactEmail');
+    const ownerContactPhone = optionalString(request.data?.ownerContactPhone, 'ownerContactPhone', 40);
 
+    return guarded('sendClaimInquiryEmail', async () => {
     const loungeSnapshot = await db.collection('lounges').doc(loungeId).get();
+    if (!loungeSnapshot.exists) {
+      // 'not-found', not 'internal' — the caller sent a bad id, and saying so
+      // is the difference between a fixable error and a mystery.
+      throw new HttpsError('not-found', 'That lounge no longer exists.');
+    }
     const loungeName = (loungeSnapshot.data()?.name as string | undefined) ?? loungeId;
 
     sgMail.setApiKey(sendgridApiKey.value());
@@ -631,6 +501,7 @@ export const sendClaimInquiryEmail = onCall(
     });
 
     return { sent: true };
+    });
   },
 );
 
@@ -668,20 +539,22 @@ export const sendReservationEmail = onCall(
       throw new HttpsError('unauthenticated', 'Sign in required.');
     }
 
-    const loungeId = String(request.data?.loungeId ?? '').trim();
-    const guestName = String(request.data?.guestName ?? '').trim();
-    const contactPhone = String(request.data?.contactPhone ?? '').trim();
-    const partySize = Number(request.data?.partySize ?? 0);
-    const date = String(request.data?.date ?? '').trim();
-    const timeSlot = String(request.data?.timeSlot ?? '').trim();
-    const notes = String(request.data?.notes ?? '').trim();
-    if (!loungeId || !guestName || !contactPhone || !partySize || !date || !timeSlot) {
-      throw new HttpsError(
-        'invalid-argument',
-        'loungeId, guestName, contactPhone, partySize, date, and timeSlot are required.',
-      );
+    const loungeId = requireString(request.data?.loungeId, 'loungeId', 128);
+    const guestName = requireString(request.data?.guestName, 'guestName', 120);
+    const contactPhone = requireString(request.data?.contactPhone, 'contactPhone', 40);
+    const date = requireString(request.data?.date, 'date', 40);
+    const timeSlot = requireString(request.data?.timeSlot, 'timeSlot', 40);
+    // Free text from a member goes into an email body — cap it hard.
+    const notes = optionalString(request.data?.notes, 'notes', 500);
+
+    // Party size was only checked for truthiness, so 0 was rejected but 1e9
+    // and -4 both sailed through into an email to a real shop owner.
+    const partySize = Number(request.data?.partySize);
+    if (!Number.isInteger(partySize) || partySize < 1 || partySize > 50) {
+      throw new HttpsError('invalid-argument', 'partySize must be a whole number between 1 and 50.');
     }
 
+    return guarded('sendReservationEmail', async () => {
     const loungeSnapshot = await db.collection('lounges').doc(loungeId).get();
     const lounge = loungeSnapshot.data();
     const ownerContactEmail = lounge?.ownerContactEmail as string | undefined;
@@ -709,6 +582,7 @@ export const sendReservationEmail = onCall(
     });
 
     return { sent: true };
+    });
   },
 );
 
@@ -732,6 +606,25 @@ export const sendReservationEmail = onCall(
 // ---------------------------------------------------------------------------
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+
+/**
+ * Runs a handler and converts anything unexpected into a generic `internal`
+ * error. HttpsError instances the handler raised deliberately pass through
+ * untouched — those carry messages written for the client. Everything else
+ * is logged server-side and replaced, so a stack trace or a third-party
+ * error body never reaches a caller.
+ */
+async function guarded<T>(name: string, handler: () => Promise<T>): Promise<T> {
+  try {
+    return await handler();
+  } catch (error) {
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    logger.error(`${name} failed`, { error: String(error) });
+    throw new HttpsError('internal', 'Something went wrong. Please try again.');
+  }
+}
 
 /** How many real lounges to offer the model to choose between. */
 const CONCIERGE_CANDIDATES = 40;

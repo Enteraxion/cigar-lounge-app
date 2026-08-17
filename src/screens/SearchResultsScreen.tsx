@@ -253,7 +253,9 @@ export default function SearchResultsScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       {/* ---------------- Header ---------------- */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={24} color={theme.colors.white} />
         </Pressable>
         <Pressable

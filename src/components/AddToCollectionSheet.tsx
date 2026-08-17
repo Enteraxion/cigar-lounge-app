@@ -144,6 +144,7 @@ export default function AddToCollectionSheet({
         <View style={styles.searchBar}>
           <SearchIcon size={16} color={theme.colors.mutedGray} />
           <TextInput
+        accessibilityLabel="Search collections..."
             value={query}
             onChangeText={setQuery}
             placeholder="Search collections..."

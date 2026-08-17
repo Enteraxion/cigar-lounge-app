@@ -136,7 +136,9 @@ export default function CreateCollectionScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <ChevronLeft size={20} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>New Collection</Text>
@@ -178,6 +180,7 @@ export default function CreateCollectionScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Collection Name</Text>
           <TextInput
+        accessibilityLabel="e.g. London Weekend Spots"
             value={name}
             onChangeText={setName}
             placeholder="e.g. London Weekend Spots"
@@ -190,6 +193,7 @@ export default function CreateCollectionScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Description</Text>
           <TextInput
+        accessibilityLabel="Tell more about this collection..."
             value={description}
             onChangeText={setDescription}
             placeholder="Tell more about this collection..."

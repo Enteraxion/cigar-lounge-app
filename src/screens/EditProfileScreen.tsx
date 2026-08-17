@@ -87,6 +87,7 @@ function AutocompleteField({
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
+        accessibilityLabel={placeholder}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
@@ -266,7 +267,9 @@ export default function EditProfileScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={8}>
           <ChevronLeft size={20} color={theme.colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -308,6 +311,7 @@ export default function EditProfileScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Name</Text>
           <TextInput
+        accessibilityLabel="Your name"
             value={name}
             onChangeText={setName}
             placeholder="Your name"

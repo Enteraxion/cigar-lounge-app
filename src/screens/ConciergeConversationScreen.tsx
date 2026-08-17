@@ -392,7 +392,9 @@ export default function ConciergeConversationScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       {/* ---------------- Header ---------------- */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={24} color={theme.colors.white} />
         </Pressable>
         <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />
@@ -466,6 +468,7 @@ export default function ConciergeConversationScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.inputBar}>
           <TextInput
+        accessibilityLabel="Ask anything..."
             style={styles.input}
             placeholder="Ask anything..."
             placeholderTextColor={theme.colors.mutedGray}

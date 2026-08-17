@@ -91,3 +91,8 @@ ios/CigarLoungeApp/GoogleService-Info.plist
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Firebase CLI debug output — machine-local noise
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

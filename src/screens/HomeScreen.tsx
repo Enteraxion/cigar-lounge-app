@@ -200,11 +200,17 @@ export default function HomeScreen() {
   //
   // The origin is chosen above, in order of how much we trust it: the
   // device's real fix, else the home city on the member's profile, else the
-  // app's static stand-in. That middle step matters — without it a member
-  // whose location is off got lounges near defaultRegion, a fixed coordinate
-  // in London, labelled "Nearby Lounges". Sorting US lounges by distance
-  // from London is not a neutral fallback; it's a wrong answer delivered
-  // confidently. `nearbyIsReal` is what the UI uses to say so.
+  // app's static stand-in.
+  //
+  // That middle step matters, and it is wider than it looks — findCityCoordinates
+  // resolves a whole state as well as a city, because plenty of members write
+  // their state in that field and it used to resolve to nothing at all.
+  //
+  // The last step is a genuine "we don't know", not a place: defaultRegion is
+  // now the centre of the US rather than the coordinate in London it inherited
+  // from the design mock, which had this screen ranking US lounges by distance
+  // from London and calling the result "Nearby". `nearbyIsReal` is how the UI
+  // admits which of the three it used.
   const featuredLounge = lounges?.length
     ? [...lounges].sort((a, b) => b.ratings.overall - a.ratings.overall)[0]
     : null;

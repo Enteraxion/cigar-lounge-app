@@ -9,12 +9,45 @@
 
 import { loungeInteriors, rooftopBars, whiskeyBars } from './mockImages';
 
+/**
+ * Where the map starts, and what "nearby" is measured from, when the app has
+ * nothing better — GPS denied or not yet resolved, and no usable home city on
+ * the profile.
+ *
+ * This was central London (51.509, -0.147), carried over from the design
+ * mock. Every one of the 8,294 lounges in Firestore is in the United States,
+ * so that fallback was wrong in two ways at once: the map opened on a city
+ * with no lounges in it, and Home ranked "Nearby Lounges" by distance from
+ * London — which, as the comment in HomeScreen puts it, is not a neutral
+ * fallback but a wrong answer delivered confidently.
+ *
+ * It also became the app's slowest path once proximity queries landed: a
+ * latitude band around 51.5°N contains almost no US lounges, so the query
+ * found nothing and fell through to scanning the whole collection.
+ *
+ * Now the geographic centre of the contiguous US, with a delta wide enough to
+ * frame the country rather than pretend to a neighbourhood. A member seeing
+ * this is a member the app cannot locate, and showing them the whole country
+ * says exactly that. HomeScreen's `nearbyIsReal` still tells them in words.
+ */
 export const defaultRegion = {
-  latitude: 51.509,
-  longitude: -0.147,
-  latitudeDelta: 0.018,
-  longitudeDelta: 0.018,
+  latitude: 39.8283,
+  longitude: -98.5795,
+  latitudeDelta: 30,
+  longitudeDelta: 30,
 };
+
+/**
+ * How far to zoom in when the app *does* know where the member is.
+ *
+ * Separate from defaultRegion's delta on purpose. Both MapScreen's
+ * initialRegion and its recenter-on-GPS reused `defaultRegion.latitudeDelta`
+ * as "the normal zoom level", which only worked while the fallback happened
+ * to be a street-level region. Widening the fallback to frame the country
+ * would otherwise have zoomed the map out to 30° for every member with a
+ * working GPS fix — the two values look interchangeable and are not.
+ */
+export const LOCATED_ZOOM_DELTA = 0.08;
 
 export type MapPinIcon = 'cigar' | 'cup' | 'martini' | 'leaf';
 

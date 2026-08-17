@@ -204,3 +204,96 @@ describe('cityAutocomplete', () => {
     expect(results[0].name.toLowerCase().startsWith('new')).toBe(true);
   });
 });
+
+describe('findCityCoordinates — state fallback', () => {
+  it('resolves a full state name a member might type as their home city', () => {
+    // Real data: this app's owner has "New jersey" saved as their home city.
+    // Before this existed it resolved to null, which made every Passport
+    // distance "—" and sent Home's "nearby" origin to the fallback region.
+    const nj = findCityCoordinates('New jersey');
+    expect(nj).not.toBeNull();
+    expect(nj!.lat).toBeGreaterThan(38.5);
+    expect(nj!.lat).toBeLessThan(41.5);
+    expect(nj!.lng).toBeGreaterThan(-76);
+    expect(nj!.lng).toBeLessThan(-73.5);
+  });
+
+  it('is case-insensitive across state spellings', () => {
+    expect(findCityCoordinates('NEW JERSEY')).toEqual(findCityCoordinates('new jersey'));
+  });
+
+  it('resolves a two-letter state code', () => {
+    const tx = findCityCoordinates('TX');
+    expect(tx).not.toBeNull();
+    expect(tx!.lat).toBeGreaterThan(25);
+    expect(tx!.lat).toBeLessThan(37);
+  });
+
+  it('still prefers a city when the name is both', () => {
+    // "Washington" is a state and also a city in several states. A city match
+    // is the more specific reading and must win.
+    const washington = findCityCoordinates('Washington, DC');
+    expect(washington).not.toBeNull();
+    expect(washington!.lat).toBeGreaterThan(38);
+    expect(washington!.lat).toBeLessThan(39.5);
+  });
+
+  it('lands inside the state, not in the ocean', () => {
+    for (const [state, minLat, maxLat] of [
+      ['Florida', 25, 31],
+      ['California', 32, 42],
+      ['Texas', 25, 37],
+    ] as const) {
+      const point = findCityCoordinates(state);
+      expect(point).not.toBeNull();
+      expect(point!.lat).toBeGreaterThan(minLat);
+      expect(point!.lat).toBeLessThan(maxLat);
+    }
+  });
+
+  it('returns null for something that is neither city nor state', () => {
+    expect(findCityCoordinates('Freedonia')).toBeNull();
+    expect(findCityCoordinates('ZZ')).toBeNull();
+  });
+});
+
+describe('findCityCoordinates — state vs same-named town', () => {
+  it('prefers the state when the same-named town is in a different state', () => {
+    // "Florida" used to resolve to the town of Florida, New York — 1,100
+    // miles from where anyone typing "Florida" is sitting.
+    const florida = findCityCoordinates('Florida');
+    expect(florida!.lat).toBeGreaterThan(25);
+    expect(florida!.lat).toBeLessThan(31);
+  });
+
+  it('prefers the city when the town is the namesake of its own state', () => {
+    // A town that shares its own state's name is a major city, so "New York"
+    // means the city, not a point in the middle of upstate.
+    const newYork = findCityCoordinates('New York');
+    expect(newYork!.lat).toBeGreaterThan(40.4);
+    expect(newYork!.lat).toBeLessThan(41);
+    expect(newYork!.lng).toBeGreaterThan(-74.3);
+    expect(newYork!.lng).toBeLessThan(-73.7);
+  });
+
+  it('an explicit state overrides the preference entirely', () => {
+    // "Florida, NY" is unambiguous: the member means the town.
+    const town = findCityCoordinates('Florida, NY');
+    expect(town!.lat).toBeGreaterThan(40);
+    expect(town!.lat).toBeLessThan(42);
+  });
+
+  it('handles the other state names that are also towns elsewhere', () => {
+    for (const [state, minLat, maxLat] of [
+      ['Wyoming', 41, 45],
+      ['Nevada', 35, 42],
+      ['Indiana', 37.5, 42],
+      ['California', 32, 42],
+    ] as const) {
+      const point = findCityCoordinates(state);
+      expect(point).not.toBeNull();
+      expect(point!.lat).toBeGreaterThan(minLat);
+      expect(point!.lat).toBeLessThan(maxLat);
+    }
+  });
+});

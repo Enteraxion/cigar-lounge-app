@@ -23,7 +23,15 @@ import {
   assertSucceeds,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, setDoc, addDoc, collection, getDoc } from 'firebase/firestore';
+import {
+  doc,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteField,
+  collection,
+  getDoc,
+} from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'rohithakepati@gmail.com';
 const PROJECT_ID = 'the-reserve-rules-test';
@@ -161,6 +169,152 @@ describe('notification create rules', () => {
     await assertFails(getDoc(doc(member(), 'users', target, 'notifications', 'n1')));
     await assertSucceeds(
       getDoc(doc(member(target, 'victim@example.com'), 'users', target, 'notifications', 'n1')),
+    );
+  });
+});
+
+/**
+ * The claim lifecycle, as the app actually performs it.
+ *
+ * These write the exact field sets ownerService writes, because that is where
+ * this can silently break: the rules gate lounge updates on
+ * `affectedKeys().hasOnly([...])`, so adding a field to one of those service
+ * functions and not to the rules produces a permission error that no
+ * typecheck or unit test would catch.
+ */
+describe('lounge claim lifecycle rules', () => {
+  const LOUNGE = 'lounge-1';
+  const CLAIMANT = 'claimant-1';
+
+  /** Writes a lounge straight past the rules, as the import scripts do. */
+  async function seedLounge(fields: Record<string, unknown> = {}) {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'lounges', LOUNGE), {
+        name: 'Test Lounge',
+        address: '1 Main St',
+        tags: [],
+        amenities: [],
+        images: [],
+        ratings: { overall: 4 },
+        reviewCount: 0,
+        coordinates: { lat: 30, lng: -97 },
+        ...fields,
+      });
+    });
+  }
+
+  it('lets a member submit a claim on an unclaimed lounge', async () => {
+    await seedLounge();
+    const db = member(CLAIMANT, 'claimant@example.com');
+    await assertSucceeds(
+      setDoc(
+        doc(db, 'lounges', LOUNGE),
+        {
+          claimStatus: 'pending',
+          claimantUserId: CLAIMANT,
+          ownerName: 'A Owner',
+          ownerContactEmail: 'a@example.com',
+          ownerContactPhone: '555',
+          claimedAt: new Date(),
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses a member claiming on behalf of somebody else', async () => {
+    await seedLounge();
+    await assertFails(
+      setDoc(
+        doc(member(CLAIMANT, 'claimant@example.com'), 'lounges', LOUNGE),
+        { claimStatus: 'pending', claimantUserId: 'someone-else' },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses a member granting themselves ownership directly', async () => {
+    // The whole reason approval is admin-gated: a member who could write
+    // ownerId would skip review entirely and then pass isOwnListingEdit.
+    await seedLounge({ claimStatus: 'pending', claimantUserId: CLAIMANT });
+    await assertFails(
+      setDoc(
+        doc(member(CLAIMANT, 'claimant@example.com'), 'lounges', LOUNGE),
+        { ownerId: CLAIMANT },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('lets an admin approve — the exact write approveLoungeClaim makes', async () => {
+    await seedLounge({ claimStatus: 'pending', claimantUserId: CLAIMANT });
+    await assertSucceeds(
+      updateDoc(doc(admin(), 'lounges', LOUNGE), {
+        ownerId: CLAIMANT,
+        claimStatus: deleteField(),
+      }),
+    );
+  });
+
+  it('lets an admin reject — the exact write rejectLoungeClaim makes', async () => {
+    await seedLounge({
+      claimStatus: 'pending',
+      claimantUserId: CLAIMANT,
+      ownerName: 'A Owner',
+      ownerContactEmail: 'a@example.com',
+      ownerContactPhone: '555',
+      claimedAt: new Date(),
+    });
+    await assertSucceeds(
+      updateDoc(doc(admin(), 'lounges', LOUNGE), {
+        claimStatus: deleteField(),
+        claimantUserId: deleteField(),
+        ownerName: deleteField(),
+        ownerContactEmail: deleteField(),
+        ownerContactPhone: deleteField(),
+        claimedAt: deleteField(),
+      }),
+    );
+  });
+
+  it('lets the approved owner edit exactly the fields EditListing edits', async () => {
+    await seedLounge({ ownerId: CLAIMANT });
+    await assertSucceeds(
+      updateDoc(doc(member(CLAIMANT, 'claimant@example.com'), 'lounges', LOUNGE), {
+        description: 'Updated',
+        hours: 'Mon-Fri 9-5',
+        priceRange: '$$',
+        amenities: ['wifi'],
+      }),
+    );
+  });
+
+  it('refuses an owner editing a field outside that set', async () => {
+    // e.g. inflating their own rating.
+    await seedLounge({ ownerId: CLAIMANT });
+    await assertFails(
+      updateDoc(doc(member(CLAIMANT, 'claimant@example.com'), 'lounges', LOUNGE), {
+        ratings: { overall: 5 },
+      }),
+    );
+  });
+
+  it('refuses a pending claimant editing the listing before approval', async () => {
+    // isOwnListingEdit keys off ownerId, not claimantUserId — this is the
+    // asymmetry MyShopsScreen's `approved` flag has to mirror, or it would
+    // offer an Edit button that fails on save.
+    await seedLounge({ claimStatus: 'pending', claimantUserId: CLAIMANT });
+    await assertFails(
+      updateDoc(doc(member(CLAIMANT, 'claimant@example.com'), 'lounges', LOUNGE), {
+        description: 'Updated',
+      }),
+    );
+  });
+
+  it('refuses a non-owner editing someone else’s listing', async () => {
+    await seedLounge({ ownerId: 'real-owner' });
+    await assertFails(
+      updateDoc(doc(member(), 'lounges', LOUNGE), { description: 'Hijacked' }),
     );
   });
 });

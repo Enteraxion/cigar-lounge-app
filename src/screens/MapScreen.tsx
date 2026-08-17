@@ -45,7 +45,13 @@ import FilterChip from '../components/FilterChip';
 import SimplifiedMapView from '../components/SimplifiedMapView';
 // TODO(firestore): weather widget and Concierge suggestion aren't
 // modeled in Firestore yet — see header comment above.
-import { conciergeSuggestion, defaultRegion, mapFilterChips, weatherWidget } from '../data/mockMap';
+import {
+  conciergeSuggestion,
+  defaultRegion,
+  LOCATED_ZOOM_DELTA,
+  mapFilterChips,
+  weatherWidget,
+} from '../data/mockMap';
 import { getLoungesNear, type Lounge } from '../services/loungeService';
 import { nearbyCacheKey, radiusForViewport } from '../utils/geoQuery';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
@@ -104,8 +110,8 @@ export default function MapScreen() {
     ? {
         latitude: location.latitude,
         longitude: location.longitude,
-        latitudeDelta: defaultRegion.latitudeDelta,
-        longitudeDelta: defaultRegion.longitudeDelta,
+        latitudeDelta: LOCATED_ZOOM_DELTA,
+        longitudeDelta: LOCATED_ZOOM_DELTA,
       }
     : defaultRegion;
   const [selectedChip, setSelectedChip] = useState('all');
@@ -173,8 +179,8 @@ export default function MapScreen() {
         {
           latitude: location.latitude,
           longitude: location.longitude,
-          latitudeDelta: defaultRegion.latitudeDelta,
-          longitudeDelta: defaultRegion.longitudeDelta,
+          latitudeDelta: LOCATED_ZOOM_DELTA,
+          longitudeDelta: LOCATED_ZOOM_DELTA,
         },
         400,
       );

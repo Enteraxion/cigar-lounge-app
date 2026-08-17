@@ -71,14 +71,107 @@ export function findCityCoordinates(label: string): { lat: number; lng: number }
   }
   const [namePart, regionPart] = trimmed.split(',').map(part => part.trim());
   const matches = CITIES.filter(([name]) => name.toLowerCase() === namePart);
-  if (matches.length === 0) {
+
+  if (matches.length > 0) {
+    // An explicit region disambiguates outright: "Florida, NY" is the town.
+    const exact = regionPart
+      ? matches.find(([, state]) => state.toLowerCase() === regionPart)
+      : undefined;
+    if (exact) {
+      const [, , lat, lng] = exact;
+      return { lat, lng };
+    }
+    if (!regionPart && shouldPreferState(namePart, matches)) {
+      const state = findStateCoordinates(namePart);
+      if (state) {
+        return state;
+      }
+    }
+    const [, , lat, lng] = matches[0];
+    return { lat, lng };
+  }
+
+  // Not a city at all — try it as a state name or state code.
+  return findStateCoordinates(trimmed);
+}
+
+/**
+ * For a bare name that is both a state and a town, decides which was meant.
+ *
+ * Plenty of state names are also small towns somewhere else, and the town was
+ * winning purely because it lives in the city table: "Florida" resolved to
+ * Florida, New York — population in the low thousands, and 1,100 miles from
+ * the state a member typing "Florida" is sitting in.
+ *
+ * The rule that separates the two cases is whether the same-named town is
+ * *inside* the state it shares a name with:
+ *
+ *   "New York"  town of New York is in NY  -> the city was meant (NYC)
+ *   "Florida"   town of Florida is in NY   -> the state was meant
+ *   "Wyoming"   town of Wyoming is in MI   -> the state was meant
+ *
+ * A town that is the namesake of its own state is a major city; a town that
+ * borrowed another state's name is not the thing anyone means.
+ */
+function shouldPreferState(namePart: string, matches: CityRow[]): boolean {
+  const stateCode = STATE_CODE_BY_NAME[namePart];
+  if (!stateCode) {
+    return false;
+  }
+  return !matches.some(([, state]) => state === stateCode);
+}
+
+/**
+ * Full US state names to the two-letter codes usCities.json is keyed by.
+ * DC included because people write it as a place and it behaves like one.
+ */
+const STATE_CODE_BY_NAME: Record<string, string> = {
+  alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
+  colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA',
+  hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA',
+  kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD',
+  massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS',
+  missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV',
+  'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+  'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK',
+  oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT',
+  virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI',
+  wyoming: 'WY', 'district of columbia': 'DC',
+};
+
+/**
+ * Resolves a whole state to a point at the centre of its towns.
+ *
+ * A member filling in "Home City" writes what they'd say out loud, and for
+ * plenty of people that is the state — this app's own owner has "New jersey"
+ * saved. That used to resolve to nothing, which had consequences well beyond
+ * a blank field: every Passport distance rendered "—", and the Home screen
+ * fell through to its static fallback region and measured "Nearby Lounges"
+ * from there.
+ *
+ * The mean of the state's incorporated places, rather than a named city,
+ * because picking one city would be inventing a claim the member didn't make
+ * — and because the dataset carries no population to justify the choice. A
+ * state-sized answer is imprecise by nature, which is honest: it is being
+ * used to seed a 60-mile search, not to report how far someone travelled.
+ */
+function findStateCoordinates(query: string): { lat: number; lng: number } | null {
+  const code = STATE_CODE_BY_NAME[query] ?? (query.length === 2 ? query.toUpperCase() : null);
+  if (!code) {
     return null;
   }
-  const exact = regionPart
-    ? matches.find(([, state]) => state.toLowerCase() === regionPart)
-    : undefined;
-  const [, , lat, lng] = exact ?? matches[0];
-  return { lat, lng };
+  let latTotal = 0;
+  let lngTotal = 0;
+  let count = 0;
+  for (const [, state, lat, lng] of CITIES) {
+    if (state === code) {
+      latTotal += lat;
+      lngTotal += lng;
+      count += 1;
+    }
+  }
+  return count > 0 ? { lat: latTotal / count, lng: lngTotal / count } : null;
 }
 
 /**

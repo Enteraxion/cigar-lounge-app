@@ -74,6 +74,16 @@ const EVENTS_COUNT = 5;
 /** Real cigar for the current week — see src/data/cigars.ts. */
 const cigarOfWeek = cigarOfTheWeek();
 
+/**
+ * Events are usually days or weeks away, so the badge omits the year — but
+ * an event in another year rendered as a bare "AUG 8" reads as a date that
+ * has already passed. Showing the year only when it differs keeps the badge
+ * compact in the common case and honest in the uncommon one.
+ */
+function eventBadgeYear(date: Date): string | null {
+  return date.getFullYear() === new Date().getFullYear() ? null : String(date.getFullYear());
+}
+
 type TabNav = NavigationProp<MainTabParamList>;
 
 /** Shortcuts behind the "+" button — every target is an existing screen. */
@@ -452,6 +462,9 @@ export default function HomeScreen() {
                         {startsAt.toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}
                       </Text>
                       <Text style={styles.eventDay}>{startsAt.getDate()}</Text>
+                      {eventBadgeYear(startsAt) ? (
+                        <Text style={styles.eventYear}>{eventBadgeYear(startsAt)}</Text>
+                      ) : null}
                     </View>
                     <View style={styles.eventDetails}>
                       <Text style={styles.eventTitle} numberOfLines={2}>
@@ -778,6 +791,11 @@ const styles = StyleSheet.create({
   eventVenue: {
     ...theme.typography.medium,
     fontSize: 12,
+    color: theme.colors.mutedGray,
+  },
+  eventYear: {
+    ...theme.typography.caption,
+    fontSize: 9,
     color: theme.colors.mutedGray,
   },
   eventsEmpty: {

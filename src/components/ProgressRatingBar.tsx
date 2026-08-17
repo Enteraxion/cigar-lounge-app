@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 
 type Props = {
   label: string;
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   track: {
     height: 6,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     overflow: 'hidden',
   },
   fill: {

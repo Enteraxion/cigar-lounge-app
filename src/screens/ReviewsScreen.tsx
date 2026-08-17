@@ -34,7 +34,7 @@ import {
   ThumbsUp,
   Trash2,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import StarRating from '../components/StarRating';
 import FilterReviewsSheet from '../components/FilterReviewsSheet';
 import { getReviewsForLounge, type Review } from '../services/loungeService';
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: theme.spacing.lg,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
   summaryLeft: {
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
     paddingRight: theme.spacing.lg,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(192, 192, 192, 0.15)',
+    borderRightColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
   summaryRating: {
     ...theme.typography.headingMedium,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 6,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     overflow: 'hidden',
   },
   distributionFill: {
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   reviewCard: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.sm,
   },
   reviewHeaderRow: {
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
   },
   categoryChipText: {
     ...theme.typography.caption,
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     borderWidth: 1,
     borderColor: theme.colors.accentGold,
-    backgroundColor: 'rgba(234, 179, 8, 0.08)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.08),
     gap: theme.spacing.xs,
   },
   ownerResponseLabel: {
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   helpfulButtonActive: {
     backgroundColor: theme.colors.secondarySilver,
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   },
   helpfulButtonTextActive: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Write Review button ----
@@ -709,6 +709,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

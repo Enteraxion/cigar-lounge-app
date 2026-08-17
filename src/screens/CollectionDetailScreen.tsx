@@ -54,7 +54,7 @@ import {
   Share2,
   Star,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import {
   getUserCollection,
@@ -96,7 +96,7 @@ function SavedLoungeRow({ lounge, onPress }: { lounge: Lounge; onPress: () => vo
           </View>
         </View>
         <Pressable style={styles.loungeChevronButton} onPress={onPress} hitSlop={8}>
-          <ChevronRight size={18} color={theme.colors.primaryNavy} />
+          <ChevronRight size={18} color={theme.colors.primaryBlack} />
         </Pressable>
       </View>
     </View>
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   galleryWrapper: {
     position: 'relative',
     height: GALLERY_HEIGHT,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   galleryImage: {
     width: SCREEN_WIDTH,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.5)',
+    backgroundColor: withAlpha(theme.colors.background, 0.5),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 3,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    backgroundColor: withAlpha(theme.colors.white, 0.35),
   },
   dotActive: {
     backgroundColor: theme.colors.white,
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 6,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   badgeText: {
     ...theme.typography.caption,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   },
   loungeCard: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   loungeRatingText: {
     ...theme.typography.medium,

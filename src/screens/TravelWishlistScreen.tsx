@@ -39,7 +39,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NavigationProp } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Bell, MapPin, Plus, Star, User } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import SectionHeader from '../components/SectionHeader';
 import CompactLoungeCard from '../components/CompactLoungeCard';
 import NotificationBadge from '../components/NotificationBadge';
@@ -64,7 +64,7 @@ function DestinationCard({ destination }: { destination: WishlistDestination }) 
     <View style={styles.destinationCard}>
       <Image source={{ uri: destination.image }} style={styles.destinationImage} />
       <LinearGradient
-        colors={['transparent', 'rgba(5, 10, 24, 0.85)']}
+        colors={['transparent', withAlpha(theme.colors.background, 0.85)]}
         style={styles.destinationGradient}
         pointerEvents="none"
       />
@@ -204,7 +204,7 @@ export default function TravelWishlistScreen() {
             <View style={styles.heroImage} />
           )}
           <LinearGradient
-            colors={['transparent', 'rgba(5, 10, 24, 0.9)']}
+            colors={['transparent', withAlpha(theme.colors.background, 0.9)]}
             style={styles.heroGradient}
             pointerEvents="none"
           />
@@ -353,7 +353,7 @@ export default function TravelWishlistScreen() {
         style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]}
         onPress={() => Alert.alert('Coming Soon', 'Adding new destinations is coming soon.')}
       >
-        <Plus size={22} color={theme.colors.primaryNavy} />
+        <Plus size={22} color={theme.colors.primaryBlack} />
       </Pressable>
     </SafeAreaView>
   );
@@ -382,10 +382,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 3,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   segment: {
     flex: 1,
@@ -434,13 +434,13 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
   },
   segmentTextActive: {
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Hero ----
   heroCard: {
     borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     justifyContent: 'flex-end',
     height: 260,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: theme.spacing.md,
     left: theme.spacing.md,
-    backgroundColor: 'rgba(192, 192, 192, 0.85)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.85),
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     ...theme.typography.caption,
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   heroTextGroup: {
     padding: theme.spacing.md,
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     overflow: 'hidden',
     justifyContent: 'flex-end',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   destinationImage: {
     ...StyleSheet.absoluteFill,
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   highlightCard: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.sm,
     ...theme.shadows.soft,
   },
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.large,
     padding: theme.spacing.sm,
     ...theme.shadows.soft,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },

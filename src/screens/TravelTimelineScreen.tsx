@@ -31,7 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft, MapPin, Navigation, Star } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { getPassport } from '../services/passportService';
 import { groupVisitsByRecency, type TimelineGroup, type Visit } from '../utils/passport';
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   card: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.sm,
     ...theme.shadows.soft,
   },
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },

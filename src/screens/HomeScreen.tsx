@@ -49,7 +49,7 @@ import {
   User,
   Zap,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import SectionHeader from '../components/SectionHeader';
 import LoungeCard from '../components/LoungeCard';
 import FavoriteButton from '../components/FavoriteButton';
@@ -336,7 +336,7 @@ export default function HomeScreen() {
                     }
                   >
                     <Text style={styles.reserveButtonText}>Reserve a Table</Text>
-                    <ChevronRight size={16} color={theme.colors.primaryNavy} />
+                    <ChevronRight size={16} color={theme.colors.primaryBlack} />
                   </Pressable>
                 </View>
               </Pressable>
@@ -531,7 +531,7 @@ export default function HomeScreen() {
           than a new feature — the fastest routes into the three things a
           member actually opens this app to do. */}
       <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => setQuickActionsOpen(true)}>
-        <Plus size={22} color={theme.colors.primaryNavy} />
+        <Plus size={22} color={theme.colors.primaryBlack} />
       </Pressable>
 
       <Modal
@@ -591,10 +591,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   // ---- Featured Lounge ----
   featuredCard: {
     borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   },
   featuredBadgeText: {
     ...theme.typography.caption,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   featuredTopRight: {
     flexDirection: 'row',
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(5, 10, 24, 0.75)',
+    backgroundColor: withAlpha(theme.colors.background, 0.75),
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.75)',
+    backgroundColor: withAlpha(theme.colors.background, 0.75),
   },
   featuredBody: {
     padding: theme.spacing.md,
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
   reserveButtonText: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Sections ----
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: theme.radius.large,
     overflow: 'hidden',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
   cigarImage: {
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: theme.radius.small,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.large,
     padding: theme.spacing.sm,
     ...theme.shadows.soft,
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -846,11 +846,11 @@ const styles = StyleSheet.create({
   // ---- Quick actions sheet ----
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 10, 24, 0.6)',
+    backgroundColor: withAlpha(theme.colors.background, 0.6),
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: theme.radius.large,
     borderTopRightRadius: theme.radius.large,
     padding: theme.spacing.lg,

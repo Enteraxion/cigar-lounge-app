@@ -19,7 +19,7 @@
 
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import type { Review } from '../services/loungeService';
 import {
   applyReviewFilters,
@@ -154,7 +154,7 @@ export default function FilterReviewsSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   sheet: {
     position: 'absolute',
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     gap: theme.spacing.lg,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.3)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.3),
     marginTop: theme.spacing.sm,
   },
 
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   chipUnselected: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   chipText: {
     ...theme.typography.medium,
@@ -236,14 +236,14 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Star rating chips ----
   starChip: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   starChipSelected: {
     borderColor: theme.colors.accentGold,
@@ -265,6 +265,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

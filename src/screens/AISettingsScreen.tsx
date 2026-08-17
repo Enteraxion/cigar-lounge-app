@@ -32,7 +32,7 @@ import {
   Wine,
   ChevronRight,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
 import { auth, signOut } from '../services/firebaseAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -202,7 +202,7 @@ export default function AISettingsScreen() {
                   style={[styles.modeCard, selected && styles.modeCardSelected]}
                   onPress={() => setExperienceMode(mode.id)}
                 >
-                  <Icon size={22} color={selected ? theme.colors.primaryNavy : theme.colors.secondarySilver} />
+                  <Icon size={22} color={selected ? theme.colors.primaryBlack : theme.colors.secondarySilver} />
                   <Text style={[styles.modeLabel, selected && styles.modeLabelSelected]}>
                     {mode.label}
                   </Text>
@@ -335,7 +335,7 @@ export default function AISettingsScreen() {
             <Switch
               value={accessibilityMode}
               onValueChange={setAccessibilityMode}
-              trackColor={{ false: theme.colors.surfaceNavy, true: theme.colors.secondarySilver }}
+              trackColor={{ false: theme.colors.surface, true: theme.colors.secondarySilver }}
               thumbColor={theme.colors.white}
             />
           </View>
@@ -347,7 +347,7 @@ export default function AISettingsScreen() {
             <Switch
               value={loungeAlerts}
               onValueChange={setLoungeAlerts}
-              trackColor={{ false: theme.colors.surfaceNavy, true: theme.colors.secondarySilver }}
+              trackColor={{ false: theme.colors.surface, true: theme.colors.secondarySilver }}
               thumbColor={theme.colors.white}
             />
           </View>
@@ -419,12 +419,12 @@ export default function AISettingsScreen() {
 const styles = StyleSheet.create({
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 10, 24, 0.6)',
+    backgroundColor: withAlpha(theme.colors.background, 0.6),
     justifyContent: 'flex-end',
   },
   sheet: {
     maxHeight: '80%',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: theme.radius.large,
     borderTopRightRadius: theme.radius.large,
     padding: theme.spacing.lg,
@@ -451,13 +451,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveButtonIdle: {
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
   },
   saveButtonText: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   saveButtonTextIdle: {
     color: theme.colors.secondarySilver,
@@ -491,10 +491,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -546,9 +546,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.lg,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
   modeCardSelected: {
     backgroundColor: theme.colors.white,
@@ -561,14 +561,14 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
   },
   modeLabelSelected: {
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Atmosphere & Radius ----
   card: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.sm,
     ...theme.shadows.soft,
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   chipSelected: {
     backgroundColor: theme.colors.secondarySilver,
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Detailed Profiles ----
@@ -627,14 +627,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
   infoIconBox: {
     width: 40,
     height: 40,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   toggleLeft: {
     flexDirection: 'row',
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: withAlpha(theme.colors.danger, 0.3),
   },
   logOutButtonText: {
     ...theme.typography.medium,

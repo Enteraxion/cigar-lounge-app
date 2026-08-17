@@ -41,7 +41,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Calendar, ImagePlus, X } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import StarRating from '../components/StarRating';
 import { detailedRatingCategories } from '../data/mockReviews';
 import {
@@ -360,7 +360,7 @@ export default function WriteReviewScreen() {
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator color={theme.colors.primaryNavy} />
+            <ActivityIndicator color={theme.colors.primaryBlack} />
           ) : (
             <Text style={styles.submitButtonText}>
               {isEditMode ? 'Save Changes' : 'Submit Review'}
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -443,9 +443,9 @@ const styles = StyleSheet.create({
     height: 50,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
   dateText: {
     ...theme.typography.medium,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
   },
   toggleButtonTextActive: {
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Review text area ----
@@ -499,9 +499,9 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     padding: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
 
   // ---- Photos ----
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(192, 192, 192, 0.35)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.35),
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -584,6 +584,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

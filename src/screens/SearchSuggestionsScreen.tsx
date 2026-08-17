@@ -33,7 +33,7 @@ import {
   Sofa,
   X,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { cigarBrandSuggestions, type CigarBrandSuggestion, type RecentlyVisited } from '../data/mockSuggestions';
 import {
   getDistinctCities,
@@ -344,9 +344,9 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
   },
   searchInput: {
     ...theme.typography.body,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.2)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -427,6 +427,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 13,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

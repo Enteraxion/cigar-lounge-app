@@ -35,7 +35,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { Camera, ChevronLeft, Lock, Plus } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { loungeInteriors } from '../data/mockImages';
 import { collectionCategories } from '../data/mockCollections';
 import { createCollection as createCollectionInFirestore } from '../services/userActionsService';
@@ -166,7 +166,7 @@ export default function CreateCollectionScreen() {
             ) : (
               <View style={styles.coverOverlay}>
                 <View style={styles.coverIconCircle}>
-                  <Camera size={22} color={theme.colors.primaryNavy} />
+                  <Camera size={22} color={theme.colors.primaryBlack} />
                 </View>
                 <Text style={styles.coverOverlayLabel}>
                   {coverRemoteUrl ? 'Change Photo' : 'Add Photo'}
@@ -242,7 +242,7 @@ export default function CreateCollectionScreen() {
             <Switch
               value={isPrivate}
               onValueChange={setIsPrivate}
-              trackColor={{ false: theme.colors.surfaceNavy, true: theme.colors.secondarySilver }}
+              trackColor={{ false: theme.colors.surface, true: theme.colors.secondarySilver }}
               thumbColor={theme.colors.white}
             />
           </View>
@@ -254,11 +254,11 @@ export default function CreateCollectionScreen() {
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator color={theme.colors.primaryNavy} />
+            <ActivityIndicator color={theme.colors.primaryBlack} />
           ) : (
             <>
               <Text style={styles.submitButtonText}>Create Collection</Text>
-              <Plus size={18} color={theme.colors.primaryNavy} />
+              <Plus size={18} color={theme.colors.primaryBlack} />
             </>
           )}
         </Pressable>
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -321,9 +321,9 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: theme.radius.large,
     overflow: 'hidden',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
   },
   coverImage: {
     ...StyleSheet.absoluteFill,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: 'rgba(5, 10, 24, 0.35)',
+    backgroundColor: withAlpha(theme.colors.background, 0.35),
   },
   coverIconCircle: {
     width: 52,
@@ -366,9 +366,9 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
   textArea: {
     ...theme.typography.body,
@@ -378,9 +378,9 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     padding: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
 
   // ---- Category ----
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   categoryChipActive: {
     backgroundColor: theme.colors.secondarySilver,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Privacy ----
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   privacyIconBox: {
     width: 40,
@@ -461,6 +461,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

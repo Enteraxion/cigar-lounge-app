@@ -24,7 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft, ShieldCheck } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import {
   approveLoungeClaim,
   getApprovedLounges,
@@ -198,7 +198,7 @@ export default function AdminClaimReviewScreen() {
                   disabled={actioningId === claim.id}
                 >
                   {actioningId === claim.id ? (
-                    <ActivityIndicator color={theme.colors.primaryNavy} />
+                    <ActivityIndicator color={theme.colors.primaryBlack} />
                   ) : (
                     <Text style={styles.approveButtonText}>Approve</Text>
                   )}
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -310,9 +310,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     gap: 4,
     ...theme.shadows.soft,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   buttonDisabled: {
     opacity: 0.6,

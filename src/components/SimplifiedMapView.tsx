@@ -24,7 +24,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Cigarette, MapPin as MapPinIcon } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import type { Lounge } from '../services/loungeService';
 
 const GRID_LINE_COUNT = 6;
@@ -100,7 +100,7 @@ function SimplifiedPin({
           <View style={[styles.pinCircle, selected && styles.pinCircleSelected]}>
             <Cigarette
               size={selected ? 18 : 14}
-              color={selected ? theme.colors.primaryNavy : theme.colors.secondarySilver}
+              color={selected ? theme.colors.primaryBlack : theme.colors.secondarySilver}
             />
           </View>
           <View style={[styles.pinStem, selected && styles.pinStemSelected]} />
@@ -128,7 +128,7 @@ export default function SimplifiedMapView({
     <View style={styles.container}>
       {/* ---- Backdrop: radial-ish glow + city-block grid ---- */}
       <LinearGradient
-        colors={['rgba(234, 179, 8, 0.16)', 'rgba(5, 10, 24, 0)']}
+        colors={[withAlpha(theme.colors.accentGold, 0.16), withAlpha(theme.colors.background, 0)]}
         style={styles.glow}
         pointerEvents="none"
       />
@@ -165,7 +165,7 @@ export default function SimplifiedMapView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },
   glow: {
@@ -181,14 +181,14 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 1,
-    backgroundColor: 'rgba(192, 192, 192, 0.08)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.08),
   },
   gridLineHorizontal: {
     position: 'absolute',
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(192, 192, 192, 0.08)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.08),
   },
 
   // ---- Pins ----
@@ -209,9 +209,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   pinStem: {
     width: 2,
     height: 10,
-    backgroundColor: 'rgba(192, 192, 192, 0.5)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.5),
   },
   pinStemSelected: {
     backgroundColor: theme.colors.white,
@@ -243,9 +243,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     height: 22,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
   },
   badgeText: {
     ...theme.typography.caption,

@@ -33,7 +33,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Bell, Plus, User } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import StarRating from '../components/StarRating';
 import NotificationBadge from '../components/NotificationBadge';
 import { auth } from '../services/firebaseAuth';
@@ -291,7 +291,7 @@ export default function FavoritesScreen() {
       </ScrollView>
 
       <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => navigation.navigate('CreateCollection')}>
-        <Plus size={22} color={theme.colors.primaryNavy} />
+        <Plus size={22} color={theme.colors.primaryBlack} />
       </Pressable>
     </SafeAreaView>
   );
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -356,10 +356,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 3,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   segment: {
     flex: 1,
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
   },
   segmentTextActive: {
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Populated state ----
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 4,
   },
   statLabel: {
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   loungeCard: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: theme.radius.full,
     overflow: 'hidden',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   emptyImage: {
     width: '100%',
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   secondaryButton: {
     width: '100%',
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   secondaryButtonText: {
     ...theme.typography.medium,

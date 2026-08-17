@@ -19,7 +19,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import { ChevronLeft, MonitorSmartphone } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { submitLoungeClaim } from '../services/ownerService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
   pricingCard: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.lg,
     alignItems: 'center',
     gap: theme.spacing.xs,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.xs,
@@ -309,9 +309,9 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
   textInputError: {
     borderColor: theme.colors.danger,
@@ -337,6 +337,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

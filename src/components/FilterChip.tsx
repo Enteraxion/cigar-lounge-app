@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 
 type Props = {
   label: string;
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   chipUnselected: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   label: {
     ...theme.typography.medium,
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   },
   labelSelected: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   labelUnselected: {
     color: theme.colors.secondarySilver,

@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   cardHeader: {
     flexDirection: 'row',

@@ -22,7 +22,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { getUserStats, type UserStats } from '../services/userActionsService';
 import {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 6,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     overflow: 'hidden',
   },
   progressFill: {
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   recommendationIconBox: {
     width: 40,

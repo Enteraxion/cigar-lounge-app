@@ -14,7 +14,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import SectionHeader from '../components/SectionHeader';
 import { conciergeUser } from '../data/mockConcierge';
 import { getAllLounges, type Lounge } from '../services/loungeService';
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: theme.radius.large,
     overflow: 'hidden',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     justifyContent: 'flex-end',
   },
   gridImage: {
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   gridOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(5, 10, 24, 0.35)',
+    backgroundColor: withAlpha(theme.colors.background, 0.35),
   },
   gridTextGroup: {
     padding: theme.spacing.sm,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   eventDateBox: {
     width: 52,
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   luxuryCard: {
     flexDirection: 'row',
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.15),
   },
   luxuryBadgeText: {
     ...theme.typography.caption,
@@ -437,6 +437,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 12,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

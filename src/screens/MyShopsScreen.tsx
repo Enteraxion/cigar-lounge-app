@@ -127,7 +127,7 @@ export default function MyShopsScreen() {
                 </Text>
                 <View style={[styles.pill, shop.approved ? styles.pillApproved : styles.pillPending]}>
                   {shop.approved ? (
-                    <CheckCircle2 size={12} color={theme.colors.primaryNavy} />
+                    <CheckCircle2 size={12} color={theme.colors.primaryBlack} />
                   ) : (
                     <Clock size={12} color={theme.colors.accentGold} />
                   )}
@@ -180,7 +180,7 @@ export default function MyShopsScreen() {
                 Sign in with the same email and password you use here.
               </Text>
               <Pressable style={styles.portalButton} onPress={openPortal}>
-                <ExternalLink size={16} color={theme.colors.primaryNavy} />
+                <ExternalLink size={16} color={theme.colors.primaryBlack} />
                 <Text style={styles.portalButtonText}>Open Owner Portal</Text>
               </Pressable>
               <Text style={styles.portalUrl} selectable>
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   retryText: {
     ...theme.typography.medium,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   pillTextApproved: {
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   pillTextPending: {
     color: theme.colors.accentGold,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.surfaceNavy,
+    borderColor: theme.colors.surface,
   },
   portalTitle: {
     ...theme.typography.headingMedium,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   // Selectable, and shown even though the button exists, so an owner who
   // prefers a desktop browser can read the address off their phone and type

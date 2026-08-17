@@ -13,7 +13,7 @@
 import React from 'react';
 import { Image, ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { Star } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import FavoriteButton from './FavoriteButton';
 
 type Props = {
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.medium,
     overflow: 'hidden',
     aspectRatio: 4 / 3,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   image: {
     width: '100%',
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: theme.spacing.sm,
     right: theme.spacing.sm,
-    backgroundColor: 'rgba(5, 10, 24, 0.75)',
+    backgroundColor: withAlpha(theme.colors.background, 0.75),
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.55)',
+    backgroundColor: withAlpha(theme.colors.background, 0.55),
   },
   body: {
     gap: 2,

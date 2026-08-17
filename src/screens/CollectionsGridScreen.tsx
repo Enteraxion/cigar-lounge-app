@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Bell, Globe, Lock, Plus, User } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { getUserCollections, type UserCollection } from '../services/userActionsService';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -198,10 +198,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 3,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   segment: {
     flex: 1,
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
   },
   segmentTextActive: {
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Title row ----
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: TILE_SIZE,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.xs,
   },
   privacyBadge: {
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.6)',
+    backgroundColor: withAlpha(theme.colors.background, 0.6),
   },
   privacyBadgeText: {
     ...theme.typography.caption,
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(192, 192, 192, 0.35)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.35),
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },

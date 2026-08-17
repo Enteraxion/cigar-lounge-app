@@ -33,7 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Calendar, ChevronDown, ChevronLeft, History, MapPin, Navigation } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { conciergeUser } from '../data/mockConcierge';
 import { defaultSelectedPreferenceIds, preferenceOptions } from '../data/mockTripPlanner';
 import { getAllLounges } from '../services/loungeService';
@@ -276,7 +276,7 @@ export default function TripPlannerScreen() {
           disabled={planning}
         >
           {planning ? (
-            <ActivityIndicator color={theme.colors.primaryNavy} />
+            <ActivityIndicator color={theme.colors.primaryBlack} />
           ) : (
             <Text style={styles.generateButtonText}>Generate Itinerary</Text>
           )}
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   inputPrefix: {
     ...theme.typography.medium,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 6,
   },
   sideFieldLabel: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   chipSelected: {
     backgroundColor: theme.colors.secondarySilver,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   planError: {
@@ -510,12 +510,12 @@ const styles = StyleSheet.create({
   },
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 10, 24, 0.6)',
+    backgroundColor: withAlpha(theme.colors.background, 0.6),
     justifyContent: 'flex-end',
   },
   sheet: {
     maxHeight: '70%',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: theme.radius.large,
     borderTopRightRadius: theme.radius.large,
     padding: theme.spacing.lg,
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Route stops ----
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 13,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   stopTextGroup: {
     flex: 1,
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     marginLeft: 40,
     padding: theme.spacing.sm,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   loungeImage: {
     width: 52,
@@ -636,6 +636,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 12,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

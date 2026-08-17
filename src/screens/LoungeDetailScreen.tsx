@@ -44,7 +44,7 @@ import {
   ThumbsUp,
   Trash2,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import HoursCard from '../components/HoursCard';
 import AmenityCard from '../components/AmenityCard';
 import ProgressRatingBar from '../components/ProgressRatingBar';
@@ -283,7 +283,7 @@ export default function LoungeDetailScreen() {
             onPress={() => navigation.navigate('ReserveTable', { loungeId, loungeName: lounge.name })}
           >
             <Text style={styles.reserveButtonText}>Reserve a Table</Text>
-            <CalendarCheck size={18} color={theme.colors.primaryNavy} />
+            <CalendarCheck size={18} color={theme.colors.primaryBlack} />
           </Pressable>
 
           {/* ---------------- Claim / Edit Listing ---------------- */}
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   galleryWrapper: {
     position: 'relative',
     height: GALLERY_HEIGHT,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   galleryImage: {
     width: SCREEN_WIDTH,
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.5)',
+    backgroundColor: withAlpha(theme.colors.background, 0.5),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 3,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    backgroundColor: withAlpha(theme.colors.white, 0.35),
   },
   dotActive: {
     backgroundColor: theme.colors.white,
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   claimButton: {
     flexDirection: 'row',
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   claimButtonPending: {
     opacity: 0.6,
@@ -783,13 +783,13 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   eventIconBox: {
     width: 40,
     height: 40,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: theme.radius.medium,
     overflow: 'hidden',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.xs,
   },
   humidorImage: {
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xl,
     padding: theme.spacing.lg,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
   verdictTitle: {
@@ -890,7 +890,7 @@ const styles = StyleSheet.create({
   reviewCard: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.sm,
   },
   reviewHeaderRow: {

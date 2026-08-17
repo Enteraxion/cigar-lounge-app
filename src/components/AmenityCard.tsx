@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     height: 64,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   label: {
     ...theme.typography.medium,

@@ -24,7 +24,7 @@ import {
   Ship,
   Users,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import type { Badge } from '../utils/achievements';
 
 export const BADGE_ICON: Record<Badge['icon'], React.ComponentType<{ size?: number; color?: string }>> = {
@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: theme.radius.large,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeIconBoxLocked: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   badgeLabel: {
     ...theme.typography.medium,

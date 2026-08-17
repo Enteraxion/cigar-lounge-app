@@ -12,7 +12,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { parseWeeklyHours, rotateToToday } from '../utils/parseHours';
 
 type Props = {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     padding: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   row: {
     flexDirection: 'row',
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.small,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },

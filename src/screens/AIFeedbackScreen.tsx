@@ -26,7 +26,7 @@ import {
   ThumbsUp,
   User,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import ReportIssueModal from '../components/ReportIssueModal';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { improvementReasons } from '../data/mockAISettings';
@@ -225,7 +225,7 @@ export default function AIFeedbackScreen() {
               >
                 <ThumbsUp
                   size={16}
-                  color={vote === 'helpful' ? theme.colors.primaryNavy : theme.colors.secondarySilver}
+                  color={vote === 'helpful' ? theme.colors.primaryBlack : theme.colors.secondarySilver}
                 />
                 <Text
                   style={[styles.voteButtonText, vote === 'helpful' && styles.voteButtonTextSelected]}
@@ -239,7 +239,7 @@ export default function AIFeedbackScreen() {
               >
                 <ThumbsDown
                   size={16}
-                  color={vote === 'not-helpful' ? theme.colors.primaryNavy : theme.colors.secondarySilver}
+                  color={vote === 'not-helpful' ? theme.colors.primaryBlack : theme.colors.secondarySilver}
                 />
                 <Text
                   style={[
@@ -342,13 +342,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitButtonIdle: {
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
   },
   submitButtonText: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   submitButtonTextIdle: {
     color: theme.colors.secondarySilver,
@@ -375,10 +375,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   card: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.md,
     ...theme.shadows.soft,
   },
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.75)',
+    backgroundColor: withAlpha(theme.colors.background, 0.75),
   },
   loungeBadgeText: {
     ...theme.typography.caption,
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   voteButtonSelected: {
     backgroundColor: theme.colors.white,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
   },
   voteButtonTextSelected: {
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Improve chips ----
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   chipSelected: {
     backgroundColor: theme.colors.secondarySilver,
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Actions ----
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   secondaryButtonText: {
     ...theme.typography.medium,
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: withAlpha(theme.colors.danger, 0.3),
   },
   reportButtonText: {
     ...theme.typography.medium,
@@ -564,6 +564,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

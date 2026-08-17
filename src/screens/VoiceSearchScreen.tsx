@@ -13,7 +13,7 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { ChevronRight, Keyboard, Mic } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { recentVoiceSearches, voiceSearchSuggestions } from '../data/mockMap';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 
@@ -145,9 +145,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.4)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.4),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   suggestionText: {
     ...theme.typography.medium,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   recentChipText: {
     ...theme.typography.medium,

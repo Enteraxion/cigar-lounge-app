@@ -26,7 +26,7 @@ import {
   View,
 } from 'react-native';
 import { Check, Plus, Search as SearchIcon, X } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import {
   addLoungeToCollection,
@@ -197,7 +197,7 @@ export default function AddToCollectionSheet({
                     </Text>
                   </View>
                   <View style={[styles.selectionCircle, selected && styles.selectionCircleSelected]}>
-                    {selected ? <Check size={14} color={theme.colors.primaryNavy} /> : null}
+                    {selected ? <Check size={14} color={theme.colors.primaryBlack} /> : null}
                   </View>
                 </Pressable>
               );
@@ -211,7 +211,7 @@ export default function AddToCollectionSheet({
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator color={theme.colors.primaryNavy} />
+            <ActivityIndicator color={theme.colors.primaryBlack} />
           ) : (
             <Text style={styles.confirmButtonText}>Confirm Selection</Text>
           )}
@@ -224,7 +224,7 @@ export default function AddToCollectionSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   sheet: {
     position: 'absolute',
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     ...theme.shadows.deep,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.3)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.3),
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.sm,
     borderRadius: theme.radius.large,
-    backgroundColor: 'rgba(5, 10, 24, 0.4)',
+    backgroundColor: withAlpha(theme.colors.background, 0.4),
     marginBottom: theme.spacing.md,
   },
   loungeImage: {
@@ -311,9 +311,9 @@ const styles = StyleSheet.create({
     height: 46,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(5, 10, 24, 0.4)',
+    backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
     marginBottom: theme.spacing.md,
   },
   searchInput: {
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 40,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   collectionRowSelected: {
     borderColor: theme.colors.white,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: withAlpha(theme.colors.white, 0.06),
   },
   collectionImage: {
     width: 52,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: theme.radius.full,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.4)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.4),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -435,6 +435,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

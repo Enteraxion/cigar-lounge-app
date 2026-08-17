@@ -23,7 +23,7 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from '
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Cigarette, MapPin } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import SimplifiedMapView from './SimplifiedMapView';
 import { auth } from '../services/firebaseAuth';
 import { getUserFavorites } from '../services/userActionsService';
@@ -152,8 +152,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.12)',
-    backgroundColor: theme.colors.surfaceNavy,
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.12),
+    backgroundColor: theme.colors.surface,
   },
   centered: {
     alignItems: 'center',
@@ -174,15 +174,15 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
   pinStem: {
     width: 2,
     height: 8,
-    backgroundColor: 'rgba(192, 192, 192, 0.5)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.5),
   },
 });

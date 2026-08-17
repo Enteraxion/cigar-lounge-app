@@ -33,6 +33,7 @@ import {
   isSignUpTransitionActive,
   type AuthUser,
 } from '../services/firebaseAuth';
+import { theme } from '../theme';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -47,7 +48,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function SplashScreen() {
   return (
     <View style={splashStyles.screen}>
-      <FlameIcon size={32} color="#C0C0C0" />
+      <FlameIcon size={32} color={theme.colors.secondarySilver} />
     </View>
   );
 }
@@ -55,7 +56,7 @@ function SplashScreen() {
 const splashStyles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0A1128',
+    backgroundColor: theme.colors.primaryBlack,
     alignItems: 'center',
     justifyContent: 'center',
   },

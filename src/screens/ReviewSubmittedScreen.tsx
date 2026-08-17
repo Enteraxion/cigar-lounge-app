@@ -19,7 +19,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { ArrowRight, Award, Check } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { loungeInteriors } from '../data/mockImages';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 
@@ -37,7 +37,7 @@ export default function ReviewSubmittedScreen() {
         <View style={styles.heroWrap}>
           <Image source={{ uri: loungeInteriors[0] }} style={styles.heroImage} />
           <View style={styles.checkBadge}>
-            <Check size={32} color={theme.colors.primaryNavy} strokeWidth={3} />
+            <Check size={32} color={theme.colors.primaryBlack} strokeWidth={3} />
           </View>
         </View>
 
@@ -67,7 +67,7 @@ export default function ReviewSubmittedScreen() {
             onPress={() => navigation.navigate('LoungeDetail', { loungeId })}
           >
             <Text style={styles.primaryButtonText}>Return to Lounge</Text>
-            <ArrowRight size={18} color={theme.colors.primaryNavy} />
+            <ArrowRight size={18} color={theme.colors.primaryBlack} />
           </Pressable>
         ) : null}
         <Pressable
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   statValue: {
     ...theme.typography.headingMedium,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   secondaryButton: {
     height: 52,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   secondaryButtonText: {
     ...theme.typography.medium,

@@ -40,7 +40,7 @@ import {
   Sparkles,
   Sun,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import FilterChip from '../components/FilterChip';
 import SimplifiedMapView from '../components/SimplifiedMapView';
 // TODO(firestore): weather widget and Concierge suggestion aren't
@@ -78,7 +78,7 @@ function MapPin({
         <View style={[styles.pinCircle, selected && styles.pinCircleSelected]}>
           <Cigarette
             size={selected ? 20 : 16}
-            color={selected ? theme.colors.primaryNavy : theme.colors.secondarySilver}
+            color={selected ? theme.colors.primaryBlack : theme.colors.secondarySilver}
           />
         </View>
         <View style={[styles.pinStem, selected && styles.pinStemSelected]} />
@@ -173,18 +173,33 @@ export default function MapScreen() {
   // initialRegion only applies at first mount; if the GPS fix resolves
   // after the map has already rendered with the fallback defaultRegion,
   // animate over to the real position once it arrives.
+  //
+  // Sets `viewport` here as well as animating, rather than waiting for
+  // onRegionChangeComplete to report the move. A programmatic
+  // animateToRegion does not reliably fire that callback on Apple Maps, and
+  // when it didn't, the pins and the selected-lounge card stayed with the
+  // region the map had *left*: observed showing "NVY Bar & Cigar Lounge,
+  // Kearney NE" while the map itself had animated to San Francisco. The
+  // destination is already known here, so there is no reason to learn it
+  // second-hand from the map.
   useEffect(() => {
-    if (location) {
-      mapRef.current?.animateToRegion(
-        {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          latitudeDelta: LOCATED_ZOOM_DELTA,
-          longitudeDelta: LOCATED_ZOOM_DELTA,
-        },
-        400,
-      );
+    if (!location) {
+      return;
     }
+    mapRef.current?.animateToRegion(
+      {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: LOCATED_ZOOM_DELTA,
+        longitudeDelta: LOCATED_ZOOM_DELTA,
+      },
+      400,
+    );
+    setViewport({
+      lat: location.latitude,
+      lng: location.longitude,
+      latitudeDelta: LOCATED_ZOOM_DELTA,
+    });
   }, [location]);
 
   const selectedLounge = lounges?.find(lounge => lounge.id === selectedLoungeId) ?? null;
@@ -396,7 +411,7 @@ export default function MapScreen() {
                   <Text style={styles.viewDetailsText}>View Details</Text>
                 </Pressable>
                 <Pressable style={styles.shareButton} onPress={onShare} hitSlop={8}>
-                  <Share2 size={16} color={theme.colors.primaryNavy} />
+                  <Share2 size={16} color={theme.colors.primaryBlack} />
                 </Pressable>
               </View>
             </View>
@@ -435,7 +450,7 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
   searchPlaceholder: {
@@ -454,7 +469,7 @@ const styles = StyleSheet.create({
   },
   chipBacking: {
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
 
@@ -466,7 +481,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 4,
     ...theme.shadows.soft,
   },
@@ -495,7 +510,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 4,
     ...theme.shadows.soft,
   },
@@ -527,7 +542,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadows.soft,
@@ -541,9 +556,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -557,7 +572,7 @@ const styles = StyleSheet.create({
   pinStem: {
     width: 2,
     height: 10,
-    backgroundColor: 'rgba(192, 192, 192, 0.5)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.5),
   },
   pinStemSelected: {
     backgroundColor: theme.colors.white,
@@ -574,7 +589,7 @@ const styles = StyleSheet.create({
     // on devices with a home indicator.
     padding: theme.spacing.md,
     borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.md,
     ...theme.shadows.deep,
   },
@@ -633,7 +648,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 13,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   shareButton: {
     width: 40,
@@ -650,7 +665,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(192, 192, 192, 0.12)',
+    borderTopColor: withAlpha(theme.colors.secondarySilver, 0.12),
     paddingTop: theme.spacing.sm,
   },
   amenityChip: {

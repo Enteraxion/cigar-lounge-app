@@ -47,7 +47,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowRight, History, Mic, Search as SearchIcon } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import SectionHeader from '../components/SectionHeader';
 import FilterChip from '../components/FilterChip';
 import CompactLoungeCard from '../components/CompactLoungeCard';
@@ -246,7 +246,7 @@ export default function SearchScreen() {
                     resizeMode="cover"
                   />
                   <LinearGradient
-                    colors={['transparent', 'rgba(5, 10, 24, 0.85)']}
+                    colors={['transparent', withAlpha(theme.colors.background, 0.85)]}
                     style={styles.destinationGradient}
                     pointerEvents="none"
                   />
@@ -315,7 +315,7 @@ export default function SearchScreen() {
               resizeMode="cover"
             />
             <LinearGradient
-              colors={['transparent', 'rgba(5, 10, 24, 0.7)', 'rgba(5, 10, 24, 0.95)']}
+              colors={['transparent', withAlpha(theme.colors.background, 0.7), withAlpha(theme.colors.background, 0.95)]}
               locations={[0, 0.5, 1]}
               style={styles.guideGradient}
               pointerEvents="none"
@@ -338,7 +338,7 @@ export default function SearchScreen() {
                 <Text style={styles.guideButtonText}>
                   Explore {featuredGuide.city.split(',')[0]}
                 </Text>
-                <ArrowRight size={16} color={theme.colors.primaryNavy} />
+                <ArrowRight size={16} color={theme.colors.primaryBlack} />
               </Pressable>
             </View>
           </View>
@@ -375,9 +375,9 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
     marginBottom: theme.spacing.md,
   },
   searchPlaceholder: {
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     overflow: 'hidden',
     justifyContent: 'flex-end',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   destinationImage: {
     ...StyleSheet.absoluteFill,
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   trendingCard: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.large,
     padding: theme.spacing.md,
     ...theme.shadows.soft,
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.xl,
     overflow: 'hidden',
     justifyContent: 'flex-end',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.deep,
   },
   guideImage: {
@@ -519,6 +519,6 @@ const styles = StyleSheet.create({
   guideButtonText: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

@@ -15,7 +15,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Bookmark, MapPin, Navigation, Star } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { getAmenityIcon } from '../utils/amenityIcon';
 import type { Lounge } from '../services/loungeService';
 import FavoriteButton from './FavoriteButton';
@@ -49,7 +49,7 @@ export default function SearchResultCard({
           <View
             style={[styles.badge, { backgroundColor: isOpen ? theme.colors.success : theme.colors.danger }]}
           >
-            <Text style={[styles.badgeText, { color: isOpen ? theme.colors.primaryNavy : theme.colors.white }]}>
+            <Text style={[styles.badgeText, { color: isOpen ? theme.colors.primaryBlack : theme.colors.white }]}>
               {isOpen ? 'OPEN NOW' : 'CLOSED'}
             </Text>
           </View>
@@ -127,7 +127,7 @@ export default function SearchResultCard({
 const styles = StyleSheet.create({
   card: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   imageWrapper: {
     position: 'relative',
     aspectRatio: 16 / 11,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   image: {
     ...StyleSheet.absoluteFill,
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.55)',
+    backgroundColor: withAlpha(theme.colors.background, 0.55),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(5, 10, 24, 0.65)',
+    backgroundColor: withAlpha(theme.colors.background, 0.65),
   },
   statLabel: {
     ...theme.typography.caption,
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   directionsButton: {
     flex: 1,
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   directionsButtonText: {
     ...theme.typography.medium,

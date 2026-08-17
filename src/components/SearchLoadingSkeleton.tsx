@@ -14,7 +14,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { Map as MapIcon } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 
 function useShimmer() {
   const value = useRef(new Animated.Value(0.4)).current;
@@ -56,7 +56,7 @@ export default function SearchLoadingSkeleton() {
 
       {/* ---- Mini map preview ---- */}
       <View style={styles.mapCard}>
-        <MapIcon size={40} color={theme.colors.surfaceNavy} />
+        <MapIcon size={40} color={theme.colors.surface} />
         <Box opacity={opacity} style={styles.pinDotLarge} />
         <Box opacity={opacity} style={styles.pinDotSmall} />
       </View>
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
 
   box: {
-    backgroundColor: 'rgba(192, 192, 192, 0.16)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.16),
     borderRadius: theme.radius.small,
   },
 
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   mapCard: {
     height: 180,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   // ---- Large card ----
   card: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
   },
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 1,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     justifyContent: 'flex-end',
     padding: theme.spacing.sm,
   },
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
   },
   listRowImage: {

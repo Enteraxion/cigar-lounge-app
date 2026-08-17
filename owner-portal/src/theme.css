@@ -53,15 +53,15 @@
 }
 
 :root {
-  --navy: #0a1128;
+  --ink: #050506;
   --silver: #c0c0c0;
-  --gold: #eab308;
+  --gold: #c8a868;
   --gold-dim: rgba(234, 179, 8, 0.12);
-  --bg: #050a18;
+  --bg: #0a0a0c;
   --white: #ffffff;
   --muted: #8e8e8e;
-  --surface: #121e3f;
-  --surface-raised: #16234a;
+  --surface: #18181c;
+  --surface-raised: #202026;
   --success: #22c55e;
   --success-dim: rgba(34, 197, 94, 0.14);
   --danger: #ef4444;
@@ -444,7 +444,7 @@ a {
 
 .btn--primary {
   background: var(--white);
-  color: var(--navy);
+  color: var(--ink);
 }
 
 .btn--primary:hover:not(:disabled) {
@@ -574,7 +574,7 @@ a {
 .select {
   width: 100%;
   border-radius: var(--radius-md);
-  background: var(--navy);
+  background: var(--ink);
   border: 1px solid var(--hairline-strong);
   color: var(--white);
   font-family: inherit;

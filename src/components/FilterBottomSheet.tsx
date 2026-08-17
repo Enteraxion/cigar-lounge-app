@@ -47,7 +47,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import DistanceSlider from './DistanceSlider';
 import {
   amenitiesOptions,
@@ -400,7 +400,7 @@ export default function FilterBottomSheet({
                     value={nearCurrentLocation}
                     onValueChange={setNearCurrentLocation}
                     trackColor={{
-                      false: theme.colors.surfaceNavy,
+                      false: theme.colors.surface,
                       true: theme.colors.secondarySilver,
                     }}
                     thumbColor={theme.colors.white}
@@ -525,7 +525,7 @@ export default function FilterBottomSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   sheet: {
     position: 'absolute',
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     maxHeight: '88%',
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
     ...theme.shadows.deep,
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.3)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.3),
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -605,9 +605,9 @@ const styles = StyleSheet.create({
     height: 36,
     paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radius.small,
-    backgroundColor: 'rgba(5, 10, 24, 0.4)',
+    backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
     fontSize: 13,
     color: theme.colors.white,
   },
@@ -627,9 +627,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.4)',
+    backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   savedFilterChipText: {
     ...theme.typography.medium,
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   // ---- Sections ----
   section: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(192, 192, 192, 0.12)',
+    borderBottomColor: withAlpha(theme.colors.secondarySilver, 0.12),
     paddingVertical: theme.spacing.md,
   },
   lastSection: {
@@ -704,9 +704,9 @@ const styles = StyleSheet.create({
     height: 46,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(5, 10, 24, 0.4)',
+    backgroundColor: withAlpha(theme.colors.background, 0.4),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
   cityInputText: {
     ...theme.typography.body,
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   chipUnselected: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   chipText: {
     ...theme.typography.medium,
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Footer ----
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 16,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   resetFiltersLink: {
     ...theme.typography.medium,

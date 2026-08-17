@@ -8,6 +8,7 @@
 
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
+import { theme } from '../theme';
 
 type Props = {
   size?: number;
@@ -16,7 +17,7 @@ type Props = {
 
 const ASPECT_RATIO = 21 / 24;
 
-export default function FlameIcon({ size = 24, color = '#C0C0C0' }: Props) {
+export default function FlameIcon({ size = 24, color = theme.colors.secondarySilver }: Props) {
   return (
     <Svg width={size * ASPECT_RATIO} height={size} viewBox="0 0 21 24" fill="none">
       <Path

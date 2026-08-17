@@ -58,7 +58,7 @@ function floatingTabBarStyle(bottomInset: number) {
     bottom: bottomInset > 0 ? bottomInset : theme.spacing.lg,
     height: TAB_BAR_HEIGHT,
     borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderTopWidth: 0,
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,

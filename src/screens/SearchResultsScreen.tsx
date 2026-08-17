@@ -68,7 +68,7 @@ import {
   SearchX,
   SlidersHorizontal,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import FilterChip from '../components/FilterChip';
 import SearchLoadingSkeleton from '../components/SearchLoadingSkeleton';
 import SearchResultCard from '../components/SearchResultCard';
@@ -296,7 +296,7 @@ export default function SearchResultsScreen() {
               size={14}
               color={
                 viewMode === 'list'
-                  ? theme.colors.primaryNavy
+                  ? theme.colors.primaryBlack
                   : theme.colors.secondarySilver
               }
             />
@@ -320,7 +320,7 @@ export default function SearchResultsScreen() {
               size={14}
               color={
                 viewMode === 'map'
-                  ? theme.colors.primaryNavy
+                  ? theme.colors.primaryBlack
                   : theme.colors.secondarySilver
               }
             />
@@ -589,9 +589,9 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
   },
   searchText: {
     ...theme.typography.body,
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   toolbarButtonText: {
     ...theme.typography.medium,
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginLeft: 'auto',
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     padding: 3,
   },
   toggleOption: {
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   },
   toggleTextActive: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Results count + chips ----
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.sm,
   },
   emptyTitle: {
@@ -743,8 +743,8 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
-    backgroundColor: theme.colors.surfaceNavy,
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     gap: theme.spacing.md,
     marginBottom: theme.spacing.md,
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.small,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
   },
   suggestionText: {
     ...theme.typography.medium,
@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   secondaryButton: {
     width: '100%',
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   secondaryButtonText: {
     ...theme.typography.medium,

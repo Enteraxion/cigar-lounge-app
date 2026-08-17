@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowRight, CalendarCheck } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 
 type NavigationProp = NativeStackNavigationProp<SearchStackParamList>;
@@ -69,7 +69,7 @@ export default function ReservationConfirmedScreen() {
           onPress={() => navigation.navigate('LoungeDetail', { loungeId })}
         >
           <Text style={styles.primaryButtonText}>Return to Lounge</Text>
-          <ArrowRight size={18} color={theme.colors.primaryNavy} />
+          <ArrowRight size={18} color={theme.colors.primaryBlack} />
         </Pressable>
       </View>
     </SafeAreaView>
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -112,9 +112,9 @@ const styles = StyleSheet.create({
   detailCard: {
     width: '100%',
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.15)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.15),
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
   },
@@ -150,6 +150,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

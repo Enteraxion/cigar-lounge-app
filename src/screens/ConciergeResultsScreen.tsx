@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft, MapPin, Sparkles, Star } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { resultTabs, type ResultCard, type ResultTabId } from '../data/mockConcierge';
 import { getAllLounges, type Lounge } from '../services/loungeService';
 import { haversineDistanceMiles, isPremiumLounge } from '../utils/loungeSearch';
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   tabActive: {
     backgroundColor: theme.colors.white,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   scrollContent: {
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     padding: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.1),
   },
   insightText: {
     ...theme.typography.medium,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
 
   card: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   topMatchText: {
     ...theme.typography.caption,
     fontSize: 9,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   body: {
     padding: theme.spacing.md,

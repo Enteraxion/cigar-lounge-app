@@ -9,7 +9,7 @@
 import React from 'react';
 import { Image, ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { Star } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 
 type Props = {
   image: ImageSourcePropType;
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 4 / 3,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   nameRow: {
     flexDirection: 'row',
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   tagText: {
     ...theme.typography.caption,

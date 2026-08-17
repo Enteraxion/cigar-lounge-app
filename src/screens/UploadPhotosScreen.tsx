@@ -22,7 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { Check, ChevronLeft, Plus, X } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { uploadImage } from '../services/storageService';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
@@ -209,7 +209,7 @@ export default function UploadPhotosScreen() {
       <View style={styles.footer}>
         <Pressable style={styles.doneButton} onPress={done}>
           <Text style={styles.doneButtonText}>Done</Text>
-          <Check size={16} color={theme.colors.primaryNavy} />
+          <Check size={16} color={theme.colors.primaryBlack} />
         </Pressable>
         <Pressable style={styles.cancelButton} onPress={() => navigation.goBack()}
           accessibilityRole="button"
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   categoryChipActive: {
     backgroundColor: theme.colors.secondarySilver,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     fontFamily: theme.fontFamily.semibold,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Photo grid ----
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     height: TILE_SIZE,
     borderRadius: theme.radius.large,
     overflow: 'hidden',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   photoImage: {
     ...StyleSheet.absoluteFill,
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     right: theme.spacing.sm,
     height: 3,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.colors.white, 0.25),
     overflow: 'hidden',
   },
   photoProgressFill: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xs,
     paddingVertical: 2,
     borderRadius: theme.radius.small,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   progressBadgeText: {
     ...theme.typography.caption,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     padding: theme.spacing.sm,
-    backgroundColor: 'rgba(5, 10, 24, 0.75)',
+    backgroundColor: withAlpha(theme.colors.background, 0.75),
   },
   errorOverlayText: {
     ...theme.typography.caption,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(192, 192, 192, 0.35)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.35),
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   cancelButton: {
     paddingVertical: theme.spacing.xs,

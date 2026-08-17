@@ -33,7 +33,7 @@
 
 import React, { useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 
 const THUMB_SIZE = 20;
 
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   track: {
     height: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.2)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.2),
     overflow: 'hidden',
   },
   fill: {

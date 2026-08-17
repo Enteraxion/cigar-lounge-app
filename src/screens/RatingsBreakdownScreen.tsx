@@ -24,7 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import StarRating from '../components/StarRating';
 import ProgressRatingBar from '../components/ProgressRatingBar';
 import { getLoungeById, getReviewsForLounge, type Lounge } from '../services/loungeService';
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   overallCard: {
     padding: theme.spacing.lg,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.md,
     ...theme.shadows.soft,
   },
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 6,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     overflow: 'hidden',
   },
   distributionFill: {
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   categoryCard: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
 
   // ---- Stat cards ----
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 4,
   },
   statLabel: {

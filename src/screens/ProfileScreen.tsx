@@ -68,7 +68,7 @@ import {
   Store,
   User,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { isAdminEmail } from '../config/admins';
 import { auth } from '../services/firebaseAuth';
 import { getLoungesForOwner } from '../services/ownerService';
@@ -319,7 +319,7 @@ export default function ProfileScreen() {
               </View>
             )}
             <View style={styles.crownBadge}>
-              <Crown size={16} color={theme.colors.primaryNavy} fill={theme.colors.primaryNavy} />
+              <Crown size={16} color={theme.colors.primaryBlack} fill={theme.colors.primaryBlack} />
             </View>
           </View>
           <Text style={styles.profileName}>{profile?.name ?? 'Member'}</Text>
@@ -331,7 +331,7 @@ export default function ProfileScreen() {
             onPress={() => navigation.navigate('EditProfile')}
           >
             <Text style={styles.editButtonText}>Edit Profile</Text>
-            <Pencil size={14} color={theme.colors.primaryNavy} />
+            <Pencil size={14} color={theme.colors.primaryBlack} />
           </Pressable>
         </View>
 
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
@@ -552,10 +552,10 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: theme.radius.full,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Stats ----
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 4,
   },
   statValue: {
@@ -632,14 +632,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
   passportIconBox: {
     width: 44,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     width: 132,
     height: 110,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     marginBottom: 4,
   },
   cigarImagePlaceholder: {
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
   emptyCard: {
     padding: theme.spacing.lg,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
   },
   emptyCardText: {
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   travelCard: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.md,
   },
   travelStatRow: {
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -803,7 +803,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: 2,
     marginVertical: theme.spacing.xs,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
   },
   activityContent: {
     flex: 1,
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
   quoteCard: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     borderLeftWidth: 2,
     borderLeftColor: theme.colors.accentGold,
   },
@@ -863,13 +863,13 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   activityPhotoOverflow: {
     width: 60,
     height: 60,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },

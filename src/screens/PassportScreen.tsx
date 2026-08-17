@@ -49,7 +49,7 @@ import {
   Trophy,
   User,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 
 import JourneyMap from '../components/JourneyMap';
 import { auth } from '../services/firebaseAuth';
@@ -259,7 +259,7 @@ export default function PassportScreen() {
               </View>
             )}
             <View style={styles.crownBadge}>
-              <Crown size={14} color={theme.colors.primaryNavy} fill={theme.colors.primaryNavy} />
+              <Crown size={14} color={theme.colors.primaryBlack} fill={theme.colors.primaryBlack} />
             </View>
           </View>
           <Text style={styles.profileName}>{profile?.name ?? 'Member'}</Text>
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -484,10 +484,10 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: theme.radius.full,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
   },
   avatarPlaceholder: {
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 4,
   },
   infoLabel: {
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   linkButtonText: {
     ...theme.typography.medium,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   statsErrorText: {
     ...theme.typography.medium,
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: 4,
   },
   statValue: {
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -656,13 +656,13 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   highlightIconBox: {
     width: 36,
     height: 36,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },

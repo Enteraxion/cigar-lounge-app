@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Bell, ChevronRight, Compass, History, Map, Search, Star, X } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import SectionHeader from '../components/SectionHeader';
 import NotificationBadge from '../components/NotificationBadge';
 import {
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     marginTop: theme.spacing.md,
   },
   searchInput: {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   chipText: {
     ...theme.typography.medium,
@@ -321,14 +321,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
   },
   tripIconBox: {
     width: 44,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   reasoningPill: {
     padding: theme.spacing.sm,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
     marginBottom: theme.spacing.sm,
   },
   reasoningText: {
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 10,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   railBody: {
     marginTop: theme.spacing.sm,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 4 / 3,
     borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.xs,
   },
   trendingRatingRow: {

@@ -10,7 +10,7 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Crown, X } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { sortOptions } from '../data/mockSort';
 
 type Props = {
@@ -75,7 +75,7 @@ export default function SortBottomSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   sheet: {
     position: 'absolute',
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     ...theme.shadows.deep,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.3)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.3),
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
@@ -113,13 +113,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(192, 192, 192, 0.15)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.15),
     marginVertical: theme.spacing.md,
   },
 
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: theme.radius.full,
     borderWidth: 2,
-    borderColor: 'rgba(192, 192, 192, 0.4)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.4),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -171,6 +171,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 16,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

@@ -45,7 +45,7 @@ import {
   Sparkles,
   Star,
 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import {
   conciergeUser,
   loadingStatusMessages,
@@ -549,7 +549,7 @@ export default function ConciergeConversationScreen() {
             returnKeyType="send"
           />
           <Pressable style={styles.sendButton} onPress={() => sendMessage(inputText)} hitSlop={8}>
-            <Send size={16} color={theme.colors.primaryNavy} />
+            <Send size={16} color={theme.colors.primaryBlack} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     height: 84,
     borderRadius: theme.radius.full,
     borderWidth: 2,
-    borderColor: 'rgba(234, 179, 8, 0.35)',
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
     borderTopRightRadius: theme.radius.small,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   userBubbleText: {
     ...theme.typography.medium,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
     borderTopLeftRadius: theme.radius.small,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   aiText: {
     ...theme.typography.medium,
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
   // ---- Recommendation card ----
   recCard: {
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   recRatingText: {
     ...theme.typography.medium,
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   recTagText: {
     ...theme.typography.caption,
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 13,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   directionsButton: {
     flex: 1,
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   directionsText: {
     ...theme.typography.medium,
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(192, 192, 192, 0.12)',
+    borderTopColor: withAlpha(theme.colors.secondarySilver, 0.12),
   },
   secondaryAction: {
     flexDirection: 'row',
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     padding: theme.spacing.sm,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
   },
   compactThumb: {
     width: 44,
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing.lg,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.xs,
   },
   noResultsIconBox: {
@@ -911,13 +911,13 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   noResultsSecondaryButton: {
     height: 44,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -936,14 +936,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(192, 192, 192, 0.12)',
+    borderTopColor: withAlpha(theme.colors.secondarySilver, 0.12),
   },
   input: {
     flex: 1,
     height: 46,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     ...theme.typography.medium,
     fontSize: 14,
     color: theme.colors.white,

@@ -29,6 +29,7 @@ import { sendPasswordResetEmail } from '@react-native-firebase/auth';
 import FlameIcon from '../components/FlameIcon';
 import { auth, getAuthErrorMessage } from '../services/firebaseAuth';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
+import { theme, withAlpha } from '../theme';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
 const FONT_SERIF_SEMIBOLD = 'PlayfairDisplay-SemiBold';
@@ -70,7 +71,7 @@ export default function ForgotPasswordScreen() {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <LinearGradient
-        colors={['rgba(10, 17, 40, 0.4)', 'rgba(10, 17, 40, 0.8)', '#0A1128']}
+        colors={[withAlpha(theme.colors.primaryBlack, 0.4), withAlpha(theme.colors.primaryBlack, 0.8), theme.colors.primaryBlack]}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -86,13 +87,13 @@ export default function ForgotPasswordScreen() {
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()}
           accessibilityRole="button"
           accessibilityLabel="Go back" hitSlop={12}>
-          <Icon name="arrow-back" size={22} color="#FFFFFF" />
+          <Icon name="arrow-back" size={22} color={theme.colors.white} />
         </Pressable>
 
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <View style={styles.logoBadge}>
-            <FlameIcon size={24} color="#C0C0C0" />
+            <FlameIcon size={24} color={theme.colors.secondarySilver} />
           </View>
           <Text style={styles.heading1}>THE RESERVE</Text>
           <Text style={styles.subtitle}>CIGAR LOUNGE SOCIETY</Text>
@@ -101,7 +102,7 @@ export default function ForgotPasswordScreen() {
         {/* ---------------- Card ---------------- */}
         <View style={styles.card}>
           <LinearGradient
-            colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0)']}
+            colors={[withAlpha(theme.colors.white, 0.06), withAlpha(theme.colors.white, 0)]}
             style={styles.cardSheen}
             pointerEvents="none"
           />
@@ -109,7 +110,7 @@ export default function ForgotPasswordScreen() {
           {sent ? (
             <View style={styles.successBlock}>
               <View style={styles.successIconBadge}>
-                <Icon name="checkmark-circle-outline" size={32} color="#C0C0C0" />
+                <Icon name="checkmark-circle-outline" size={32} color={theme.colors.secondarySilver} />
               </View>
               <Text style={styles.heading2}>Check Your Email</Text>
               <Text style={styles.description}>
@@ -141,13 +142,13 @@ export default function ForgotPasswordScreen() {
                   <Text style={styles.fieldLabel}>Email Address</Text>
                   <View style={styles.inputWrapper}>
                     <View style={styles.inputIconSlot}>
-                      <Icon name="mail-outline" size={16} color="rgba(192, 192, 192, 0.6)" />
+                      <Icon name="mail-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
                     </View>
                     <TextInput
         accessibilityLabel="Enter your email"
                       style={styles.input}
                       placeholder="Enter your email"
-                      placeholderTextColor="rgba(192, 192, 192, 0.4)"
+                      placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                       value={email}
                       onChangeText={setEmail}
                       autoCapitalize="none"
@@ -168,7 +169,7 @@ export default function ForgotPasswordScreen() {
                   disabled={submitting}
                 >
                   {submitting ? (
-                    <ActivityIndicator color="#0A1128" />
+                    <ActivityIndicator color={theme.colors.primaryBlack} />
                   ) : (
                     <Text style={styles.primaryButtonText}>Send Reset Link</Text>
                   )}
@@ -197,7 +198,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0A1128',
+    backgroundColor: theme.colors.primaryBlack,
   },
   main: {
     flex: 1,
@@ -212,9 +213,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(18, 30, 63, 0.5)',
+    backgroundColor: withAlpha(theme.colors.surface, 0.5),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -229,9 +230,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(18, 30, 63, 0.5)',
+    backgroundColor: withAlpha(theme.colors.surface, 0.5),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     lineHeight: 36,
     letterSpacing: 0.75,
-    color: '#FFFFFF',
+    color: theme.colors.white,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -256,16 +257,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: 'rgba(192, 192, 192, 0.8)',
+    color: withAlpha(theme.colors.secondarySilver, 0.8),
     textAlign: 'center',
   },
 
   // ---- Card ----
   card: {
     marginTop: 33,
-    backgroundColor: 'rgba(10, 17, 40, 0.75)',
+    backgroundColor: withAlpha(theme.colors.primaryBlack, 0.75),
     borderTopWidth: 1,
-    borderTopColor: 'rgba(192, 192, 192, 0.2)',
+    borderTopColor: withAlpha(theme.colors.secondarySilver, 0.2),
     borderRadius: 24,
     padding: 24,
     gap: 16,
@@ -287,19 +288,19 @@ const styles = StyleSheet.create({
     fontFamily: FONT_SERIF_REGULAR,
     fontSize: 24,
     lineHeight: 32,
-    color: '#FFFFFF',
+    color: theme.colors.white,
     textAlign: 'center',
   },
   description: {
     fontFamily: FONT_SANS_REGULAR,
     fontSize: 14,
     lineHeight: 20,
-    color: 'rgba(192, 192, 192, 0.8)',
+    color: withAlpha(theme.colors.secondarySilver, 0.8),
     textAlign: 'center',
   },
   descriptionEmphasis: {
     fontFamily: FONT_SANS_SEMIBOLD,
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
 
   // ---- Form ----
@@ -316,15 +317,15 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: '#C0C0C0',
+    color: theme.colors.secondarySilver,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
-    backgroundColor: 'rgba(18, 30, 63, 0.6)',
+    backgroundColor: withAlpha(theme.colors.surface, 0.6),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.2)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.2),
     borderRadius: 12,
   },
   inputIconSlot: {
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     fontFamily: FONT_SANS_REGULAR,
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
 
   // ---- Error message ----
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_SANS_MEDIUM,
     fontSize: 13,
     lineHeight: 18,
-    color: '#EF4444',
+    color: theme.colors.danger,
     textAlign: 'center',
   },
 
@@ -354,10 +355,10 @@ const styles = StyleSheet.create({
   primaryButton: {
     height: 52,
     borderRadius: 12,
-    backgroundColor: '#C0C0C0',
+    backgroundColor: theme.colors.secondarySilver,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#C0C0C0',
+    shadowColor: theme.colors.secondarySilver,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 14,
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 0.35,
     textTransform: 'uppercase',
-    color: '#0A1128',
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Success state ----
@@ -386,9 +387,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(192, 192, 192, 0.12)',
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.3)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -403,12 +404,12 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: FONT_SANS_REGULAR,
     fontSize: 14,
-    color: 'rgba(192, 192, 192, 0.7)',
+    color: withAlpha(theme.colors.secondarySilver, 0.7),
     textAlign: 'center',
   },
   footerLink: {
     fontFamily: FONT_SANS_SEMIBOLD,
-    color: '#FFFFFF',
+    color: theme.colors.white,
     textDecorationLine: 'underline',
   },
 });

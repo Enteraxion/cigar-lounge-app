@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft, Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { conciergeUser } from '../data/mockConcierge';
 import { auth } from '../services/firebaseAuth';
 import {
@@ -196,7 +196,7 @@ export default function SavedConversationsScreen() {
           <Text style={styles.headerTitle}>History</Text>
         </View>
         <Pressable style={styles.newButton} onPress={() => openConversation()} hitSlop={8} accessibilityRole="button" accessibilityLabel="New conversation">
-          <Plus size={18} color={theme.colors.primaryNavy} />
+          <Plus size={18} color={theme.colors.primaryBlack} />
         </Pressable>
       </View>
 
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   card: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.sm,
     ...theme.shadows.soft,
   },
@@ -379,14 +379,14 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 13,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
   viewButton: {
     paddingHorizontal: theme.spacing.md,
     height: 36,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
     alignItems: 'center',
     justifyContent: 'center',
   },

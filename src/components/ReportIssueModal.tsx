@@ -11,7 +11,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 
 type Props = {
   visible: boolean;
@@ -72,12 +72,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
-    backgroundColor: 'rgba(5, 10, 24, 0.7)',
+    backgroundColor: withAlpha(theme.colors.background, 0.7),
   },
   card: {
     padding: theme.spacing.lg,
     borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceNavy,
+    backgroundColor: theme.colors.surface,
     gap: theme.spacing.sm,
     ...theme.shadows.deep,
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: theme.radius.medium,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    backgroundColor: withAlpha(theme.colors.danger, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.sm,
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
     color: theme.colors.white,
     fontSize: 14,
     marginTop: theme.spacing.xs,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(192, 192, 192, 0.25)',
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.25),
   },
   cancelButtonText: {
     ...theme.typography.medium,
@@ -143,6 +143,6 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 14,
-    color: theme.colors.primaryNavy,
+    color: theme.colors.primaryBlack,
   },
 });

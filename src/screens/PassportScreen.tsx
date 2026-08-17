@@ -62,6 +62,7 @@ import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
 import NotificationBadge from '../components/NotificationBadge';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type PassportNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -432,7 +433,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

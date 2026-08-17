@@ -50,6 +50,7 @@ import {
   type ExperienceMode,
 } from '../data/mockAISettings';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type AISettingsNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -474,7 +475,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

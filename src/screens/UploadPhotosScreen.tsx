@@ -26,6 +26,7 @@ import { theme } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { uploadImage } from '../services/storageService';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type UploadPhotosNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     alignItems: 'center',
     gap: theme.spacing.md,
     backgroundColor: theme.colors.background,

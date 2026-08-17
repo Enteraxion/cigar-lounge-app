@@ -37,6 +37,7 @@ import { getPassport } from '../services/passportService';
 import { groupVisitsByRecency, type TimelineGroup, type Visit } from '../utils/passport';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type TravelTimelineNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

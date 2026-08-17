@@ -43,6 +43,7 @@ import { displayTags } from '../utils/displayTags';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { loungeImageUri } from '../utils/loungeImage';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

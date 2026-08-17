@@ -30,6 +30,7 @@ import { getRecentlyViewedLounges, getUserFavoriteIds } from '../services/userAc
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { loungeImageUri } from '../utils/loungeImage';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type RecentlyViewedNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 140,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
   stateBox: {

@@ -23,6 +23,7 @@ import { getUserReviews, type UserReviewEntry } from '../services/userActionsSer
 import { auth } from '../services/firebaseAuth';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type MyReviewsNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 140,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
   stateBox: {

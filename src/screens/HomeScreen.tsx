@@ -65,7 +65,7 @@ import {
   type MemberEvent,
 } from '../services/eventService';
 import { loungeImageUri } from '../utils/loungeImage';
-import { tabBarClearance } from '../utils/tabBarLayout';
+import { tabBarClearance, TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 const NEARBY_COUNT = 4;
 const TRENDING_COUNT = 3;
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 140,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

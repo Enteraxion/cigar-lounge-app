@@ -25,6 +25,7 @@ import { findCityCoordinates } from '../utils/cityAutocomplete';
 import { loungeImageUri } from '../utils/loungeImage';
 import { displayTags } from '../utils/displayTags';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
 

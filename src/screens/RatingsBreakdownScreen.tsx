@@ -29,6 +29,7 @@ import StarRating from '../components/StarRating';
 import ProgressRatingBar from '../components/ProgressRatingBar';
 import { getLoungeById, getReviewsForLounge, type Lounge } from '../services/loungeService';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type RatingsBreakdownNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 type RatingsBreakdownRouteProp = RouteProp<SearchStackParamList, 'RatingsBreakdown'>;
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
 

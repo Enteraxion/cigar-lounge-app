@@ -57,6 +57,7 @@ import { deleteReview, isFavorited, recordLoungeView } from '../services/userAct
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { loungeImageUri } from '../utils/loungeImage';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type LoungeDetailNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 type LoungeDetailRouteProp = RouteProp<SearchStackParamList, 'LoungeDetail'>;
@@ -558,7 +559,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingBottom: 140,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
   },
 
   // ---- Loading / error state ----

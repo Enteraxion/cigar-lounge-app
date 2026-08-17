@@ -22,6 +22,7 @@ import { getUpcomingEventsAcrossLounges, type MemberEvent } from '../services/ev
 import { isPremiumLounge } from '../utils/loungeSearch';
 import { loungeImageUri } from '../utils/loungeImage';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 /**
  * Curated experiences, built from the directory rather than invented.
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

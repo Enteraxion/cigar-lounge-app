@@ -31,3 +31,18 @@ export function tabBarTop(bottomInset: number): number {
 export function tabBarClearance(bottomInset: number): number {
   return tabBarTop(bottomInset) + CLEARANCE_GAP;
 }
+
+/**
+ * Bottom padding for a scroll view that sits under the floating tab bar.
+ *
+ * A static value rather than an inset-derived one, because scroll padding
+ * lives in StyleSheet.create and threading insets through 25 screens buys
+ * nothing: this only has to clear the worst case. The bar's top edge is at
+ * most 98pt from the bottom (34pt home-indicator inset + 64pt bar), so this
+ * leaves a comfortable margin above it.
+ *
+ * Before this existed, screens each guessed: values ranged from 100 (2pt of
+ * clearance — content effectively touching the bar) to 140. One shared value
+ * means no screen can be accidentally too tight again.
+ */
+export const TAB_BAR_SCROLL_CLEARANCE = 140;

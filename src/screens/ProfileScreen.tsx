@@ -89,6 +89,7 @@ import BadgeTile from '../components/BadgeTile';
 import JourneyMap from '../components/JourneyMap';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

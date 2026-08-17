@@ -71,6 +71,7 @@ import {
 import { auth } from '../services/firebaseAuth';
 import { displayTags } from '../utils/displayTags';
 import { loungeImageUri } from '../utils/loungeImage';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type SearchNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 140,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

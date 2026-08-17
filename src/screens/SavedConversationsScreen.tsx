@@ -26,6 +26,7 @@ import {
   type SavedConversation,
 } from '../services/conciergeMemoryService';
 import type { ConciergeStackParamList } from '../navigation/ConciergeNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
 
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
   },
   sectionTitle: {
     ...theme.typography.headingSmall,

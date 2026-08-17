@@ -51,6 +51,7 @@ import {
 import { auth } from '../services/firebaseAuth';
 import type { ReviewCategoryRatings } from '../types/firestore';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type WriteReviewNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
 type WriteReviewRouteProp = RouteProp<SearchStackParamList, 'WriteReview'>;
@@ -566,7 +567,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     backgroundColor: theme.colors.background,
   },
   submitButton: {

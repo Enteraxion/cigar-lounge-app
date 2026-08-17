@@ -45,7 +45,7 @@ import type { MainTabParamList } from '../navigation/MainNavigator';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import { displayTags } from '../utils/displayTags';
 import { loungeImageUri } from '../utils/loungeImage';
-import { tabBarClearance } from '../utils/tabBarLayout';
+import { tabBarClearance, TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type FavoritesNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
 

@@ -97,6 +97,7 @@ import {
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
 import { loungeImageUri } from '../utils/loungeImage';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 // Deliberately neutral (no filtering applied) — this is the screen's actual
 // applied-filter state before the user has ever pressed "Show Results" on
@@ -669,7 +670,7 @@ const styles = StyleSheet.create({
   // ---- Results list ----
   resultsList: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 140,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
 

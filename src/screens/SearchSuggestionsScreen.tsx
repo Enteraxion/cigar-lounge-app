@@ -45,6 +45,7 @@ import { getRecentlyViewedLounges } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import { searchUsCities } from '../utils/cityAutocomplete';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 const RECENT_VISIBLE_LIMIT = 5;
 
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
   contentInner: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 140,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
   section: {

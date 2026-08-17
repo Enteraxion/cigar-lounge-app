@@ -37,6 +37,7 @@ import { loungeImageUri } from '../utils/loungeImage';
 import { submitIssueReport } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type AIFeedbackNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

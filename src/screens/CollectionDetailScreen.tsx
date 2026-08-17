@@ -65,6 +65,7 @@ import { getLoungesByIds, type Lounge } from '../services/loungeService';
 import type { SavedStackParamList } from '../navigation/SavedNavigator';
 import type { MainTabParamList } from '../navigation/MainNavigator';
 import { loungeImageUri } from '../utils/loungeImage';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type CollectionDetailNavigationProp = NativeStackNavigationProp<SavedStackParamList>;
 type CollectionDetailRouteProp = RouteProp<SavedStackParamList, 'CollectionDetail'>;
@@ -322,7 +323,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
   },
 
   // ---- Gallery ----

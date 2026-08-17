@@ -334,7 +334,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.cigarloungeapp.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.enteraxion.thereserve;
 				PRODUCT_NAME = CigarLoungeApp;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -364,7 +364,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.cigarloungeapp.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.enteraxion.thereserve;
 				PRODUCT_NAME = CigarLoungeApp;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;

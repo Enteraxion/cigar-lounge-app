@@ -8,11 +8,11 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.cigarloungeapp.app # change to match the bundle ID you set in Xcode + App Store Connect
+        bundle_identifier: com.enteraxion.thereserve # change to match the bundle ID you set in Xcode + App Store Connect
       groups:
         - ios_signing
       vars:
-        BUNDLE_ID: "com.cigarloungeapp.app"
+        BUNDLE_ID: "com.enteraxion.thereserve"
         XCODE_WORKSPACE: "ios/CigarLoungeApp.xcworkspace"
         XCODE_SCHEME: "CigarLoungeApp"
       node: 22.11.0

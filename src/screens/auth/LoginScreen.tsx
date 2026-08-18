@@ -115,7 +115,7 @@ export default function LoginScreen() {
           <View style={styles.logoBadge}>
             <FlameIcon size={26} color={theme.colors.accentGold} />
           </View>
-          <Text style={styles.heading1}>THE RESERVE</Text>
+          <Text style={styles.heading1}>LOUNGE LOCATOR</Text>
           <Text style={styles.subtitle}>CIGAR LOUNGE SOCIETY</Text>
         </View>
 

@@ -1,7 +1,9 @@
 /**
  * FlameIcon
  *
- * Exact vector path exported from the Figma "The Reserve" logo mark
+ * Exact vector path exported from the original Figma logo mark (the app was
+ * called "The Reserve" then; it is now Lounge Locator — see
+ * design-reference/logo/ for the current mark)
  * (viewBox 21x24), rendered natively via react-native-svg instead of
  * an approximated icon-font glyph.
  */

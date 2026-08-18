@@ -36,13 +36,13 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>The Reserve uses your camera so you can take photos to attach to reviews and collection covers.</string>
+	<string>Lounge Locator uses your camera so you can take photos to attach to reviews and collections.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>The Reserve uses your location to show nearby cigar lounges and center the map on where you are.</string>
+	<string>Lounge Locator uses your location to show nearby cigar lounges and center the map on where you are.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>The Reserve uses your location to show nearby cigar lounges and center the map on where you are.</string>
+	<string>Lounge Locator uses your location to show nearby cigar lounges and center the map on where you are.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>The Reserve uses your photo library so you can attach photos to reviews and collection covers.</string>
+	<string>Lounge Locator uses your photo library so you can attach photos to reviews and collections, and upload a photo of your ID to verify you are 21 or over.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

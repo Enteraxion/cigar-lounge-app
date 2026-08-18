@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit",
     "build:city-stats": "ts-node --project scripts/tsconfig.json scripts/buildCityStats.ts",
     "test:rules": "npx firebase-tools emulators:exec --only firestore \"npx jest --selectProjects rules\"",
-    "seed:demo-claim": "ts-node --project scripts/tsconfig.json scripts/seedDemoClaim.ts"
+    "seed:demo-claim": "ts-node --project scripts/tsconfig.json scripts/seedDemoClaim.ts",
+    "backfill:phones": "ts-node --project scripts/tsconfig.json scripts/backfillPhones.ts"
   },
   "dependencies": {
     "@react-native-community/geolocation": "^3.4.0",

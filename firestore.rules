@@ -33,7 +33,10 @@ service cloud.firestore {
     // sync when adding/removing admins.
     function isAdmin() {
       return isSignedIn() && request.auth.token.email in [
-        'rohithakepati@gmail.com'
+        'rohithakepati@gmail.com',
+        'rohith.akepati@enteraxion.com',
+        'julian.brinkley@enteraxion.com',
+        'julianlbrinkley@gmail.com'
       ];
     }
 

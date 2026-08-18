@@ -17,6 +17,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -36,6 +37,8 @@ import {
   ChevronLeft,
   Cigarette,
   MapPin,
+  Navigation,
+  Phone,
   MessageCircle,
   Pencil,
   Share2,
@@ -45,6 +48,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { openInMaps } from '../utils/openMaps';
 import HoursCard from '../components/HoursCard';
 import AmenityCard from '../components/AmenityCard';
 import ProgressRatingBar from '../components/ProgressRatingBar';
@@ -275,7 +279,44 @@ export default function LoungeDetailScreen() {
           <View style={styles.addressRow}>
             <MapPin size={14} color={theme.colors.mutedGray} />
             <Text style={styles.address}>{lounge.address}</Text>
+            {/* A labelled control rather than a tappable address. Lakhan's
+                point in the 2026-08-17 demo was that tapping the address text
+                is undiscoverable — nothing tells you it does anything. */}
+            <Pressable
+              style={styles.directionsButton}
+              onPress={() =>
+                openInMaps({
+                  name: lounge.name,
+                  address: lounge.address,
+                  coordinates: lounge.coordinates,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Get directions to ${lounge.name}`}
+              hitSlop={8}
+            >
+              <Navigation size={12} color={theme.colors.primaryBlack} />
+              <Text style={styles.directionsButtonText}>Directions</Text>
+            </Pressable>
           </View>
+
+          {/* Phone, only when the source gave us one. Dr. Brinkley's ask in
+              the 2026-08-17 demo was to be able to reach a lounge, so this is
+              a tap-to-call rather than static text. Rendered conditionally
+              because coverage is partial — inventing a placeholder number
+              would be worse than showing nothing. */}
+          {lounge.phone ? (
+            <Pressable
+              style={styles.phoneRow}
+              onPress={() => Linking.openURL(`tel:${lounge.phone}`).catch(() => {})}
+              accessibilityRole="button"
+              accessibilityLabel={`Call ${lounge.name}`}
+              hitSlop={6}
+            >
+              <Phone size={14} color={theme.colors.accentGold} />
+              <Text style={styles.phoneText}>{lounge.phone}</Text>
+            </Pressable>
+          ) : null}
 
           {/* ---------------- Reserve Button ---------------- */}
           <Pressable
@@ -684,6 +725,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.mutedGray,
     flexShrink: 1,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+  },
+  phoneText: {
+    ...theme.typography.medium,
+    fontSize: 13,
+    color: theme.colors.accentGold,
+  },
+  directionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 5,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.accentGold,
+  },
+  directionsButtonText: {
+    ...theme.typography.caption,
+    fontSize: 10,
+    color: theme.colors.primaryBlack,
   },
 
   // ---- Reserve button ----

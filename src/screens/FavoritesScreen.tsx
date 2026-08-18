@@ -178,7 +178,18 @@ export default function FavoritesScreen() {
           </View>
         </View>
 
-        <View style={styles.emptyContent}>
+        {/* Scrollable, because this content is taller than it looks: a 220pt
+            avatar, a label, a title, a paragraph and two buttons. As a bare
+            flex:1 centred View it overflowed on shorter screens and clipped
+            the second button with no way to reach it — reported in the
+            2026-08-17 demo as "there is one more button below it, but it is
+            half and I'm not able to scroll it". flexGrow keeps it centred when
+            it does fit. */}
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.emptyContent}>
           <View style={styles.emptyImageWrap}>
             {profile?.avatarUri ? (
               <Image source={{ uri: profile.avatarUri }} style={styles.emptyImage} />
@@ -208,7 +219,8 @@ export default function FavoritesScreen() {
           >
             <Text style={styles.secondaryButtonText}>Browse Collections</Text>
           </Pressable>
-        </View>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -498,8 +510,12 @@ const styles = StyleSheet.create({
   },
 
   // ---- Empty state ----
+  emptyScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
+  },
   emptyContent: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,

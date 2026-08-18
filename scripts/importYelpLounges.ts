@@ -97,69 +97,7 @@ const db = getFirestore();
 // blaze_plan_decision memory / conversation with Julian Brinkley).
 // ---------------------------------------------------------------------------
 
-const CITIES = [
-  'New York, NY',
-  'Los Angeles, CA',
-  'Chicago, IL',
-  'Houston, TX',
-  'Phoenix, AZ',
-  'Philadelphia, PA',
-  'San Antonio, TX',
-  'San Diego, CA',
-  'Dallas, TX',
-  'Austin, TX',
-  'Jacksonville, FL',
-  'Fort Worth, TX',
-  'San Jose, CA',
-  'Columbus, OH',
-  'Charlotte, NC',
-  'Indianapolis, IN',
-  'San Francisco, CA',
-  'Seattle, WA',
-  'Denver, CO',
-  'Oklahoma City, OK',
-  'Nashville, TN',
-  'Washington, DC',
-  'El Paso, TX',
-  'Las Vegas, NV',
-  'Boston, MA',
-  'Detroit, MI',
-  'Portland, OR',
-  'Memphis, TN',
-  'Louisville, KY',
-  'Baltimore, MD',
-  'Milwaukee, WI',
-  'Albuquerque, NM',
-  'Tucson, AZ',
-  'Fresno, CA',
-  'Sacramento, CA',
-  'Kansas City, MO',
-  'Atlanta, GA',
-  'Miami, FL',
-  'Raleigh, NC',
-  'Omaha, NE',
-  'Colorado Springs, CO',
-  'Long Beach, CA',
-  'Virginia Beach, VA',
-  'Oakland, CA',
-  'Minneapolis, MN',
-  'Tulsa, OK',
-  'Tampa, FL',
-  'New Orleans, LA',
-  'Wichita, KS',
-  'Cleveland, OH',
-  'Bakersfield, CA',
-  'Honolulu, HI',
-  'Greenville, SC',
-  'Charleston, SC',
-  'Richmond, VA',
-  'Salt Lake City, UT',
-  'Cincinnati, OH',
-  'Pittsburgh, PA',
-  'St. Louis, MO',
-  'Orlando, FL',
-  'London, UK',
-];
+import { CITIES } from './cities';
 
 // Matches functions/src/index.ts's refreshCityLounges — Yelp's own
 // `cigarbars` category is narrow, and a lot of real cigar lounges
@@ -182,6 +120,11 @@ type YelpBusiness = {
   coordinates: { latitude: number; longitude: number };
   location: { display_address: string[]; city?: string; state?: string };
   image_url?: string;
+  /** Already locale-formatted by Yelp, e.g. "(305) 555-0134". Free on the
+   *  search endpoint — it just was never mapped. */
+  display_phone?: string;
+  /** E.164, used only when display_phone is absent. */
+  phone?: string;
 };
 
 type YelpSearchResponse = {
@@ -266,6 +209,11 @@ function toLoungeDocument(business: YelpBusiness, now: Timestamp): LoungeDocumen
     name: business.name,
     description: '',
     address: business.location.display_address.join(', '),
+    // display_phone is already formatted for the locale; `phone` (E.164) is
+    // the fallback. Both come free on the search endpoint.
+    ...(business.display_phone || business.phone
+      ? { phone: business.display_phone || business.phone }
+      : {}),
     coordinates: { lat: business.coordinates.latitude, lng: business.coordinates.longitude },
     hours: 'Hours not yet available',
     status: business.is_closed ? 'closed' : 'open',

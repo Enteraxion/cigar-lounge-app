@@ -13,6 +13,13 @@ export const ADMIN_EMAILS: string[] = [
   // (a non-admin sees no review screen); add it back when a second real
   // reviewer is needed.
   'rohithakepati@gmail.com',
+  // Rohith's work account — the one used on the office Apple ID / device.
+  'rohith.akepati@enteraxion.com',
+  // Dr. Brinkley, requested in the 2026-08-17 demo so he can exercise Review
+  // Business Claims himself. Both addresses are listed because he has a
+  // Firebase account under each and signs in with whichever is to hand.
+  'julian.brinkley@enteraxion.com',
+  'julianlbrinkley@gmail.com',
 ];
 
 export function isAdminEmail(email: string | null | undefined): boolean {

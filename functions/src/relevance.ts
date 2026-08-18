@@ -12,6 +12,10 @@
  */
 
 export type YelpBusiness = {
+  /** Locale-formatted by Yelp; free on the search endpoint. */
+  display_phone?: string;
+  /** E.164 fallback. */
+  phone?: string;
   id: string;
   name: string;
   is_closed: boolean;
@@ -25,6 +29,10 @@ export type YelpBusiness = {
 };
 
 export type GooglePlace = {
+  /** Locale-formatted, e.g. "(305) 555-0134". Requested in the field mask. */
+  nationalPhoneNumber?: string;
+  /** E.164-ish fallback, used for non-US listings. */
+  internationalPhoneNumber?: string;
   id: string;
   displayName?: { text: string };
   formattedAddress?: string;

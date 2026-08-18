@@ -113,6 +113,18 @@ export type LoungeDocument = {
    */
   city?: string;
   /**
+   * Contact number as the source gave it — Yelp's `display_phone` is already
+   * formatted for its locale, Google's `nationalPhoneNumber` likewise, so it is
+   * stored as text and shown as-is rather than reformatted.
+   *
+   * Optional because the imports did not capture it originally: Dr. Brinkley
+   * asked for it in the 2026-08-17 demo ("I need the phone number") and a
+   * sample of 400 lounges had **zero** phone fields, even though both APIs
+   * return one. Existing documents are backfilled by
+   * scripts/backfillPhones.ts; new ones get it at import time.
+   */
+  phone?: string;
+  /**
    * Set once an admin approves a pending claim (see
    * src/services/ownerService.ts's approveLoungeClaim) — `ownerId` gates
    * edit access in updateLoungeDetails and is the sole source of truth

@@ -153,6 +153,10 @@ async function fetchGooglePlaces(apiKey: string, location: string): Promise<Goog
       // the directory had no pictures.
       'X-Goog-FieldMask':
         'places.id,places.displayName,places.formattedAddress,places.location,' +
+        // nationalPhoneNumber is the locale-formatted one; the
+        // international form is the fallback for non-US listings, which
+        // matters now that Germany is in scope (2026-08-17 demo).
+        'places.nationalPhoneNumber,places.internationalPhoneNumber,' +
         'places.regularOpeningHours,places.primaryType,places.photos,' +
         // Atmosphere-tier fields — see amenitiesFromGoogle. These move the
         // request into a higher-priced Places SKU, which is a deliberate
@@ -291,6 +295,11 @@ function toLoungeDocumentFromGoogle(
     name: place.displayName?.text ?? 'Unnamed Lounge',
     description: '',
     address: place.formattedAddress ?? '',
+    // Prefer the locale-formatted number; fall back to the international form
+    // so German listings still get one (Germany came into scope 2026-08-17).
+    ...(place.nationalPhoneNumber || place.internationalPhoneNumber
+      ? { phone: place.nationalPhoneNumber || place.internationalPhoneNumber }
+      : {}),
     coordinates: { lat: place.location?.latitude ?? 0, lng: place.location?.longitude ?? 0 },
     hours,
     status: 'open' as const,

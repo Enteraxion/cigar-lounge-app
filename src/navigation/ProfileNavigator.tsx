@@ -18,6 +18,8 @@ import AIFeedbackScreen from '../screens/AIFeedbackScreen';
 import MyReviewsScreen from '../screens/MyReviewsScreen';
 import AdminClaimReviewScreen from '../screens/AdminClaimReviewScreen';
 import MyShopsScreen from '../screens/MyShopsScreen';
+import AgeVerificationScreen from '../screens/AgeVerificationScreen';
+import AdminAgeReviewScreen from '../screens/AdminAgeReviewScreen';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -35,6 +37,10 @@ export type ProfileStackParamList = {
    * or have claimed a lounge, so most members never see this exists.
    */
   MyShops: undefined;
+  /** Member-facing 21+ ID upload. Only surfaced while there is something to do. */
+  AgeVerification: undefined;
+  /** Admin-only, like AdminClaimReview — see src/config/admins.ts. */
+  AdminAgeReview: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -52,6 +58,8 @@ export default function ProfileNavigator() {
       <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
       <Stack.Screen name="AdminClaimReview" component={AdminClaimReviewScreen} />
       <Stack.Screen name="MyShops" component={MyShopsScreen} />
+      <Stack.Screen name="AgeVerification" component={AgeVerificationScreen} />
+      <Stack.Screen name="AdminAgeReview" component={AdminAgeReviewScreen} />
     </Stack.Navigator>
   );
 }

@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// Cloud Storage rules for Lounge Locator.
+//
+// Added 2026-08-18, when the 21+ flow started uploading photographs of
+// passports and driving licences. Until then this bucket had no rules in the
+// repository at all — whatever was set in the console governed it, which is not
+// a defensible place for government ID to land.
+//
+// Every path the app writes goes through storageService.uploadImage, which
+// builds `users/{userId}/{folder}/{timestamp}.jpg`. The folders in use are
+// `avatars`, `reviews`, `collections` and `age-verification`.
+//
+// DEPLOY: npx firebase-tools deploy --only storage
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Mirrors src/config/admins.ts and firestore.rules' isAdmin() — three
+    // copies of one list is not ideal, but rules cannot import app code and
+    // Storage rules cannot read Firestore. Keep all three in step.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email in [
+        'rohithakepati@gmail.com',
+        'rohith.akepati@enteraxion.com',
+        'julian.brinkley@enteraxion.com',
+        'julianlbrinkley@gmail.com'
+      ];
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // 10 MB. A phone photo of an ID is well under this; the cap exists so the
+    // bucket cannot be used as free file hosting.
+    function isReasonableSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /users/{userId}/{folder}/{fileName} {
+      // Only the member may put files in their own folder, and only images.
+      allow write: if isSignedIn()
+        && request.auth.uid == userId
+        && isImage()
+        && isReasonableSize();
+
+      // Identity documents are readable only by the member who uploaded them
+      // and by an admin doing the review. Avatars and review photos stay
+      // publicly readable because they are shown to other members — a review
+      // author's avatar appears on everyone's screen.
+      //
+      // CAVEAT, deliberately written down rather than assumed away:
+      // getDownloadURL() mints a URL containing a download token, and that
+      // token grants access regardless of these rules. For ID images the URL is
+      // only ever stored on the member's own user document, which is now
+      // readable by that member and admins alone — but anyone who obtained the
+      // URL could read the file. Closing that properly means serving IDs
+      // through short-lived signed URLs from a Cloud Function instead of
+      // storing a permanent one. Worth doing before this is exposed to real
+      // members at volume.
+      allow read: if folder == 'age-verification'
+        ? (isSignedIn() && (request.auth.uid == userId || isAdmin()))
+        : true;
+
+      // Nothing in the app deletes uploads, and a member deleting the ID out
+      // from under a review in progress is not a case worth supporting.
+      allow delete: if isAdmin();
+    }
+
+    // Anything not matched above is denied by default.
+  }
+}

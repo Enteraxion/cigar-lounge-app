@@ -64,6 +64,7 @@ import {
   Pencil,
   Plane,
   Settings,
+  IdCard,
   ShieldCheck,
   Store,
   User,
@@ -72,6 +73,8 @@ import { theme, withAlpha } from '../theme';
 import { isAdminEmail } from '../config/admins';
 import { auth } from '../services/firebaseAuth';
 import { getLoungesForOwner } from '../services/ownerService';
+import { getAgeVerification } from '../services/ageVerificationService';
+import type { AgeVerificationStatus } from '../types/firestore';
 import {
   getUserCollections,
   getUserReviews,
@@ -203,6 +206,9 @@ export default function ProfileScreen() {
   // an owner-facing entry point on every member's profile would be noise —
   // so this is driven by real ownership rather than shown-and-empty.
   const [ownsShops, setOwnsShops] = useState(false);
+  // Only surfaced while there is something to do. A verified member has no
+  // reason to be shown a card about verification.
+  const [ageStatus, setAgeStatus] = useState<AgeVerificationStatus | null>(null);
 
   const loadProfileSections = useCallback(async () => {
     if (!userId) return;
@@ -210,7 +216,8 @@ export default function ProfileScreen() {
       // Favorites are no longer fetched here: the Travel History card was
       // their only reader and now counts real visits instead, and the
       // headline "Favorites Saved" figure comes from getUserStats.
-      const [userCollections, recentlyViewed, reviews, passportBundle, shops] = await Promise.all([
+      const [userCollections, recentlyViewed, reviews, passportBundle, shops, ageVerification] =
+        await Promise.all([
         getUserCollections(userId),
         getRecentlyViewedLounges(userId, 1),
         getUserReviews(userId),
@@ -218,9 +225,14 @@ export default function ProfileScreen() {
         // Never fails the profile over it: a member who owns nothing is the
         // common case and looks identical to a failed lookup here.
         getLoungesForOwner(userId).catch(() => []),
+        // Never fails the profile over it — an unreadable status just means the
+        // card stays hidden, which is the same as being verified from the
+        // screen's point of view.
+        getAgeVerification(userId).catch(() => null),
       ]);
       setCollections(userCollections);
       setOwnsShops(shops.length > 0);
+      setAgeStatus(ageVerification?.status ?? null);
       setLastViewedLounge(recentlyViewed[0] ?? null);
       setPassport(passportBundle.passport);
 
@@ -360,6 +372,42 @@ export default function ProfileScreen() {
           </View>
           <ChevronRight size={18} color={theme.colors.secondarySilver} />
         </Pressable>
+
+        {/* ---------------- 21+ verification ---------------- */}
+        {/* Shown only while unresolved: pending needs an ID, rejected needs a
+            better one. A verified member sees nothing, and a member with no
+            record at all predates the feature — also nothing, because nagging
+            them is a product decision nobody has made. */}
+        {ageStatus === 'pending' || ageStatus === 'rejected' ? (
+          <Pressable style={styles.passportCard} onPress={() => navigation.navigate('AgeVerification')}>
+            <View style={styles.passportIconBox}>
+              <IdCard size={20} color={theme.colors.accentGold} />
+            </View>
+            <View style={styles.passportTextGroup}>
+              <Text style={styles.passportTitle}>Age Verification</Text>
+              <Text style={styles.passportSubtitle}>
+                {ageStatus === 'rejected'
+                  ? 'We couldn’t verify your ID — send another'
+                  : 'Upload an ID to confirm you’re 21+'}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={theme.colors.secondarySilver} />
+          </Pressable>
+        ) : null}
+
+        {/* ---------------- Admin: Review Age Verification ---------------- */}
+        {isAdminEmail(auth.currentUser?.email) && (
+          <Pressable style={styles.passportCard} onPress={() => navigation.navigate('AdminAgeReview')}>
+            <View style={styles.passportIconBox}>
+              <IdCard size={20} color={theme.colors.accentGold} />
+            </View>
+            <View style={styles.passportTextGroup}>
+              <Text style={styles.passportTitle}>Review Age Verification</Text>
+              <Text style={styles.passportSubtitle}>Check member IDs against declared age</Text>
+            </View>
+            <ChevronRight size={18} color={theme.colors.secondarySilver} />
+          </Pressable>
+        )}
 
         {/* ---------------- Owner: My Shops ---------------- */}
         {/* Shown only to owners/claimants — see ownsShops above. This is the

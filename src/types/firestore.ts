@@ -308,6 +308,44 @@ export type AiPreferences = {
   drinks: string[];
 };
 
+/**
+ * 21+ age verification, per Dr. Brinkley 2026-08-17: "the only people who
+ * should be able to register are people who are 21 and up", backed by an ID
+ * ("evaluate the driver's license or whatever to determine the age").
+ *
+ * Two layers, deliberately:
+ *
+ *  - `dateOfBirth` is self-declared and checked at sign-up (see
+ *    src/utils/ageCheck.ts). This is the *gate* — an under-21 date is refused
+ *    before an account exists at all, so no minor account is ever created.
+ *  - `status` plus `idImageUrl` is the *evidence*, reviewed by a human, the
+ *    same manual pattern the business claims already use. No paid identity
+ *    service is involved.
+ *
+ * `dateOfBirth` is an ISO `YYYY-MM-DD` string rather than a Timestamp on
+ * purpose: a birth date is a calendar date, not an instant, and storing it as a
+ * timestamp reintroduces the timezone off-by-one that ageCheck exists to avoid.
+ */
+export type AgeVerificationStatus = 'pending' | 'verified' | 'rejected';
+
+export type AgeVerification = {
+  /** ISO YYYY-MM-DD. Self-declared at sign-up and already gate-checked. */
+  dateOfBirth: string;
+  status: AgeVerificationStatus;
+  /**
+   * Firebase Storage URL of the uploaded ID, when one has been supplied.
+   * Optional because the date gate stands on its own — a member is blocked at
+   * sign-up regardless, and the ID is what upgrades them from `pending`.
+   */
+  idImageUrl?: string;
+  submittedAt: Timestamp;
+  reviewedAt?: Timestamp;
+  /** Admin uid who made the decision, so a call can be traced to a person. */
+  reviewedBy?: string;
+  /** Set on rejection so the member is told why rather than just refused. */
+  rejectionReason?: string;
+};
+
 export type UserDocument = {
   /** Absent for members who have never opened AI Settings. */
   aiPreferences?: AiPreferences;
@@ -319,6 +357,12 @@ export type UserDocument = {
   favoriteBrand: string;
   favoriteLounge: string;
   memberSince: Timestamp;
+  /**
+   * 21+ verification. Absent on accounts created before this existed, which is
+   * why every read treats "missing" as unverified rather than assuming a
+   * grandfathered pass.
+   */
+  ageVerification?: AgeVerification;
   /** Starts at all-zero for every new user; incremented by later phases
    * (check-in flow, review submission, favoriting, etc.) — never
    * hardcoded from mock data. */
@@ -434,7 +478,9 @@ export type NotificationType =
   | 'new_review_on_favorite'
   | 'claim_approved'
   | 'claim_rejected'
-  | 'ownership_revoked';
+  | 'ownership_revoked'
+  | 'age_verified'
+  | 'age_rejected';
 
 export type NotificationDocument = {
   id: string;

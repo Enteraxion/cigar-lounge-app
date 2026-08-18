@@ -213,7 +213,35 @@ service cloud.firestore {
     // users/{userId} and its subcollections
     // ---------------------------------------------------------------
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      // Admins can read a member's document so they can review 21+ age
+      // verifications (ageVerificationService.getPendingAgeVerifications).
+      allow read: if isOwner(userId) || isAdmin();
+
+      // A member owns their profile and may SUBMIT an age verification, but may
+      // never DECIDE one. Without this split the whole 21+ gate would be
+      // decorative: `allow write: if isOwner(userId)` let anyone set
+      // `ageVerification.status` to 'verified' on themselves with one request.
+      allow write: if isAdmin() || (isOwner(userId) && !decidesOwnAgeVerification());
+
+      function incomingAgeStatus() {
+        return request.resource.data.get('ageVerification', {}).get('status', '');
+      }
+      function existingAgeStatus() {
+        return resource == null
+          ? ''
+          : resource.data.get('ageVerification', {}).get('status', '');
+      }
+      /**
+       * True when this write changes the member's own verification status to
+       * anything other than 'pending'. Comparing against the existing value
+       * matters: a verified member editing their home city sends a document
+       * that still says 'verified', and that must not be mistaken for them
+       * trying to grant it.
+       */
+      function decidesOwnAgeVerification() {
+        return incomingAgeStatus() != existingAgeStatus()
+          && incomingAgeStatus() != 'pending';
+      }
 
       match /favorites/{loungeId} {
         allow read, write: if isOwner(userId);
@@ -269,7 +297,8 @@ service cloud.firestore {
           && (
             request.resource.data.type in ['review_helpful', 'new_review_on_favorite']
             || (isAdmin() && request.resource.data.type in [
-                 'claim_approved', 'claim_rejected', 'ownership_revoked'
+                 'claim_approved', 'claim_rejected', 'ownership_revoked',
+                 'age_verified', 'age_rejected'
                ])
           );
       }

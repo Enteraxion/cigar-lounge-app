@@ -361,6 +361,91 @@ describe('lounge claim lifecycle rules', () => {
   });
 });
 
+/**
+ * The 21+ age gate, at the rules layer.
+ *
+ * The gate is only worth something if a member cannot grant it to themselves.
+ * Before this rule existed `allow write: if isOwner(userId)` let anyone set
+ * their own `ageVerification.status` to 'verified' with a single request, which
+ * would have made the whole feature decorative.
+ */
+describe('age verification rules', () => {
+  const ME = 'member-1';
+
+  async function seedUser(fields: Record<string, unknown> = {}) {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'users', ME), { name: 'A Member', ...fields });
+    });
+  }
+
+  it('lets a member submit their own verification as pending', async () => {
+    await seedUser();
+    await assertSucceeds(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        { ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses a member marking themselves verified', async () => {
+    // The property this block exists for.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertFails(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        { ageVerification: { status: 'verified' } },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses a member marking themselves rejected either', async () => {
+    // Not harmful, but the rule should be about who decides, not about which
+    // outcome happens to be favourable.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertFails(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        { ageVerification: { status: 'rejected' } },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('lets an admin decide', async () => {
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertSucceeds(
+      setDoc(
+        doc(admin(), 'users', ME),
+        { ageVerification: { status: 'verified', reviewedBy: 'admin-1' } },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('still lets a verified member edit the rest of their profile', async () => {
+    // The regression the existing-vs-incoming comparison prevents: a verified
+    // member's document still says 'verified' on every subsequent write, and
+    // that must not be read as an attempt to grant it.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'verified' } });
+    await assertSucceeds(
+      setDoc(doc(member(ME), 'users', ME), { homeCity: 'Austin, TX' }, { merge: true }),
+    );
+  });
+
+  it('lets an admin read a member document to review it', async () => {
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertSucceeds(getDoc(doc(admin(), 'users', ME)));
+  });
+
+  it('does not let one member read another', async () => {
+    await seedUser();
+    await assertFails(getDoc(doc(member('someone-else'), 'users', ME)));
+  });
+});
+
 describe('aggregates rules', () => {
   it('is readable by anyone, including signed-out visitors', async () => {
     await testEnv.withSecurityRulesDisabled(async context => {

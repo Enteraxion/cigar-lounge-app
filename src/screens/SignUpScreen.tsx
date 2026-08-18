@@ -42,6 +42,8 @@ import {
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 import { theme, withAlpha } from '../theme';
+import { ageCheckMessage, checkMinimumAge } from '../utils/ageCheck';
+import { submitAgeVerification } from '../services/ageVerificationService';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
@@ -63,6 +65,12 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Date of birth as three separate fields rather than one free-text date.
+  // A single box invites "18/08/2005" vs "08/18/2005" ambiguity, and getting
+  // that wrong on an age gate is not a cosmetic problem.
+  const [birthDay, setBirthDay] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthYear, setBirthYear] = useState('');
 
   const handleCreateAccount = async () => {
     setErrorMessage(null);
@@ -76,6 +84,22 @@ export default function SignUpScreen() {
       return;
     }
 
+    // The 21+ gate runs BEFORE createUserWithEmailAndPassword, deliberately.
+    // Checking afterwards would mean a minor's account exists, however
+    // briefly, and would then need deleting — this way it is never created.
+    // Dr. Brinkley, 2026-08-17: "the only people who should be able to
+    // register are people who are 21 and up."
+    const birth = {
+      year: birthYear.trim() ? Number(birthYear.trim()) : undefined,
+      month: birthMonth.trim() ? Number(birthMonth.trim()) : undefined,
+      day: birthDay.trim() ? Number(birthDay.trim()) : undefined,
+    };
+    const ageCheck = checkMinimumAge(birth);
+    if (!ageCheck.ok) {
+      setErrorMessage(ageCheckMessage(ageCheck));
+      return;
+    }
+
     setSubmitting(true);
     // createUserWithEmailAndPassword signs the new user in automatically;
     // suppress AppNavigator's session listener for that one transient event
@@ -84,6 +108,16 @@ export default function SignUpScreen() {
     try {
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(credential.user, { displayName: fullName.trim() });
+      // Recorded, not decided — the gate above already accepted it. Written
+      // before signing out, while this session still has permission to.
+      await submitAgeVerification(credential.user.uid, {
+        year: birth.year as number,
+        month: birth.month as number,
+        day: birth.day as number,
+      }).catch(() => {
+        // An account with no verification record reads as unverified, which is
+        // the safe direction — it does not become a way in.
+      });
       await signOut(auth);
       Alert.alert('Account Created', 'Please sign in with your new credentials.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
@@ -144,6 +178,53 @@ export default function SignUpScreen() {
 
           {/* ---- Form ---- */}
           <View style={styles.form}>
+            {/* Date of Birth — the 21+ gate. Three fields rather than one
+                free-text date, because "18/08" and "08/18" are both plausible
+                readings of the same input and guessing wrong on an age gate is
+                not a cosmetic error. */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Date of Birth</Text>
+              <View style={styles.dobRow}>
+                <View style={[styles.inputWrapper, styles.dobField]}>
+                  <TextInput
+                    accessibilityLabel="Day of birth"
+                    style={styles.dobInput}
+                    placeholder="DD"
+                    placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                    value={birthDay}
+                    onChangeText={text => setBirthDay(text.replace(/\D/g, '').slice(0, 2))}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+                <View style={[styles.inputWrapper, styles.dobField]}>
+                  <TextInput
+                    accessibilityLabel="Month of birth"
+                    style={styles.dobInput}
+                    placeholder="MM"
+                    placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                    value={birthMonth}
+                    onChangeText={text => setBirthMonth(text.replace(/\D/g, '').slice(0, 2))}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+                <View style={[styles.inputWrapper, styles.dobFieldYear]}>
+                  <TextInput
+                    accessibilityLabel="Year of birth"
+                    style={styles.dobInput}
+                    placeholder="YYYY"
+                    placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                    value={birthYear}
+                    onChangeText={text => setBirthYear(text.replace(/\D/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                  />
+                </View>
+              </View>
+              <Text style={styles.dobHint}>You must be 21 or over to join.</Text>
+            </View>
+
             {/* Full Name field */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Full Name</Text>
@@ -413,6 +494,30 @@ const styles = StyleSheet.create({
   // ---- Form ----
   form: {
     gap: 16,
+  },
+  dobRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  dobField: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  dobFieldYear: {
+    flex: 1.4,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  dobInput: {
+    flex: 1,
+    ...theme.typography.body,
+    fontSize: 15,
+    color: theme.colors.white,
+    textAlign: 'center',
+  },
+  dobHint: {
+    ...theme.typography.medium,
+    fontSize: 11,
+    color: theme.colors.mutedGray,
   },
   fieldGroup: {
     gap: 8,

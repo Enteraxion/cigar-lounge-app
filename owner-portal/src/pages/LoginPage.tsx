@@ -26,7 +26,7 @@ export default function LoginPage() {
     <div className="login">
       <div className="login__card">
         <div className="login__brand">
-          <h1 className="login__wordmark">The Reserve</h1>
+          <h1 className="login__wordmark">Lounge Locator</h1>
           <p className="login__tagline">Owner Portal</p>
         </div>
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
             so a "Create account" form on the web would create an account
             with nothing attached to it. */}
         <p className="login__hint">
-          Use the same account you use in The Reserve app. Don't have one yet? Claim your
+          Use the same account you use in the Lounge Locator app. Don't have one yet? Claim your
           business in the app first, then sign in here.
         </p>
       </div>

@@ -80,13 +80,13 @@ export default function DashboardPage() {
     <AppShell
       eyebrow="Dashboard"
       title="Your Listings"
-      subtitle="Manage how your business appears in The Reserve, and keep on top of bookings."
+      subtitle="Manage how your business appears in Lounge Locator, and keep on top of bookings."
     >
       {loading ? (
         <p className="muted">Loading…</p>
       ) : summaries.length === 0 ? (
         <div className="empty">
-          No claim found for this account yet. Claim your business from The Reserve app and it
+          No claim found for this account yet. Claim your business from the Lounge Locator app and it
           will appear here.
         </div>
       ) : (

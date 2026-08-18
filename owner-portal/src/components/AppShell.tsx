@@ -28,7 +28,7 @@ export default function AppShell({
     <div className="shell">
       <header className="topbar">
         <Link to="/" className="brand">
-          <span className="brand__mark">The Reserve</span>
+          <span className="brand__mark">Lounge Locator</span>
           <span className="brand__sub">Owner Portal</span>
         </Link>
 

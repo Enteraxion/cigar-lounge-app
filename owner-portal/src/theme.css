@@ -1,5 +1,5 @@
 /**
- * The Reserve — Owner Portal design system.
+ * Lounge Locator — Owner Portal design system.
  *
  * Tokens mirrored from the mobile app's ../../src/theme/index.ts so the
  * portal and the app read as one product: same navy/gold palette, same
@@ -692,6 +692,16 @@ a {
 .login__brand {
   text-align: center;
   margin-bottom: var(--space-xl);
+}
+
+/* The mark sits above the wordmark. alt="" on purpose: the name is already
+   the adjacent h1, so announcing it twice is noise for a screen reader. */
+.login__mark {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  margin-bottom: 14px;
+  border: 1px solid var(--gold-line, rgba(200, 168, 104, 0.28));
 }
 
 .login__wordmark {

@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
     <div className="login">
       <div className="login__card">
         <div className="login__brand">
-          <h1 className="login__wordmark">The Reserve</h1>
+          <h1 className="login__wordmark">Lounge Locator</h1>
           <p className="login__tagline">Owner Portal</p>
         </div>
 

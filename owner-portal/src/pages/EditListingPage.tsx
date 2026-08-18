@@ -75,7 +75,7 @@ export default function EditListingPage() {
     <AppShell
       eyebrow={loungeName}
       title="Edit Listing"
-      subtitle="This is what guests see on your business's page in The Reserve app."
+      subtitle="This is what guests see on your business's page in the Lounge Locator app."
       backTo="/"
     >
       {loading ? (

@@ -5,6 +5,7 @@
  * deliberately about *what a member observes*, not about internal shape.
  */
 
+import type { LoungeType } from '../loungeType';
 import {
   applySearchFilters,
   isPremiumLounge,
@@ -44,6 +45,7 @@ const NO_FILTERS = {
   atmosphere: [] as string[],
   amenities: [] as string[],
   entertainment: [] as string[],
+  loungeTypes: [] as LoungeType[],
 };
 
 describe('applySearchFilters', () => {
@@ -171,5 +173,50 @@ describe('isPremiumLounge', () => {
     const ordinary = lounge('o', { ratings: { overall: 3.2 } as never, priceRange: '$' });
     expect(isPremiumLounge(premium)).toBe(true);
     expect(isPremiumLounge(ordinary)).toBe(false);
+  });
+});
+
+describe('applySearchFilters — lounge type', () => {
+  const cigarBar = lounge('c', { name: 'King Corona Cigars' });
+  const hookahBar = lounge('h', { name: 'Sahara Shisha Lounge' });
+  const unclear = lounge('u', { name: 'The Metropolitan Society' });
+  const all = [cigarBar, hookahBar, unclear];
+
+  it('returns everything when no type is selected', () => {
+    expect(applySearchFilters(all, NO_FILTERS, AUSTIN)).toHaveLength(3);
+  });
+
+  it('narrows to the selected type', () => {
+    const result = applySearchFilters(all, { ...NO_FILTERS, loungeTypes: ['hookah'] }, AUSTIN);
+    expect(result.map(l => l.id)).toEqual(['h']);
+  });
+
+  it('ORs multiple selected types', () => {
+    const result = applySearchFilters(
+      all,
+      { ...NO_FILTERS, loungeTypes: ['cigar', 'hookah'] },
+      AUSTIN,
+    );
+    expect(result.map(l => l.id).sort()).toEqual(['c', 'h']);
+  });
+
+  it('reaches the untypeable venues through "Other"', () => {
+    // 36.7% of the real collection lands here; without this option those
+    // lounges become unreachable the moment any type is selected.
+    const result = applySearchFilters(all, { ...NO_FILTERS, loungeTypes: ['unknown'] }, AUSTIN);
+    expect(result.map(l => l.id)).toEqual(['u']);
+  });
+
+  it('respects real Yelp categories over the name', () => {
+    const mislabelled = lounge('m', {
+      name: 'Havana Cigar Lounge',
+      yelpCategories: ['hookah_bars'],
+    });
+    expect(
+      applySearchFilters([mislabelled], { ...NO_FILTERS, loungeTypes: ['cigar'] }, AUSTIN),
+    ).toHaveLength(0);
+    expect(
+      applySearchFilters([mislabelled], { ...NO_FILTERS, loungeTypes: ['hookah'] }, AUSTIN),
+    ).toHaveLength(1);
   });
 });

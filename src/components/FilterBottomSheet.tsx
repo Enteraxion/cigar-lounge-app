@@ -38,6 +38,7 @@ import {
 import {
   ChevronDown,
   ChevronUp,
+  Cigarette,
   Clock,
   LayoutGrid,
   LocateFixed,
@@ -48,6 +49,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { LOUNGE_TYPE_OPTIONS, type LoungeType } from '../utils/loungeType';
 import DistanceSlider from './DistanceSlider';
 import {
   amenitiesOptions,
@@ -90,7 +92,13 @@ type Props = {
   userId?: string;
 };
 
-type SectionId = 'location' | 'availability' | 'atmosphere' | 'amenities' | 'entertainment';
+type SectionId =
+  | 'location'
+  | 'loungeType'
+  | 'availability'
+  | 'atmosphere'
+  | 'amenities'
+  | 'entertainment';
 
 function SectionHeaderRow({
   icon,
@@ -186,6 +194,9 @@ export default function FilterBottomSheet({
     initialFilters.atmosphere,
   );
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialFilters.amenities);
+  const [selectedLoungeTypes, setSelectedLoungeTypes] = useState<LoungeType[]>(
+    initialFilters.loungeTypes,
+  );
   const [selectedEntertainment, setSelectedEntertainment] = useState<string[]>(
     initialFilters.entertainment,
   );
@@ -225,6 +236,7 @@ export default function FilterBottomSheet({
     setSelectedAtmosphere([]);
     setSelectedAmenities([]);
     setSelectedEntertainment([]);
+    setSelectedLoungeTypes([]);
   };
 
   const draftFilters: SearchFilters = {
@@ -235,6 +247,7 @@ export default function FilterBottomSheet({
     atmosphere: selectedAtmosphere,
     amenities: selectedAmenities,
     entertainment: selectedEntertainment,
+    loungeTypes: selectedLoungeTypes,
   };
 
   // Dataset is a few dozen lounges at most (see loungeService.ts), so
@@ -437,6 +450,35 @@ export default function FilterBottomSheet({
                   options={availabilityOptions}
                   selectedIds={selectedAvailability}
                   onToggle={id => setSelectedAvailability(prev => toggleId(prev, id))}
+                />
+              </View>
+            ) : null}
+          </View>
+
+          {/* ---------------- Lounge Type ---------------- */}
+          {/* Placed first because it is the coarsest cut a member can make —
+              "show me hookah bars" narrows harder than any amenity, and
+              Dr. Brinkley asked for it by name (2026-08-19).
+
+              Not passed through `viableFilterOptions` like the sections below.
+              Those hide chips that match nothing in the dataset, which is right
+              for free-text attributes; type is derived for every lounge, so
+              every option here always has venues behind it. */}
+          <View style={styles.section}>
+            <SectionHeaderRow
+              icon={<Cigarette size={16} color={theme.colors.secondarySilver} />}
+              title="Lounge Type"
+              expanded={expandedSections.includes('loungeType')}
+              onToggle={() => toggleSection('loungeType')}
+            />
+            {expandedSections.includes('loungeType') ? (
+              <View style={styles.sectionBody}>
+                <ChipGroup
+                  options={LOUNGE_TYPE_OPTIONS}
+                  selectedIds={selectedLoungeTypes}
+                  onToggle={id =>
+                    setSelectedLoungeTypes(prev => toggleId(prev, id) as LoungeType[])
+                  }
                 />
               </View>
             ) : null}

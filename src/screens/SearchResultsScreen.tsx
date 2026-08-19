@@ -115,6 +115,7 @@ const defaultSearchFilters: SearchFilters = {
   atmosphere: [],
   amenities: [],
   entertainment: [],
+  loungeTypes: [],
 };
 
 /** Fits a region around every result's real coordinates, falling back to

@@ -23,6 +23,7 @@
 
 import type { Lounge } from '../services/loungeService';
 import { defaultRegion } from '../data/mockMap';
+import { matchesLoungeType, type LoungeType } from './loungeType';
 
 export type LatLng = { latitude: number; longitude: number };
 
@@ -34,6 +35,13 @@ export type SearchFilters = {
   atmosphere: string[];
   amenities: string[];
   entertainment: string[];
+  /**
+   * Venue type — cigar, hookah, cannabis and so on. Requested by
+   * Dr. Brinkley 2026-08-19. Unlike the other sections this is not a keyword
+   * match against free text: type is derived, real Yelp categories first and
+   * the name only as a fallback. See src/utils/loungeType.ts.
+   */
+  loungeTypes: LoungeType[];
 };
 
 /**
@@ -180,7 +188,8 @@ export function applySearchFilters(
       matchesAvailability(lounge, filters.availability) &&
       matchesKeywordCategory(lounge, filters.atmosphere) &&
       matchesKeywordCategory(lounge, filters.amenities) &&
-      matchesKeywordCategory(lounge, filters.entertainment),
+      matchesKeywordCategory(lounge, filters.entertainment) &&
+      matchesLoungeType(lounge, filters.loungeTypes),
   );
 }
 

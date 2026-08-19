@@ -36,6 +36,7 @@ import {
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { useAgeVerification } from '../hooks/useAgeVerification';
+import { useEmailVerification } from '../hooks/useEmailVerification';
 import { verificationGateMessage, type GatedAction } from '../utils/verificationGate';
 import StarRating from '../components/StarRating';
 import FilterReviewsSheet from '../components/FilterReviewsSheet';
@@ -235,16 +236,21 @@ export default function ReviewsScreen() {
 
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const ageState = useAgeVerification();
+  const emailState = useEmailVerification();
 
   // Step 4 of the 21+ flow: browsing reviews is open, writing one is not.
   // Grandfathered accounts (no record at all) pass, so this cannot lock out
   // anyone who predates the feature.
   const requireVerified = (action: GatedAction, proceed: () => void) => {
-    if (ageState.isVerified || ageState.verification === null) {
+    // Email confirmation applies to everyone, including accounts that predate the
+    // 21+ gate — it is about the address being real, not about age, so the
+    // grandfathering below deliberately does not cover it.
+    const gateState = { ...ageState, emailVerified: emailState.emailVerified };
+    if (emailState.emailVerified !== false && (ageState.isVerified || ageState.verification === null)) {
       proceed();
       return;
     }
-    const { title, body } = verificationGateMessage(action, ageState);
+    const { title, body } = verificationGateMessage(action, gateState);
     Alert.alert(title, body);
   };
 

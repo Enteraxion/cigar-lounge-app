@@ -47,4 +47,32 @@ describe('verificationGateMessage', () => {
       }
     }
   });
+
+  describe('unconfirmed email', () => {
+    const UNCONFIRMED = { awaitingReview: false, wasRejected: false, emailVerified: false };
+
+    it('names the action, like every other branch', () => {
+      expect(verificationGateMessage('review', UNCONFIRMED).body).toContain('write a review');
+      expect(verificationGateMessage('reservation', UNCONFIRMED).body).toContain('reserve a table');
+      expect(verificationGateMessage('claim', UNCONFIRMED).body).toContain('claim a business');
+    });
+
+    it('points at the inbox rather than at the app', () => {
+      // "Verify your email" alone sends people hunting for a screen that does not
+      // exist. The link is in their mail.
+      expect(verificationGateMessage('review', UNCONFIRMED).body.toLowerCase()).toContain('link');
+      expect(verificationGateMessage('review', UNCONFIRMED).title).toBe('Confirm your email');
+    });
+
+    it('outranks a pending ID review, which the member cannot act on', () => {
+      const both = { awaitingReview: true, wasRejected: false, emailVerified: false };
+      expect(verificationGateMessage('review', both).title).toBe('Confirm your email');
+    });
+
+    it('is silent when the email state is unknown', () => {
+      // undefined is "still loading" — it must not produce an email message.
+      const loading = { awaitingReview: true, wasRejected: false, emailVerified: undefined };
+      expect(verificationGateMessage('review', loading).title).not.toBe('Confirm your email');
+    });
+  });
 });

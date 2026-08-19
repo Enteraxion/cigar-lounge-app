@@ -10,7 +10,13 @@
  * namespaced `auth()` API is deprecated as of @react-native-firebase v22.
  */
 
-import { getAuth, onAuthStateChanged, signOut, type User } from '@react-native-firebase/auth';
+import {
+  getAuth,
+  onAuthStateChanged,
+  sendEmailVerification,
+  signOut,
+  type User,
+} from '@react-native-firebase/auth';
 
 export const auth = getAuth();
 
@@ -55,6 +61,55 @@ export function endSignUpTransition() {
 
 export function isSignUpTransitionActive() {
   return signUpTransitionActive;
+}
+
+/**
+ * Asks Firebase to email the member a link confirming they own the address.
+ *
+ * Rohith, 2026-08-19: every new member should prove their email. Firebase has no
+ * OTP code for password accounts — it sends a link — and this is the free,
+ * server-side version of that with no email provider of our own to configure.
+ *
+ * Never allowed to fail loudly. It is called immediately after sign-up, where
+ * throwing would surface as "couldn't create your account" over an account that
+ * was in fact created. The member can resend from the banner, and the address
+ * being unconfirmed is already a state the app handles.
+ */
+export async function sendVerificationEmail(): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user || user.emailVerified) {
+    return false;
+  }
+  try {
+    await sendEmailVerification(user);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Re-reads the account so `emailVerified` reflects a link tapped elsewhere.
+ *
+ * The flag is baked into the cached ID token, so it does not change on its own
+ * when the member confirms in their mail app — without an explicit reload the app
+ * would keep insisting the address is unconfirmed until the token happened to
+ * refresh. Callers poll this when the app returns to the foreground, which is
+ * exactly when someone has come back from tapping the link.
+ */
+export async function refreshEmailVerified(): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user) {
+    return false;
+  }
+  try {
+    await user.reload();
+    return auth.currentUser?.emailVerified ?? false;
+  } catch {
+    // A failed refresh reports the value already held rather than false, so a
+    // dropped request cannot un-verify somebody who is verified.
+    return auth.currentUser?.emailVerified ?? false;
+  }
 }
 
 /**

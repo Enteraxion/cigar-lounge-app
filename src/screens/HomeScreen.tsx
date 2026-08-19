@@ -73,6 +73,7 @@ import { loungeImageUri } from '../utils/loungeImage';
 import { tabBarClearance, TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { useAgeVerification } from '../hooks/useAgeVerification';
 import VerificationBanner from '../components/VerificationBanner';
+import { useEmailVerification } from '../hooks/useEmailVerification';
 
 const NEARBY_COUNT = 4;
 /**
@@ -125,6 +126,7 @@ export default function HomeScreen() {
   const { count: unreadNotificationCount } = useUnreadNotificationCount();
   const { location: currentLocation } = useCurrentLocation();
   const ageState = useAgeVerification();
+  const emailState = useEmailVerification();
   const [lounges, setLounges] = useState<Lounge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -258,6 +260,10 @@ export default function HomeScreen() {
           awaitingReview={ageState.awaitingReview}
           needsId={ageState.needsId}
           wasRejected={ageState.wasRejected}
+          emailVerified={emailState.emailVerified}
+          onResendEmail={emailState.resend}
+          resendingEmail={emailState.sending}
+          resendCooldownSeconds={emailState.cooldownSeconds}
           onPress={() =>
             (tabNavigation.navigate as (n: string, p?: object) => void)('Profile', {
               screen: 'AgeVerification',

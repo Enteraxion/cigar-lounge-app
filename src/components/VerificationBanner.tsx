@@ -1,66 +1,89 @@
 /**
- * The "verification pending" strip.
+ * The one-line strip telling a member what their account still needs.
  *
- * Step 3 of the 21+ flow (Dr. Brinkley, 2026-08-19): a member who has uploaded
- * their ID browses freely while a person reviews it. This is what tells them
- * that is happening — without it, discovering that Reserve a Table is locked
- * would be a mystery rather than an explained wait.
+ * Steps 3 of the 21+ flow (Dr. Brinkley, 2026-08-19) plus email confirmation
+ * (Rohith, same day). A member can owe several things at once, and exactly one is
+ * shown — src/utils/accountPrompt.ts decides which, and explains the ordering.
+ * Stacking them on the first screen of the app gets none of them read.
  *
- * Renders nothing at all when there is nothing to say: verified members, and
- * members with no record (every account predating the feature). A banner that
- * is always present stops being read.
+ * Renders nothing when there is nothing to say: verified members, and accounts
+ * predating the gate. A banner that is always present stops being one.
  */
 
 import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { Clock, IdCard, XCircle } from 'lucide-react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { Clock, IdCard, MailCheck, XCircle } from 'lucide-react-native';
 import { theme } from '../theme';
+import { accountPrompt, type AccountPromptInput } from '../utils/accountPrompt';
 
 export default function VerificationBanner({
   awaitingReview,
   needsId,
   wasRejected,
+  emailVerified,
   onPress,
-}: {
-  awaitingReview: boolean;
-  /**
-   * Skipped the wall and has sent nothing yet. This is the only prompt such a
-   * member gets, so unlike the other two it names what verifying buys them —
-   * "you still need to" with no reason attached reads as nagging.
-   */
-  needsId: boolean;
-  wasRejected: boolean;
-  /** Opens the upload screen, so a member can act on it immediately. */
+  onResendEmail,
+  resendingEmail = false,
+  resendCooldownSeconds = 0,
+}: AccountPromptInput & {
+  /** Opens the ID screen, so a member can act on the age prompts immediately. */
   onPress?: () => void;
+  /** Sends another confirmation link. Absent means the email prompt is read-only. */
+  onResendEmail?: () => void;
+  resendingEmail?: boolean;
+  resendCooldownSeconds?: number;
 }) {
-  if (!awaitingReview && !wasRejected && !needsId) {
+  const prompt = accountPrompt({ awaitingReview, needsId, wasRejected, emailVerified });
+  if (prompt === 'none') {
     return null;
   }
 
-  const rejected = wasRejected;
+  const rejected = prompt === 'rejected';
+  const email = prompt === 'confirm-email';
+
+  // The email prompt's action is resending, not opening a screen — tapping it to
+  // land on the ID upload would be answering a question nobody asked.
+  const action = email ? onResendEmail : onPress;
+
   return (
     <Pressable
       style={[styles.banner, rejected && styles.bannerRejected]}
-      onPress={onPress}
-      disabled={!onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
+      onPress={action}
+      disabled={!action || resendingEmail || (email && resendCooldownSeconds > 0)}
+      accessibilityRole={action ? 'button' : undefined}
     >
       {rejected ? (
         <XCircle size={14} color={theme.colors.danger} />
-      ) : needsId ? (
+      ) : email ? (
+        <MailCheck size={14} color={theme.colors.accentGold} />
+      ) : prompt === 'needs-id' ? (
         <IdCard size={14} color={theme.colors.accentGold} />
       ) : (
         <Clock size={14} color={theme.colors.accentGold} />
       )}
-      <Text style={[styles.text, rejected && styles.textRejected]}>
-        {rejected
-          ? 'We couldn’t verify your ID — tap to send another photo.'
-          : needsId
-            ? 'Verify your age to write reviews, reserve tables and claim a business.'
-            : 'Your ID is being reviewed. Reviews and reservations unlock once you’re verified.'}
-      </Text>
+
+      <Text style={[styles.text, rejected && styles.textRejected]}>{message(prompt)}</Text>
+
+      {email && resendingEmail ? <ActivityIndicator size="small" color={theme.colors.accentGold} /> : null}
     </Pressable>
   );
+
+  function message(kind: typeof prompt): string {
+    switch (kind) {
+      case 'rejected':
+        return 'We couldn’t verify your ID — tap to send another photo.';
+      case 'needs-id':
+        return 'Verify your age to write reviews, reserve tables and claim a business.';
+      case 'confirm-email':
+        // Says where the link is and what to do, because "verify your email" on its
+        // own sends people looking for a screen in the app that does not exist.
+        return resendCooldownSeconds > 0
+          ? `Confirmation link sent — check your inbox. Resend in ${resendCooldownSeconds}s.`
+          : 'Check your inbox for a link to confirm your email — tap here to resend it.';
+      default:
+        return 'Your ID is being reviewed. Reviews and reservations unlock once you’re verified.';
+    }
+  }
 }
 
 const styles = StyleSheet.create({

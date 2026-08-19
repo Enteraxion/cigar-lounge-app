@@ -36,6 +36,7 @@ import {
   beginSignUpTransition,
   endSignUpTransition,
   getAuthErrorMessage,
+  sendVerificationEmail,
 } from '../services/firebaseAuth';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
@@ -116,6 +117,12 @@ export default function SignUpScreen() {
         // An account with no verification record reads as unverified, which is
         // the safe direction — it does not become a way in.
       });
+      // Ask Firebase to email the confirmation link. Fire-and-forget by design:
+      // sendVerificationEmail never throws, because a failure here would surface
+      // as "couldn't create your account" over an account that was created. The
+      // member can resend from the banner, and an unconfirmed address is a state
+      // the app already handles rather than an error.
+      await sendVerificationEmail();
       // Deliberately no sign-out and no "please sign in" alert. The session
       // stays, so AppNavigator takes the new member straight to the ID upload —
       // which is what Dr. Brinkley asked for ("right after they sign up ...

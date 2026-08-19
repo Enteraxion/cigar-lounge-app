@@ -21,8 +21,17 @@ const WHAT: Record<GatedAction, string> = {
 
 export function verificationGateMessage(
   action: GatedAction,
-  state: { awaitingReview: boolean; wasRejected: boolean },
+  state: { awaitingReview: boolean; wasRejected: boolean; emailVerified?: boolean },
 ): { title: string; body: string } {
+  // Checked before the 21+ branches because it is the one the member can clear
+  // right now, without waiting on anybody here. Telling them to sit tight for a
+  // review when the actual blocker is a link in their inbox would be wrong.
+  if (state.emailVerified === false) {
+    return {
+      title: 'Confirm your email',
+      body: `We sent a link to your email address. Tap it and you'll be able to ${WHAT[action]}.`,
+    };
+  }
   if (state.wasRejected) {
     return {
       title: 'Verification needed',

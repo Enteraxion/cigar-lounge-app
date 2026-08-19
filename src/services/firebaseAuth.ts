@@ -77,13 +77,30 @@ export function isSignUpTransitionActive() {
  */
 export async function sendVerificationEmail(): Promise<boolean> {
   const user = auth.currentUser;
-  if (!user || user.emailVerified) {
+  if (!user) {
+    if (__DEV__) {
+      console.warn('[email verification] no signed-in user to send to');
+    }
+    return false;
+  }
+  if (user.emailVerified) {
     return false;
   }
   try {
     await sendEmailVerification(user);
+    if (__DEV__) {
+      console.log(`[email verification] link sent to ${user.email}`);
+    }
     return true;
-  } catch {
+  } catch (error) {
+    // Swallowed on purpose — see above — but never silently. The first time this
+    // failed the question "was an email even attempted?" could not be answered
+    // from the logs, which turned a one-line answer into a hunt. The most likely
+    // real causes are auth/too-many-requests (Firebase rate-limits these
+    // aggressively) and an address that does not exist.
+    if (__DEV__) {
+      console.warn('[email verification] send failed:', error);
+    }
     return false;
   }
 }

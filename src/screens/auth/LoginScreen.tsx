@@ -201,14 +201,21 @@ export default function LoginScreen() {
         </View>
 
         {/* ---------------- Footer ---------------- */}
+        {/* "Apply for Access" until 2026-08-19 — membership wording carried over
+            from the original Figma. It promised something the app does not do:
+            there is no application and nothing to wait for, an account is created
+            immediately. It also stopped reading as the sign-up link at all, which
+            is how the only route to sign-up came to look missing. The screen it
+            opens is headed "Create Account", so this now matches it. */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Not a member yet?{' '}
             <Text
               style={styles.footerLink}
               onPress={() => navigation.navigate('SignUp')}
+              accessibilityRole="link"
             >
-              Apply for Access
+              Create Account
             </Text>
           </Text>
         </View>

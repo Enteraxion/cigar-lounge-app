@@ -125,6 +125,20 @@ export type LoungeDocument = {
    */
   phone?: string;
   /**
+   * Yelp category aliases, e.g. `['cigarbars','hookah_bars']`.
+   *
+   * The only real source of lounge *type* we have. Neither import persisted it,
+   * and classifying by name alone leaves 40.6% of the 8,496 lounges unknown —
+   * real venues like "Smokers Dynasty" and "Boston Smoke & More" among them. So
+   * the type filter reads this first and falls back to the name classifier
+   * (src/utils/loungeType.ts) only where it is absent.
+   *
+   * Aliases rather than display titles: aliases are stable identifiers, titles
+   * are text Yelp can reword. Populated by scripts/backfillPhones.ts for
+   * existing lounges and at import time for new ones.
+   */
+  yelpCategories?: string[];
+  /**
    * Set once an admin approves a pending claim (see
    * src/services/ownerService.ts's approveLoungeClaim) — `ownerId` gates
    * edit access in updateLoungeDetails and is the sole source of truth

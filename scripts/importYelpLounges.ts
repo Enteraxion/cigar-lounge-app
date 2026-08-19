@@ -125,6 +125,9 @@ type YelpBusiness = {
   display_phone?: string;
   /** E.164, used only when display_phone is absent. */
   phone?: string;
+  /** Category aliases, e.g. cigarbars / hookah_bars — the only real source of
+   *  lounge type. Free on the search endpoint. */
+  categories?: { alias: string; title: string }[];
 };
 
 type YelpSearchResponse = {
@@ -213,6 +216,9 @@ function toLoungeDocument(business: YelpBusiness, now: Timestamp): LoungeDocumen
     // the fallback. Both come free on the search endpoint.
     ...(business.display_phone || business.phone
       ? { phone: business.display_phone || business.phone }
+      : {}),
+    ...(business.categories?.length
+      ? { yelpCategories: business.categories.map(c => c.alias).filter(Boolean) }
       : {}),
     coordinates: { lat: business.coordinates.latitude, lng: business.coordinates.longitude },
     hours: 'Hours not yet available',

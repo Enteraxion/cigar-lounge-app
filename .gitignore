@@ -99,3 +99,7 @@ ui-debug.log
 
 # xcodebuild logs from local simulator builds
 ios/*build.log
+
+# Firestore emulator log, produced by `npm run test:rules`
+firestore-debug.log
+ui-debug.log

@@ -47,6 +47,30 @@ export type AgeVerificationState = {
   reload: () => void;
 };
 
+/**
+ * The gate decision, as a pure function of the stored record.
+ *
+ * Split out of the hook so it can be tested directly. This is the rule that
+ * decides whether someone reaches the app at all, and every branch of it is a
+ * decision somebody could get wrong later:
+ *
+ *  - a **missing** record grandfathers, so accounts predating the feature are
+ *    not locked out of their own app;
+ *  - `pending` **with** an image lets them in, because review is done by a human
+ *    and making them wait on it would be a dead end;
+ *  - `pending` **without** an image is the only state that blocks.
+ */
+export function deriveAgeGateState(verification: AgeVerification | null | undefined) {
+  const status = verification?.status;
+  return {
+    loading: verification === undefined,
+    mustUploadId: status === 'pending' && !verification?.idImageUrl,
+    awaitingReview: status === 'pending' && !!verification?.idImageUrl,
+    wasRejected: status === 'rejected',
+    isVerified: status === 'verified',
+  };
+}
+
 export function useAgeVerification(): AgeVerificationState {
   const userId = auth.currentUser?.uid;
   const [verification, setVerification] = useState<AgeVerification | null | undefined>(undefined);
@@ -66,14 +90,5 @@ export function useAgeVerification(): AgeVerificationState {
 
   useEffect(reload, [reload]);
 
-  const status = verification?.status;
-  return {
-    verification,
-    loading: verification === undefined,
-    mustUploadId: status === 'pending' && !verification?.idImageUrl,
-    awaitingReview: status === 'pending' && !!verification?.idImageUrl,
-    wasRejected: status === 'rejected',
-    isVerified: status === 'verified',
-    reload,
-  };
+  return { verification, ...deriveAgeGateState(verification), reload };
 }

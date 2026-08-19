@@ -250,3 +250,34 @@ a travel "passport" feature, and an AI concierge.
   * The kiosk V1 designs are for an **in-shop 43" kiosk**, a separate product
     (attract loop, "Start Over" session model, QR send-to-phone, staff
     assistance, live humidor stock) — not a restyle of this app.
+- 2026-08-19: Reworked the 21+ ID upload from "upload a photo of your ID"
+  into a real two-step document flow, per Rohith's ask to design it "like a
+  pro" with passport/driving licence/state ID and front-and-back. New
+  `src/utils/idDocument.ts` owns which sides each document needs (cards need
+  both — DOB on the front, security features on the back; a passport needs
+  only its photo page) and `src/components/IdDocumentCapture.tsx` is the
+  shared capture UI used by both the post-sign-up wall and the voluntary
+  Profile route. Frames are drawn at the documents' true proportions (ID-1
+  85.6x54, passport data page 125x88) with viewfinder corner marks.
+  **Photos are held locally until every required side is in hand, then
+  uploaded together** — uploading each side as taken would write a record
+  missing a side, which is exactly what the app gate refuses, pinning the
+  member at the wall with our own half-written record. `deriveAgeGateState`
+  now tests *completeness* rather than "an image exists"; a record with no
+  `documentType` counts as complete so accounts that verified before this
+  existed are not sent back through it. Sides already on file are reused when
+  the document is unchanged, so a member told "the back was blurry" retakes
+  only the back. `attachIdImage` became `attachIdDocument`, which clears the
+  previous decision (making a rejection recoverable) and clears a stale back
+  image when switching to a passport. AdminAgeReviewScreen stacks and labels
+  each side and will not approve an incomplete submission. **firestore.rules
+  and storage.rules needed no change** — verified against the emulator,
+  including a member attaching both sides with `status: 'verified'` smuggled
+  alongside (still refused). Also surfaced the cigar/hookah/THC filter that
+  was already built but collapsed three taps deep in the Filter sheet: it is
+  now a chip row on SearchResultsScreen writing into the same
+  `appliedFilters.loungeTypes`, and the sheet's section opens by default.
+  Verified by driving the running simulator: step 1 picker, two-sided State
+  ID capture, single-page passport capture, and the legacy "currently on
+  file" block all render. tsc clean, ESLint 0 errors, 241 unit tests, 34
+  rules tests, production iOS bundle clean.

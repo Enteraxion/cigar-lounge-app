@@ -49,30 +49,92 @@ describe('verificationGateMessage', () => {
   });
 
   describe('unconfirmed email', () => {
-    const UNCONFIRMED = { awaitingReview: false, wasRejected: false, emailVerified: false };
+    /** Email unconfirmed, age already approved — email is the only thing owed. */
+    const EMAIL_ONLY = {
+      awaitingReview: false,
+      wasRejected: false,
+      isVerified: true,
+      emailVerified: false,
+    };
 
     it('names the action, like every other branch', () => {
-      expect(verificationGateMessage('review', UNCONFIRMED).body).toContain('write a review');
-      expect(verificationGateMessage('reservation', UNCONFIRMED).body).toContain('reserve a table');
-      expect(verificationGateMessage('claim', UNCONFIRMED).body).toContain('claim a business');
+      expect(verificationGateMessage('review', EMAIL_ONLY).body).toContain('write a review');
+      expect(verificationGateMessage('reservation', EMAIL_ONLY).body).toContain('reserve a table');
+      expect(verificationGateMessage('claim', EMAIL_ONLY).body).toContain('claim a business');
     });
 
-    it('points at the inbox rather than at the app', () => {
+    it('points at the emailed link rather than at a screen in the app', () => {
       // "Verify your email" alone sends people hunting for a screen that does not
-      // exist. The link is in their mail.
-      expect(verificationGateMessage('review', UNCONFIRMED).body.toLowerCase()).toContain('link');
-      expect(verificationGateMessage('review', UNCONFIRMED).title).toBe('Confirm your email');
+      // exist. The link arrives in their mail.
+      expect(verificationGateMessage('review', EMAIL_ONLY).body.toLowerCase()).toContain('link');
+      expect(verificationGateMessage('review', EMAIL_ONLY).title).toBe('Confirm your email');
     });
 
-    it('outranks a pending ID review, which the member cannot act on', () => {
-      const both = { awaitingReview: true, wasRejected: false, emailVerified: false };
-      expect(verificationGateMessage('review', both).title).toBe('Confirm your email');
+    it('never asserts a link was already sent', () => {
+      // The bug: for accounts created before the sending code shipped, or where the
+      // send failed, "we sent a link" was false and sent members hunting an inbox
+      // for something that did not exist.
+      const body = verificationGateMessage('review', EMAIL_ONLY).body.toLowerCase();
+      expect(body).not.toContain('we sent');
+      expect(body).not.toContain('we have sent');
+    });
+
+    it('offers to send the link, so the alert has something to do', () => {
+      expect(verificationGateMessage('review', EMAIL_ONLY).offerResend).toBe(true);
     });
 
     it('is silent when the email state is unknown', () => {
       // undefined is "still loading" — it must not produce an email message.
       const loading = { awaitingReview: true, wasRejected: false, emailVerified: undefined };
-      expect(verificationGateMessage('review', loading).title).not.toBe('Confirm your email');
+      const result = verificationGateMessage('review', loading);
+      expect(result.title).not.toBe('Confirm your email');
+      expect(result.offerResend).toBe(false);
+    });
+  });
+
+  describe('when both the email and the ID are outstanding', () => {
+    // Rohith, 2026-08-19: tapping "Claim this business" named only the email, when
+    // that member also had no ID on file. Clearing the email would have produced a
+    // second refusal naming a second requirement — the member learns what is being
+    // asked one rejection at a time, which reads as the goalposts moving.
+
+    it('names both in one message', () => {
+      const both = { awaitingReview: false, wasRejected: false, emailVerified: false };
+      const { title, body } = verificationGateMessage('claim', both);
+      expect(title).toBe('Two things first');
+      expect(body.toLowerCase()).toContain('email');
+      expect(body.toLowerCase()).toContain('id');
+      expect(body).toContain('claim a business');
+    });
+
+    it('says the ID is already under way when it is being reviewed', () => {
+      // Not phrased as a task: there is nothing for them to do about the review.
+      const both = { awaitingReview: true, wasRejected: false, emailVerified: false };
+      const body = verificationGateMessage('claim', both).body.toLowerCase();
+      expect(body).toContain('wait for our team');
+      expect(body).toContain('under way');
+    });
+
+    it('asks for a clearer photo when the ID was rejected', () => {
+      const both = { awaitingReview: false, wasRejected: true, emailVerified: false };
+      expect(verificationGateMessage('claim', both).body).toContain('clearer photo');
+    });
+
+    it('still offers to send the link', () => {
+      const both = { awaitingReview: false, wasRejected: true, emailVerified: false };
+      expect(verificationGateMessage('claim', both).offerResend).toBe(true);
+    });
+
+    it('does not ask a grandfathered account to verify its age', () => {
+      // verification === null is an account predating the 21+ gate. Age is
+      // deliberately not a blocker for them, so only the email is owed.
+      const grandfathered = {
+        awaitingReview: false,
+        wasRejected: false,
+        verification: null,
+        emailVerified: false,
+      };
+      expect(verificationGateMessage('claim', grandfathered).title).toBe('Confirm your email');
     });
   });
 });

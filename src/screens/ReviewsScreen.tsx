@@ -250,8 +250,32 @@ export default function ReviewsScreen() {
       proceed();
       return;
     }
-    const { title, body } = verificationGateMessage(action, gateState);
-    Alert.alert(title, body);
+    const { title, body, offerResend } = verificationGateMessage(action, gateState);
+    // A dead OK on a message that asks for an email link leaves the member to go
+    // find the resend themselves. When a link is part of what's outstanding, the
+    // alert can just send it.
+    Alert.alert(
+      title,
+      body,
+      offerResend
+        ? [
+            { text: 'Not now', style: 'cancel' },
+            {
+              text: 'Send link',
+              onPress: () => {
+                emailState.resend().then(sent => {
+                  Alert.alert(
+                    sent ? 'Link sent' : "Couldn't send that",
+                    sent
+                      ? 'Check your inbox — and your spam folder, just in case.'
+                      : 'Wait a minute and try again, or resend from the banner on Home.',
+                  );
+                });
+              },
+            },
+          ]
+        : undefined,
+    );
   };
 
   const [error, setError] = useState<string | null>(null);

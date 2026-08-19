@@ -342,16 +342,36 @@ export type AiPreferences = {
  */
 export type AgeVerificationStatus = 'pending' | 'verified' | 'rejected';
 
+/**
+ * Which document the member chose to send. See src/utils/idDocument.ts for what
+ * each one requires — a card needs both sides, a passport needs one page.
+ */
+export type IdDocumentType = 'drivers_license' | 'state_id' | 'passport' | 'military_id';
+
 export type AgeVerification = {
   /** ISO YYYY-MM-DD. Self-declared at sign-up and already gate-checked. */
   dateOfBirth: string;
   status: AgeVerificationStatus;
   /**
-   * Firebase Storage URL of the uploaded ID, when one has been supplied.
+   * Absent on records written before the document picker existed — those carry a
+   * lone `idImageUrl` and no indication of what it shows. Treated as
+   * single-sided rather than re-requested; see idDocument.ts's header.
+   */
+  documentType?: IdDocumentType;
+  /**
+   * Firebase Storage URL of the front of the card, or a passport's photo page.
+   * Named `idImageUrl` rather than `idFrontImageUrl` because renaming it would
+   * orphan every record already stored under this key.
+   *
    * Optional because the date gate stands on its own — a member is blocked at
    * sign-up regardless, and the ID is what upgrades them from `pending`.
    */
   idImageUrl?: string;
+  /**
+   * The back of the card. Absent for passports, which have nothing on the back
+   * worth reviewing, and absent on legacy single-image records.
+   */
+  idBackImageUrl?: string;
   submittedAt: Timestamp;
   reviewedAt?: Timestamp;
   /** Admin uid who made the decision, so a call can be traced to a person. */

@@ -444,6 +444,75 @@ describe('age verification rules', () => {
     await seedUser();
     await assertFails(getDoc(doc(member('someone-else'), 'users', ME)));
   });
+
+  // ---------------- two-sided documents (2026-08-19) ----------------
+
+  it('lets a member attach both sides of a card and the document type', async () => {
+    // What ageVerificationService.attachIdDocument actually writes. If the rules
+    // refused these newer fields the entire upload would fail silently behind a
+    // "check your connection" alert.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertSucceeds(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        {
+          ageVerification: {
+            documentType: 'drivers_license',
+            idImageUrl: 'https://example/front.jpg',
+            idBackImageUrl: 'https://example/back.jpg',
+            status: 'pending',
+          },
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('lets a rejected member resubmit, which puts them back to pending', async () => {
+    // attachIdDocument clears the old decision and re-enters the queue. Going
+    // rejected -> pending is a member-permitted transition; it has to be, or a
+    // rejection would be permanent.
+    await seedUser({
+      ageVerification: {
+        dateOfBirth: '1990-01-01',
+        status: 'rejected',
+        rejectionReason: 'Too blurry',
+      },
+    });
+    await assertSucceeds(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        {
+          ageVerification: {
+            documentType: 'passport',
+            idImageUrl: 'https://example/page.jpg',
+            status: 'pending',
+          },
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('still refuses a member who attaches images and marks themselves verified', async () => {
+    // The bypass the two-sided change could have opened: a legitimate-looking
+    // upload with 'verified' smuggled in alongside it.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertFails(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        {
+          ageVerification: {
+            documentType: 'drivers_license',
+            idImageUrl: 'https://example/front.jpg',
+            idBackImageUrl: 'https://example/back.jpg',
+            status: 'verified',
+          },
+        },
+        { merge: true },
+      ),
+    );
+  });
 });
 
 describe('aggregates rules', () => {

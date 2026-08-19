@@ -93,4 +93,45 @@ describe('deriveAgeGateState', () => {
     // and let a member past the upload without one.
     expect(deriveAgeGateState(record({ status: 'pending', idImageUrl: '' })).mustUploadId).toBe(true);
   });
+
+  // ---------------- two-sided documents ----------------
+  // Added 2026-08-19 with the document picker. Before it, "has an image" was the
+  // whole test; now a card needs both sides and the gate has to know the
+  // difference, because half a licence is not something a reviewer can act on.
+
+  it('keeps blocking a licence with only its front photographed', () => {
+    const state = deriveAgeGateState(
+      record({ status: 'pending', documentType: 'drivers_license', idImageUrl: 'front' }),
+    );
+    expect(state.mustUploadId).toBe(true);
+    expect(state.awaitingReview).toBe(false);
+  });
+
+  it('lets a licence through once the back is in too', () => {
+    const state = deriveAgeGateState(
+      record({
+        status: 'pending',
+        documentType: 'drivers_license',
+        idImageUrl: 'front',
+        idBackImageUrl: 'back',
+      }),
+    );
+    expect(state.mustUploadId).toBe(false);
+    expect(state.awaitingReview).toBe(true);
+  });
+
+  it('never asks a passport for a second side', () => {
+    const state = deriveAgeGateState(
+      record({ status: 'pending', documentType: 'passport', idImageUrl: 'page' }),
+    );
+    expect(state.mustUploadId).toBe(false);
+    expect(state.awaitingReview).toBe(true);
+  });
+
+  it('does not re-wall a member who verified before the picker existed', () => {
+    // The regression that matters most: a record with an image and no
+    // documentType is complete, not a licence missing its back.
+    const state = deriveAgeGateState(record({ status: 'pending', idImageUrl: 'legacy' }));
+    expect(state.mustUploadId).toBe(false);
+  });
 });

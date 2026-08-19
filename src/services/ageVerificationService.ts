@@ -21,6 +21,7 @@
 import {
   getFirestore,
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -32,6 +33,7 @@ import {
 import type {
   AgeVerification,
   AgeVerificationStatus,
+  IdDocumentType,
   UserDocument,
 } from '../types/firestore';
 import { createNotification } from './userActionsService';
@@ -63,11 +65,42 @@ export async function submitAgeVerification(
   await setDoc(doc(db, 'users', userId), { ageVerification: verification }, { merge: true });
 }
 
-/** Attaches an ID image to an existing pending record. */
-export async function attachIdImage(userId: string, idImageUrl: string): Promise<void> {
+/**
+ * Attaches the photographed document to the member's pending record.
+ *
+ * Both sides are written in one operation on purpose. The capture screen holds
+ * the photos locally until every required side is in hand, so the record never
+ * passes through a half-submitted state that the app gate would read as
+ * incomplete and hold the member at the upload wall over.
+ *
+ * `back` is cleared rather than left alone when the document does not have one.
+ * A member who first sent a driving licence and then replaced it with a passport
+ * would otherwise leave the licence's back image attached to a passport record,
+ * and the reviewer would be looking at two different documents.
+ *
+ * The status returns to `pending` and any previous decision is erased, which is
+ * what makes a rejection recoverable: re-uploading puts the member back in the
+ * queue instead of leaving them looking at the old rejection reason forever.
+ */
+export async function attachIdDocument(
+  userId: string,
+  documentType: IdDocumentType,
+  images: { front: string; back?: string },
+): Promise<void> {
   await setDoc(
     doc(db, 'users', userId),
-    { ageVerification: { idImageUrl, status: 'pending', submittedAt: Timestamp.now() } },
+    {
+      ageVerification: {
+        documentType,
+        idImageUrl: images.front,
+        idBackImageUrl: images.back ?? deleteField(),
+        status: 'pending',
+        submittedAt: Timestamp.now(),
+        rejectionReason: deleteField(),
+        reviewedAt: deleteField(),
+        reviewedBy: deleteField(),
+      },
+    },
     { merge: true },
   );
 }

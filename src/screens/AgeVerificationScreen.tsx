@@ -1,16 +1,19 @@
 /**
  * AgeVerificationScreen
  *
- * Where a member supplies the ID that backs the 21+ gate. Requested by
- * Dr. Brinkley in the 2026-08-17 demo — the date of birth is already checked at
- * sign-up (src/utils/ageCheck.ts), and this is the evidence a human reviews.
+ * Where a member supplies or replaces the ID that backs the 21+ gate, reached
+ * voluntarily from Profile. Requested by Dr. Brinkley in the 2026-08-17 demo —
+ * the date of birth is already checked at sign-up (src/utils/ageCheck.ts), and
+ * this is the evidence a human reviews.
  *
- * Reached from the Profile card, which only appears while there is something to
- * do: a member who is already verified has no reason to be sent here.
+ * The Profile card that leads here only appears while there is something to do,
+ * so a member who is already verified has no reason to arrive.
  *
- * The screen is deliberately plain about what happens to the image, because
- * "upload a photo of your passport" is a large ask and a vague screen makes it
- * larger. It says who sees it, what it is used for, and that it can be replaced.
+ * Status comes first and the capture second, because someone opening this screen
+ * wants to know where they stand before being asked to do anything. The capture
+ * itself is IdDocumentCapture, shared with the post-sign-up wall — a verified
+ * member is shown what we hold rather than a form, since re-sending an accepted
+ * ID would put them back in the review queue for nothing.
  */
 
 import React, { useCallback, useState } from 'react';
@@ -27,17 +30,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { CheckCircle2, ChevronLeft, Clock, IdCard, ShieldCheck, XCircle } from 'lucide-react-native';
-import { theme, withAlpha } from '../theme';
+import { CheckCircle2, ChevronLeft, Clock, Lock, XCircle } from 'lucide-react-native';
+import { theme } from '../theme';
 import { auth } from '../services/firebaseAuth';
-import { uploadImage } from '../services/storageService';
-import {
-  attachIdImage,
-  getAgeVerification,
-} from '../services/ageVerificationService';
+import { getAgeVerification } from '../services/ageVerificationService';
+import IdDocumentCapture from '../components/IdDocumentCapture';
 import type { AgeVerification } from '../types/firestore';
-import { fromIsoDate, MINIMUM_AGE } from '../utils/ageCheck';
+import { MINIMUM_AGE } from '../utils/ageCheck';
+import { documentLabel, imageForSide, requiredSides, sideLabel } from '../utils/idDocument';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
@@ -56,7 +56,7 @@ const STATUS_COPY = {
   },
   rejected: {
     title: 'We couldn’t verify this',
-    body: 'The ID we received couldn’t be confirmed. You can send a clearer photo below.',
+    body: 'The ID we received couldn’t be confirmed. Send a clearer set of photos below.',
   },
 } as const;
 
@@ -65,9 +65,6 @@ export default function AgeVerificationScreen() {
   const userId = auth.currentUser?.uid;
 
   const [verification, setVerification] = useState<AgeVerification | null | undefined>(undefined);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [localUri, setLocalUri] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!userId) {
@@ -83,56 +80,16 @@ export default function AgeVerificationScreen() {
   // without a restart — the same reason My Shops does it.
   useFocusEffect(load);
 
-  const upload = async (uri: string) => {
-    if (!userId) {
-      return;
-    }
-    setUploading(true);
-    setProgress(0);
-    try {
-      const url = await uploadImage(userId, uri, 'age-verification', setProgress);
-      await attachIdImage(userId, url);
-      load();
-      Alert.alert(
-        'ID received',
-        'Thanks — our team will review it and you’ll get a notification here.',
-      );
-    } catch {
-      // Kept as a retryable failure rather than a dead end: the most common
-      // cause is a dropped connection mid-upload.
-      Alert.alert("Couldn't upload that", 'Check your connection and try again.');
-      setLocalUri(null);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const pickId = () => {
-    launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 }, response => {
-      if (response.didCancel) {
-        return;
-      }
-      if (response.errorCode) {
-        Alert.alert(
-          "Couldn't open photo library",
-          response.errorCode === 'permission'
-            ? 'Allow photo library access in Settings to choose a photo of your ID.'
-            : response.errorMessage ?? 'Something went wrong.',
-        );
-        return;
-      }
-      const uri = response.assets?.[0]?.uri;
-      if (!uri) {
-        return;
-      }
-      setLocalUri(uri);
-      upload(uri);
-    });
+  const onSubmitted = () => {
+    load();
+    Alert.alert(
+      'ID received',
+      'Thanks — our team will review it and you’ll get a notification here.',
+    );
   };
 
   const status = verification?.status;
   const copy = status ? STATUS_COPY[status] : null;
-  const born = verification?.dateOfBirth ? fromIsoDate(verification.dateOfBirth) : null;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -154,8 +111,6 @@ export default function AgeVerificationScreen() {
         </View>
       ) : (
         <ScrollView {...keyboardAwareScrollProps} contentContainerStyle={styles.content}>
-          {/* Status first — a member arriving here wants to know where they
-              stand before they are asked to do anything. */}
           {copy ? (
             <View style={styles.statusCard}>
               <View style={styles.statusIcon}>
@@ -178,61 +133,70 @@ export default function AgeVerificationScreen() {
             </View>
           ) : null}
 
-          {born ? (
-            <View style={styles.dobRow}>
-              <Text style={styles.dobLabel}>Date of birth on file</Text>
-              <Text style={styles.dobValue}>{verification?.dateOfBirth}</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Date of birth on file</Text>
+            <Text style={styles.detailValue}>{verification?.dateOfBirth ?? '—'}</Text>
+          </View>
+          {verification?.documentType ? (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Document sent</Text>
+              <Text style={styles.detailValue}>{documentLabel(verification.documentType)}</Text>
             </View>
           ) : null}
 
-          {/* Why we're asking, and what happens to the photo. An unexplained
-              request for a passport photo is one people are right to refuse. */}
-          <View style={styles.explainer}>
-            <ShieldCheck size={18} color={theme.colors.accentGold} />
-            <Text style={styles.explainerText}>
-              This app is for members aged {MINIMUM_AGE} and over. A photo of a passport or
-              driving licence lets our team confirm your date of birth. It is reviewed by a
-              person on our team, used only to check your age, and you can replace it at any
-              time.
-            </Text>
-          </View>
-
-          {verification?.idImageUrl || localUri ? (
-            <View style={styles.previewWrap}>
-              <Image
-                source={{ uri: localUri ?? verification?.idImageUrl }}
-                style={styles.preview}
-                resizeMode="cover"
-              />
-              {uploading ? (
-                <View style={styles.previewOverlay}>
-                  <ActivityIndicator color={theme.colors.accentGold} />
-                  <Text style={styles.previewOverlayText}>
-                    Uploading {Math.round(progress * 100)}%
+          {/* A verified member is shown what we hold, not a form. Re-submitting an
+              accepted ID would reset them to `pending` and cost them the access
+              they already have, so the capture UI is deliberately absent here. */}
+          {status === 'verified' ? (
+            <>
+              <View style={styles.thumbRow}>
+                {requiredSides(verification?.documentType).map(side => {
+                  const uri = imageForSide(verification, side);
+                  if (!uri) {
+                    return null;
+                  }
+                  return (
+                    <View key={side} style={styles.thumbWrap}>
+                      <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+                      <Text style={styles.thumbLabel}>
+                        {sideLabel(verification?.documentType, side)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+              <View style={styles.privacy}>
+                <Lock size={14} color={theme.colors.mutedGray} />
+                <Text style={styles.privacyText}>
+                  Held only to confirm you are {MINIMUM_AGE} or over. Never shown to other members
+                  or to lounges.
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* A record from before the document picker: there is an image on
+                  file but nothing saying what it shows, so it cannot be folded
+                  into the tiles below the way a matching document's sides are.
+                  Shown anyway — a member looking at "awaiting review" alongside an
+                  empty form would reasonably conclude we lost their ID. */}
+              {!verification?.documentType && verification?.idImageUrl ? (
+                <View style={styles.onFileBlock}>
+                  <Text style={styles.detailLabel}>Currently on file</Text>
+                  <Image
+                    source={{ uri: verification.idImageUrl }}
+                    style={styles.onFileImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.onFileNote}>
+                    Sent before we asked which document it was. Choose it below to send a fresh
+                    set — or leave it and our team will review this one.
                   </Text>
                 </View>
               ) : null}
-            </View>
-          ) : null}
-
-          {status !== 'verified' ? (
-            <Pressable
-              style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
-              onPress={pickId}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <ActivityIndicator color={theme.colors.primaryBlack} />
-              ) : (
-                <>
-                  <IdCard size={18} color={theme.colors.primaryBlack} />
-                  <Text style={styles.uploadButtonText}>
-                    {verification?.idImageUrl ? 'Replace photo of ID' : 'Upload photo of ID'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-          ) : null}
+              <IdDocumentCapture onSubmitted={onSubmitted} existing={verification} />
+            </>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -278,58 +242,46 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: theme.colors.secondarySilver,
   },
-  dobRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dobLabel: { ...theme.typography.caption, fontSize: 10, color: theme.colors.accentGold },
-  dobValue: { ...theme.typography.medium, fontSize: 14, color: theme.colors.white },
-  explainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    padding: theme.spacing.md,
-    borderRadius: theme.radius.large,
-    backgroundColor: theme.gold.wash,
+  detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  detailLabel: { ...theme.typography.caption, fontSize: 10, color: theme.colors.accentGold },
+  detailValue: { ...theme.typography.medium, fontSize: 14, color: theme.colors.white },
+  thumbRow: { flexDirection: 'row', gap: theme.spacing.sm },
+  thumbWrap: { flex: 1, gap: 4 },
+  thumb: {
+    width: '100%',
+    aspectRatio: 85.6 / 54,
+    borderRadius: theme.radius.medium,
     borderWidth: 1,
     borderColor: theme.gold.line,
+    backgroundColor: theme.colors.surface,
   },
-  explainerText: {
+  thumbLabel: {
+    ...theme.typography.caption,
+    fontSize: 9,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+  },
+  onFileBlock: { gap: theme.spacing.sm },
+  onFileImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: theme.radius.medium,
+    borderWidth: 1,
+    borderColor: theme.gold.line,
+    backgroundColor: theme.colors.surface,
+  },
+  onFileNote: {
+    ...theme.typography.body,
+    fontSize: 11,
+    lineHeight: 17,
+    color: theme.colors.mutedGray,
+  },
+  privacy: { flexDirection: 'row', gap: theme.spacing.sm },
+  privacyText: {
     flex: 1,
     ...theme.typography.body,
-    fontSize: 13,
-    lineHeight: 20,
-    color: theme.colors.secondarySilver,
-  },
-  previewWrap: {
-    borderRadius: theme.radius.large,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.gold.line,
-  },
-  preview: { width: '100%', height: 200 },
-  previewOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: withAlpha(theme.colors.background, 0.7),
-  },
-  previewOverlayText: { ...theme.typography.medium, fontSize: 13, color: theme.colors.white },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.accentGold,
-  },
-  uploadButtonDisabled: { opacity: 0.7 },
-  uploadButtonText: {
-    ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
-    fontSize: 14,
-    color: theme.colors.primaryBlack,
+    fontSize: 11,
+    lineHeight: 17,
+    color: theme.colors.mutedGray,
   },
 });

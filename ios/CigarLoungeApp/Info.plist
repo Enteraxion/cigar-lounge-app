@@ -36,7 +36,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Lounge Locator uses your camera so you can take photos to attach to reviews and collections.</string>
+	<string>Lounge Locator uses your camera so you can take photos to attach to reviews and collections, and photograph your ID to verify you are 21 or over.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Lounge Locator uses your location to show nearby cigar lounges and center the map on where you are.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

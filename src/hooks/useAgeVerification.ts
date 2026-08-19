@@ -27,15 +27,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { auth } from '../services/firebaseAuth';
 import { getAgeVerification } from '../services/ageVerificationService';
 import type { AgeVerification } from '../types/firestore';
+import { isSubmissionComplete } from '../utils/idDocument';
 
 export type AgeVerificationState = {
   /** undefined while loading, null when the account has no record. */
   verification: AgeVerification | null | undefined;
   loading: boolean;
   /**
-   * Blocks the app until an ID is supplied. True only for a record that is
-   * pending *and* has no image — i.e. someone who just signed up and has not
-   * uploaded yet. Once an image exists they are let in, pending or not.
+   * Blocks the app until the chosen document has been fully photographed. True
+   * for a pending record that is still missing a required side — i.e. someone
+   * who just signed up and has not finished uploading. Once it is complete they
+   * are let in, pending or not.
    */
   mustUploadId: boolean;
   /** Submitted and awaiting a human. Drives the banner. */
@@ -56,16 +58,23 @@ export type AgeVerificationState = {
  *
  *  - a **missing** record grandfathers, so accounts predating the feature are
  *    not locked out of their own app;
- *  - `pending` **with** an image lets them in, because review is done by a human
- *    and making them wait on it would be a dead end;
- *  - `pending` **without** an image is the only state that blocks.
+ *  - `pending` with a **complete** document lets them in, because review is done
+ *    by a human and making them wait on it would be a dead end;
+ *  - `pending` with a document still **missing a side** is the only state that
+ *    blocks.
  */
 export function deriveAgeGateState(verification: AgeVerification | null | undefined) {
   const status = verification?.status;
+  // Completeness, not merely "an image exists": a driving licence with only its
+  // front photographed is not something a reviewer can act on, so it must not
+  // open the app. src/utils/idDocument.ts owns which sides each document needs,
+  // and counts a legacy single-image record as complete so members who verified
+  // before the picker existed are not sent back through it.
+  const complete = isSubmissionComplete(verification);
   return {
     loading: verification === undefined,
-    mustUploadId: status === 'pending' && !verification?.idImageUrl,
-    awaitingReview: status === 'pending' && !!verification?.idImageUrl,
+    mustUploadId: status === 'pending' && !complete,
+    awaitingReview: status === 'pending' && complete,
     wasRejected: status === 'rejected',
     isVerified: status === 'verified',
   };

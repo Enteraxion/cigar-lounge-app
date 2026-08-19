@@ -40,6 +40,13 @@ import {
   type AgeVerificationRecord,
 } from '../services/ageVerificationService';
 import { ageOn, fromIsoDate, MINIMUM_AGE } from '../utils/ageCheck';
+import {
+  documentLabel,
+  imageForSide,
+  isSubmissionComplete,
+  requiredSides,
+  sideLabel,
+} from '../utils/idDocument';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
@@ -138,6 +145,10 @@ export default function AdminAgeReviewScreen() {
             // impossible, so if it ever appears something upstream is wrong and
             // the reviewer needs to see it rather than be protected from it.
             const underage = age !== null && age < MINIMUM_AGE;
+            // Both sides of a card, or a passport's photo page. An incomplete
+            // submission is not reviewable, and approving one would record a
+            // check that did not happen.
+            const complete = isSubmissionComplete(record);
 
             return (
               <View key={record.userId} style={styles.card}>
@@ -155,15 +166,37 @@ export default function AdminAgeReviewScreen() {
                   </Text>
                 </View>
 
-                {record.idImageUrl ? (
-                  <Image
-                    source={{ uri: record.idImageUrl }}
-                    style={styles.idImage}
-                    resizeMode="contain"
-                  />
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Document</Text>
+                  <Text style={styles.detailValue}>{documentLabel(record.documentType)}</Text>
+                </View>
+
+                {/* Every side stacked and labelled rather than one image. The job
+                    is comparing the date on the front against the declared date
+                    above, and then the back against being a colour printout — a
+                    reviewer who cannot see which is which cannot do the second
+                    half of that. */}
+                {complete ? (
+                  requiredSides(record.documentType).map(side => {
+                    const uri = imageForSide(record, side);
+                    return uri ? (
+                      <View key={side} style={styles.idBlock}>
+                        <Text style={styles.idSideLabel}>
+                          {sideLabel(record.documentType, side)}
+                        </Text>
+                        <Image
+                          source={{ uri }}
+                          style={styles.idImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    ) : null;
+                  })
                 ) : (
                   <Text style={styles.noImage}>
-                    No ID uploaded yet — nothing to check against the date above.
+                    {record.idImageUrl
+                      ? 'Still uploading — some sides of this document are missing, so there is nothing complete to check yet.'
+                      : 'No ID uploaded yet — nothing to check against the date above.'}
                   </Text>
                 )}
 
@@ -178,13 +211,13 @@ export default function AdminAgeReviewScreen() {
                   <Pressable
                     style={[
                       styles.approveButton,
-                      (actioningId === record.userId || !record.idImageUrl) && styles.disabled,
+                      (actioningId === record.userId || !complete) && styles.disabled,
                     ]}
                     // Approving with no ID would be recording a check that
                     // never happened, which is the one thing this screen exists
                     // to prevent.
                     onPress={() => decide(record, true)}
-                    disabled={actioningId === record.userId || !record.idImageUrl}
+                    disabled={actioningId === record.userId || !complete}
                   >
                     {actioningId === record.userId ? (
                       <ActivityIndicator color={theme.colors.primaryBlack} />
@@ -255,10 +288,11 @@ const styles = StyleSheet.create({
   detailLabel: { ...theme.typography.caption, fontSize: 10, color: theme.colors.accentGold },
   detailValue: { ...theme.typography.medium, fontSize: 14, color: theme.colors.white },
   detailValueFlagged: { color: theme.colors.danger },
+  idBlock: { gap: 4, marginTop: theme.spacing.sm },
+  idSideLabel: { ...theme.typography.caption, fontSize: 9, color: theme.colors.mutedGray },
   idImage: {
     width: '100%',
-    height: 220,
-    marginTop: theme.spacing.sm,
+    height: 200,
     borderRadius: theme.radius.medium,
     backgroundColor: theme.colors.background,
   },

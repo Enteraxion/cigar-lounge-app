@@ -16,7 +16,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -194,40 +193,11 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          {/* ---- Divider ---- */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* ---- Social buttons ---- */}
-          <View style={styles.socialRow}>
-            <Pressable
-              style={styles.socialButton}
-              onPress={() =>
-                Alert.alert(
-                  'Coming Soon',
-                  'Sign in with Apple will be available in a future update. Please use email and password for now.',
-                )
-              }
-            >
-              <Icon name="logo-apple" size={18} color={theme.colors.accentGold} />
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </Pressable>
-            <Pressable
-              style={styles.socialButton}
-              onPress={() =>
-                Alert.alert(
-                  'Coming Soon',
-                  'Sign in with Google will be available in a future update. Please use email and password for now.',
-                )
-              }
-            >
-              <Icon name="logo-google" size={14} color={theme.colors.accentGold} />
-              <Text style={styles.socialButtonText}>Google</Text>
-            </Pressable>
-          </View>
+          {/* Apple and Google buttons removed 2026-08-19 — see the matching note
+              in SignUpScreen. They only raised a "Coming Soon" alert, and the
+              blocker on making them real is the 21+ gate: neither provider hands
+              over a date of birth, so social sign-in needs its own step to collect
+              one before it can ship. */}
         </View>
 
         {/* ---------------- Footer ---------------- */}
@@ -420,46 +390,8 @@ const styles = StyleSheet.create({
   },
 
   // ---- Divider ----
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.gold.line,
-  },
-  dividerText: {
-    fontFamily: FONT_SANS_REGULAR,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: withAlpha(theme.colors.accentGold, 0.75),
-  },
 
   // ---- Social buttons ----
-  socialRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  socialButton: {
-    flex: 1,
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: withAlpha(theme.colors.surface, 0.4),
-    borderWidth: 1,
-    borderColor: withAlpha(theme.colors.accentGold, 0.2),
-    borderRadius: 12,
-  },
-  socialButtonText: {
-    fontFamily: FONT_SANS_MEDIUM,
-    fontSize: 14,
-    color: theme.colors.white,
-  },
 
   // ---- Footer ----
   footer: {

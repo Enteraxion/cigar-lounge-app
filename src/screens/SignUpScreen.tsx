@@ -16,7 +16,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StatusBar,
@@ -349,40 +348,20 @@ export default function SignUpScreen() {
             </Pressable>
           </View>
 
-          {/* ---- Divider ---- */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
+          {/* Apple and Google buttons removed 2026-08-19. They existed only to
+              raise a "Coming Soon" alert, which on the sign-up screen is a
+              promise the app cannot keep at the moment somebody is deciding
+              whether to join — and the first thing a reviewer taps.
 
-          {/* ---- Social buttons ---- */}
-          <View style={styles.socialRow}>
-            <Pressable
-              style={styles.socialButton}
-              onPress={() =>
-                Alert.alert(
-                  'Coming Soon',
-                  'Sign up with Apple will be available in a future update. Please use email and password for now.',
-                )
-              }
-            >
-              <Icon name="logo-apple" size={18} color={theme.colors.white} />
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </Pressable>
-            <Pressable
-              style={styles.socialButton}
-              onPress={() =>
-                Alert.alert(
-                  'Coming Soon',
-                  'Sign up with Google will be available in a future update. Please use email and password for now.',
-                )
-              }
-            >
-              <Icon name="logo-google" size={14} color={theme.colors.white} />
-              <Text style={styles.socialButtonText}>Google</Text>
-            </Pressable>
-          </View>
+              The groundwork is done and kept: Google is enabled in Firebase, the
+              redirect scheme is declared in Info.plist and both client IDs are in
+              src/config/googleSignIn.ts. What is NOT done is the reason this is
+              not simply switched on — a Google or Apple account carries no date
+              of birth, and the 21+ gate reads one from this form. Such an account
+              looks identical to a grandfathered pre-feature account and would
+              walk straight past the gate, so social sign-in needs its own
+              date-of-birth step before it can ship. Restore these buttons then,
+              wired, rather than as placeholders. */}
         </View>
 
         {/* ---------------- Footer ---------------- */}
@@ -600,46 +579,8 @@ const styles = StyleSheet.create({
   },
 
   // ---- Divider ----
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.2),
-  },
-  dividerText: {
-    fontFamily: FONT_SANS_REGULAR,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: withAlpha(theme.colors.secondarySilver, 0.5),
-  },
 
   // ---- Social buttons ----
-  socialRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  socialButton: {
-    flex: 1,
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: withAlpha(theme.colors.surface, 0.4),
-    borderWidth: 1,
-    borderColor: withAlpha(theme.colors.accentGold, 0.2),
-    borderRadius: 12,
-  },
-  socialButtonText: {
-    fontFamily: FONT_SANS_MEDIUM,
-    fontSize: 14,
-    color: theme.colors.white,
-  },
 
   // ---- Footer ----
   footer: {

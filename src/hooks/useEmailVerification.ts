@@ -7,12 +7,17 @@
  * email provider of ours — `SENDGRID_API_KEY` is still a placeholder, so a code we
  * emailed ourselves would have had nothing to send with.
  *
- * The address is **not** a wall. It gates the same three actions the 21+ check
- * gates (reviews, reservations, claims) and shows a banner, but browsing stays
- * open. A new member already meets the ID step on the way in; putting an email
- * round trip in front of that too would stack a third gate on the moment we had
- * just finished making easier, and email is where drop-off is worst — wrong
- * address, spam folder, no signal.
+ * The address **is** a wall, as of later the same day: Rohith asked that nobody
+ * reach the app without tapping the link, so AppNavigator holds an unconfirmed
+ * member at EmailVerificationRequiredScreen ahead of the ID step. The banner and
+ * action-gate branches that came from the earlier, gentler design are kept as
+ * defence in depth — if a reload ever fails open they still refuse the three
+ * gated actions — but they are not states a member should normally be in.
+ *
+ * Worth knowing what that costs: email is where sign-up drop-off is worst. Wrong
+ * address, spam folder, no signal. The screen answers all three — resend, an
+ * explicit "I've confirmed" check, and a sign-out to start over — because a wall
+ * standing on an email nobody received is otherwise the end of that member.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

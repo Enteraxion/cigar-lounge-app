@@ -15,7 +15,10 @@
  *  2. `needs-id` — they chose "Explore first" and have sent nothing. The largest
  *     outstanding ask, and nothing else on screen reveals it exists.
  *  3. `confirm-email` — actionable and quick, so it outranks the wait below even
- *     though it is the smaller obligation.
+ *     though it is the smaller obligation. Kept as defence in depth rather than
+ *     an expected state: since 2026-08-19 an unconfirmed address is held at a wall
+ *     before Main mounts, so nobody inside the app should be in it. If a reload
+ *     ever fails open, this is what still says so.
  *  4. `awaiting-review` — purely informational. There is nothing for the member to
  *     do, so it yields to anything that asks them for something.
  *

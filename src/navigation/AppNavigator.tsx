@@ -36,13 +36,17 @@ import {
 } from '../services/firebaseAuth';
 import { theme } from '../theme';
 import { useAgeVerification } from '../hooks/useAgeVerification';
+import { useEmailVerification } from '../hooks/useEmailVerification';
 import AgeVerificationRequiredScreen from '../screens/AgeVerificationRequiredScreen';
+import EmailVerificationRequiredScreen from '../screens/EmailVerificationRequiredScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   /** The mandatory ID-upload step, shown instead of Main until an ID exists. */
   AgeVerificationRequired: undefined;
+  /** The mandatory email-confirmation step, ahead of the ID one. */
+  EmailVerificationRequired: undefined;
   VoiceSearch: undefined;
   AIConcierge: undefined;
   Notifications: undefined;
@@ -71,6 +75,7 @@ export default function AppNavigator() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
   const { loading: ageLoading, mustUploadId, reload: reloadAge } = useAgeVerification();
+  const { emailVerified } = useEmailVerification();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, nextUser => {
@@ -105,16 +110,26 @@ export default function AppNavigator() {
     return <SplashScreen />;
   }
 
-  // Don't decide the gate while the verification read is still in flight — a
-  // signed-in member would flash the upload screen and then be bounced out of
-  // it, which reads as a glitch.
-  if (user && ageLoading) {
+  // Don't decide either gate while its read is still in flight — a signed-in
+  // member would flash a wall and then be bounced out of it, which reads as a
+  // glitch. `emailVerified === undefined` is "not known yet" and must never be
+  // treated as "unconfirmed", or every cold start walls a member who is fine.
+  if (user && (ageLoading || emailVerified === undefined)) {
     return <SplashScreen />;
   }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user && mustUploadId ? (
+      {user && emailVerified === false ? (
+        /* Rohith, 2026-08-19: nobody reaches the app without tapping the link.
+           Placed AHEAD of the ID wall on purpose — it is the cheaper of the two
+           to clear, and there is no point asking someone to photograph a licence
+           for an account whose address may not even be real. */
+        <Stack.Screen
+          name="EmailVerificationRequired"
+          component={EmailVerificationRequiredScreen}
+        />
+      ) : user && mustUploadId ? (
         /* Step 2 of the 21+ flow: the ID upload is a required step immediately
            after sign-up, so it replaces Main rather than sitting inside it —
            there is no tab bar to escape through and nothing to skip. Only

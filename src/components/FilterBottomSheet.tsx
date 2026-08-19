@@ -181,7 +181,13 @@ export default function FilterBottomSheet({
   currentLocation,
   userId,
 }: Props) {
-  const [expandedSections, setExpandedSections] = useState<SectionId[]>(['location']);
+  // Lounge Type opens alongside Location because it is the filter members are
+  // most likely to have come here for (Dr. Brinkley, 2026-08-19) and a
+  // collapsed section is one nobody discovers.
+  const [expandedSections, setExpandedSections] = useState<SectionId[]>([
+    'location',
+    'loungeType',
+  ]);
   const [distance, setDistance] = useState(initialFilters.distanceMiles);
   const [nearCurrentLocation, setNearCurrentLocation] = useState(
     initialFilters.nearCurrentLocation,

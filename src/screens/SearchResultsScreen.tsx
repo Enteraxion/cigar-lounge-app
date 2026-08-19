@@ -85,6 +85,7 @@ import {
 } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
 import { quickFilterChips } from '../data/mockSearchResults';
+import { LOUNGE_TYPE_OPTIONS, type LoungeType } from '../utils/loungeType';
 import { defaultSortOptionId } from '../data/mockSort';
 import { defaultRegion } from '../data/mockMap';
 import { defaultDistanceMiles } from '../data/mockFilters';
@@ -107,6 +108,14 @@ import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 // sheet's OWN opening draft (see FilterBottomSheet.tsx) still defaults to
 // nearCurrentLocation/"Open Now" pre-checked, matching the design — that's
 // just a suggested starting point in the UI, not something pre-applied here.
+/**
+ * The types shown as chips on this screen. "Other" is deliberately left to the
+ * Filter sheet — as a headline chip it reads as a category rather than as
+ * "venues we could not classify", and picking it is almost never what someone
+ * scanning this row means to do.
+ */
+const TYPE_CHIPS = LOUNGE_TYPE_OPTIONS.filter(option => option.id !== 'unknown');
+
 const defaultSearchFilters: SearchFilters = {
   distanceMiles: defaultDistanceMiles,
   nearCurrentLocation: false,
@@ -246,6 +255,15 @@ export default function SearchResultsScreen() {
     selectedChips.length > 0 ||
     JSON.stringify(appliedFilters) !== JSON.stringify(defaultSearchFilters);
 
+  const toggleLoungeType = (type: LoungeType) => {
+    setAppliedFilters(current => ({
+      ...current,
+      loungeTypes: current.loungeTypes.includes(type)
+        ? current.loungeTypes.filter(t => t !== type)
+        : [...current.loungeTypes, type],
+    }));
+  };
+
   const clearFilters = () => {
     setSelectedChips([]);
     setAppliedFilters(defaultSearchFilters);
@@ -353,6 +371,23 @@ export default function SearchResultsScreen() {
         style={styles.chipScroll}
         contentContainerStyle={styles.chipRow}
       >
+        {/* Lounge type leads the row. It is the coarsest cut a member can make
+            — "show me hookah bars" narrows harder than any amenity — and
+            Dr. Brinkley asked for it by name (2026-08-19). It is also in the
+            Filter sheet, but three taps and a scroll down is not where a
+            headline filter belongs, so it is surfaced here as well.
+
+            These write into appliedFilters.loungeTypes rather than
+            selectedChips, which is what keeps the two places in step: tapping
+            Hookah here shows Hookah already selected when the sheet opens. */}
+        {TYPE_CHIPS.map(option => (
+          <FilterChip
+            key={option.id}
+            label={option.label}
+            selected={appliedFilters.loungeTypes.includes(option.id)}
+            onPress={() => toggleLoungeType(option.id)}
+          />
+        ))}
         {quickFilterChips.map(chip => (
           <FilterChip
             key={chip.id}

@@ -256,6 +256,7 @@ export default function HomeScreen() {
             action refuses them. Renders nothing when verified or ungated. */}
         <VerificationBanner
           awaitingReview={ageState.awaitingReview}
+          needsId={ageState.needsId}
           wasRejected={ageState.wasRejected}
           onPress={() =>
             (tabNavigation.navigate as (n: string, p?: object) => void)('Profile', {

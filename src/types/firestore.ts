@@ -373,6 +373,16 @@ export type AgeVerification = {
    */
   idBackImageUrl?: string;
   submittedAt: Timestamp;
+  /**
+   * Set when the member chose "Explore first" at the sign-up wall instead of
+   * photographing an ID there and then.
+   *
+   * Stored rather than kept on the device on purpose: a local flag would re-wall
+   * them on a reinstall or a second device, which reads as the app forgetting a
+   * choice they made. It records a deferral, not a pass — status stays `pending`,
+   * so every gated action (reviews, reservations, claims) is still refused.
+   */
+  deferredAt?: Timestamp;
   reviewedAt?: Timestamp;
   /** Admin uid who made the decision, so a call can be traced to a person. */
   reviewedBy?: string;

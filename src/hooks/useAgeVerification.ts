@@ -42,6 +42,12 @@ export type AgeVerificationState = {
   mustUploadId: boolean;
   /** Submitted and awaiting a human. Drives the banner. */
   awaitingReview: boolean;
+  /**
+   * Let in without an ID, because they chose "Explore first" at the wall. Drives
+   * a banner asking for one — the only prompt they will get, since nothing else
+   * on screen reveals the requirement until a gated action refuses them.
+   */
+  needsId: boolean;
   /** An admin looked and said no. Drives a banner prompting a new photo. */
   wasRejected: boolean;
   /** Confirmed 21+. The gate for reviews, reservations and claims. */
@@ -60,8 +66,9 @@ export type AgeVerificationState = {
  *    not locked out of their own app;
  *  - `pending` with a **complete** document lets them in, because review is done
  *    by a human and making them wait on it would be a dead end;
- *  - `pending` with a document still **missing a side** is the only state that
- *    blocks.
+ *  - `pending` with a document still **missing a side** blocks — unless the
+ *    member chose "Explore first", which is recorded as `deferredAt` and lets
+ *    them browse while still failing every `isVerified` check.
  */
 export function deriveAgeGateState(verification: AgeVerification | null | undefined) {
   const status = verification?.status;
@@ -71,10 +78,15 @@ export function deriveAgeGateState(verification: AgeVerification | null | undefi
   // and counts a legacy single-image record as complete so members who verified
   // before the picker existed are not sent back through it.
   const complete = isSubmissionComplete(verification);
+  // "Explore first" at the sign-up wall. A deferral, not a pass: it opens
+  // browsing and nothing else, because `isVerified` is what every gated action
+  // reads and this does not touch it.
+  const deferred = !!verification?.deferredAt;
   return {
     loading: verification === undefined,
-    mustUploadId: status === 'pending' && !complete,
+    mustUploadId: status === 'pending' && !complete && !deferred,
     awaitingReview: status === 'pending' && complete,
+    needsId: status === 'pending' && !complete && deferred,
     wasRejected: status === 'rejected',
     isVerified: status === 'verified',
   };

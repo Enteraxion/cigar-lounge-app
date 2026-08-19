@@ -105,6 +105,27 @@ export async function attachIdDocument(
   );
 }
 
+/**
+ * Records that the member chose to explore the app before verifying.
+ *
+ * Rohith, 2026-08-19: a wall at the moment of sign-up asks somebody to
+ * photograph their licence for an app they have not seen yet, and the ones who
+ * would have loved it are the ones who quit there. Deferring lets them look
+ * first and verify once they care.
+ *
+ * `status` is untouched — still `pending`. This is the difference between letting
+ * someone in to browse and letting them do the things the 21+ check exists to
+ * protect: reviews, reservations and business claims all require `verified` and
+ * are refused exactly as before.
+ */
+export async function deferAgeVerification(userId: string): Promise<void> {
+  await setDoc(
+    doc(db, 'users', userId),
+    { ageVerification: { deferredAt: Timestamp.now() } },
+    { merge: true },
+  );
+}
+
 export async function getAgeVerification(userId: string): Promise<AgeVerification | null> {
   const snapshot = await getDoc(doc(db, 'users', userId));
   if (!snapshot.exists()) {

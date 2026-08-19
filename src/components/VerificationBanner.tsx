@@ -13,20 +13,27 @@
 
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { Clock, XCircle } from 'lucide-react-native';
+import { Clock, IdCard, XCircle } from 'lucide-react-native';
 import { theme } from '../theme';
 
 export default function VerificationBanner({
   awaitingReview,
+  needsId,
   wasRejected,
   onPress,
 }: {
   awaitingReview: boolean;
+  /**
+   * Skipped the wall and has sent nothing yet. This is the only prompt such a
+   * member gets, so unlike the other two it names what verifying buys them —
+   * "you still need to" with no reason attached reads as nagging.
+   */
+  needsId: boolean;
   wasRejected: boolean;
-  /** Opens the upload screen, so a rejected member can act on it immediately. */
+  /** Opens the upload screen, so a member can act on it immediately. */
   onPress?: () => void;
 }) {
-  if (!awaitingReview && !wasRejected) {
+  if (!awaitingReview && !wasRejected && !needsId) {
     return null;
   }
 
@@ -40,13 +47,17 @@ export default function VerificationBanner({
     >
       {rejected ? (
         <XCircle size={14} color={theme.colors.danger} />
+      ) : needsId ? (
+        <IdCard size={14} color={theme.colors.accentGold} />
       ) : (
         <Clock size={14} color={theme.colors.accentGold} />
       )}
       <Text style={[styles.text, rejected && styles.textRejected]}>
         {rejected
           ? 'We couldn’t verify your ID — tap to send another photo.'
-          : 'Your ID is being reviewed. Reviews and reservations unlock once you’re verified.'}
+          : needsId
+            ? 'Verify your age to write reviews, reserve tables and claim a business.'
+            : 'Your ID is being reviewed. Reviews and reservations unlock once you’re verified.'}
       </Text>
     </Pressable>
   );

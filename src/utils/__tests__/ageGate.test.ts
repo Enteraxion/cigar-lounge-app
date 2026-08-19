@@ -82,9 +82,12 @@ describe('deriveAgeGateState', () => {
       record({ status: 'pending', idImageUrl: 'u' }),
       record({ status: 'rejected', idImageUrl: 'u' }),
       record({ status: 'verified', idImageUrl: 'u' }),
+      record({ status: 'pending', deferredAt: at }),
     ]) {
       const s = deriveAgeGateState(v);
-      expect([s.awaitingReview, s.wasRejected].filter(Boolean).length).toBeLessThanOrEqual(1);
+      expect(
+        [s.awaitingReview, s.wasRejected, s.needsId].filter(Boolean).length,
+      ).toBeLessThanOrEqual(1);
     }
   });
 
@@ -126,6 +129,49 @@ describe('deriveAgeGateState', () => {
     );
     expect(state.mustUploadId).toBe(false);
     expect(state.awaitingReview).toBe(true);
+  });
+
+  // ---------------- "Explore first" (2026-08-19) ----------------
+  // A deferral must open browsing and nothing else. If deferring ever implied
+  // verified, the 21+ check would be a button anyone could press past.
+
+  it('lets a member who chose Explore first into the app', () => {
+    const state = deriveAgeGateState(record({ status: 'pending', deferredAt: at }));
+    expect(state.mustUploadId).toBe(false);
+    expect(state.needsId).toBe(true);
+  });
+
+  it('does not make a deferral count as verified or as awaiting review', () => {
+    const state = deriveAgeGateState(record({ status: 'pending', deferredAt: at }));
+    expect(state.isVerified).toBe(false);
+    expect(state.awaitingReview).toBe(false);
+  });
+
+  it('stops prompting once the deferred member actually sends an ID', () => {
+    const state = deriveAgeGateState(
+      record({
+        status: 'pending',
+        deferredAt: at,
+        documentType: 'passport',
+        idImageUrl: 'page',
+      }),
+    );
+    expect(state.needsId).toBe(false);
+    expect(state.awaitingReview).toBe(true);
+  });
+
+  it('does not prompt a verified member who once deferred', () => {
+    const state = deriveAgeGateState(
+      record({ status: 'verified', deferredAt: at, idImageUrl: 'x' }),
+    );
+    expect(state.needsId).toBe(false);
+    expect(state.isVerified).toBe(true);
+  });
+
+  it('shows the rejection, not the skip prompt, when both could apply', () => {
+    const state = deriveAgeGateState(record({ status: 'rejected', deferredAt: at }));
+    expect(state.wasRejected).toBe(true);
+    expect(state.needsId).toBe(false);
   });
 
   it('does not re-wall a member who verified before the picker existed', () => {

@@ -494,6 +494,33 @@ describe('age verification rules', () => {
     );
   });
 
+  it('lets a member record that they skipped the wall for now', async () => {
+    // deferAgeVerification. A merge write that only adds deferredAt leaves status
+    // as 'pending', so it is not a decision — but that depends on the rule
+    // comparing incoming against existing, which is worth pinning.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertSucceeds(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        { ageVerification: { deferredAt: new Date().toISOString() } },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses a member who tries to skip straight to verified', async () => {
+    // The obvious abuse of a skip button: send the deferral and the outcome
+    // together and never photograph anything.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'pending' } });
+    await assertFails(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        { ageVerification: { deferredAt: new Date().toISOString(), status: 'verified' } },
+        { merge: true },
+      ),
+    );
+  });
+
   it('still refuses a member who attaches images and marks themselves verified', async () => {
     // The bypass the two-sided change could have opened: a legitimate-looking
     // upload with 'verified' smuggled in alongside it.

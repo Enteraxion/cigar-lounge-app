@@ -16,12 +16,21 @@
  * only collects the evidence.
  */
 
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Lock, ShieldCheck } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { auth, signOut } from '../services/firebaseAuth';
+import { deferAgeVerification } from '../services/ageVerificationService';
 import IdDocumentCapture from '../components/IdDocumentCapture';
 import { MINIMUM_AGE } from '../utils/ageCheck';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
@@ -32,6 +41,31 @@ export default function AgeVerificationRequiredScreen({
   /** Re-reads the verification record, which drops this wall once the ID is complete. */
   onSubmitted: () => void;
 }) {
+  const [skipping, setSkipping] = useState(false);
+
+  // Rohith, 2026-08-19: asking somebody to photograph their licence for an app
+  // they have not seen yet loses the members who would have liked it most. This
+  // records the deferral (see deferAgeVerification) rather than granting
+  // anything — status stays `pending`, so reviews, reservations and claims are
+  // still refused until a real ID is checked.
+  const skip = async () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId || skipping) {
+      return;
+    }
+    setSkipping(true);
+    try {
+      await deferAgeVerification(userId);
+      onSubmitted();
+    } catch {
+      // Must not silently do nothing: without the stored deferral the wall
+      // stays, and a member who tapped Skip and saw no change would reasonably
+      // tap it again.
+      Alert.alert("Couldn't skip that", 'Check your connection and try again.');
+      setSkipping(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <ScrollView {...keyboardAwareScrollProps} contentContainerStyle={styles.content}>
@@ -58,6 +92,29 @@ export default function AgeVerificationRequiredScreen({
             shown to other members or to lounges.
           </Text>
         </View>
+
+        {/* Deliberately secondary to Submit, and worded as an order of events
+            rather than a way out — "Explore first" says the ID is still coming,
+            where "Skip" would suggest it is optional. */}
+        <Pressable
+          style={styles.skipButton}
+          onPress={skip}
+          disabled={skipping}
+          accessibilityRole="button"
+          accessibilityLabel="Explore the app first and verify later"
+        >
+          {skipping ? (
+            <ActivityIndicator color={theme.colors.accentGold} />
+          ) : (
+            <>
+              <Text style={styles.skipText}>Explore the app first</Text>
+              <Text style={styles.skipNote}>
+                You can verify any time from your profile. Reviews, reservations and business
+                claims stay locked until you do.
+              </Text>
+            </>
+          )}
+        </Pressable>
 
         {/* A wall with no exit is hostile. Signing out is not a way past the
             check — the requirement is still there next time they sign in — but
@@ -109,6 +166,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
     color: theme.colors.mutedGray,
+  },
+  skipButton: {
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.medium,
+    borderWidth: 1,
+    borderColor: theme.gold.line,
+  },
+  skipText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.accentGold,
+  },
+  skipNote: {
+    ...theme.typography.body,
+    fontSize: 11,
+    lineHeight: 16,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
   },
   signOutButton: { alignItems: 'center', paddingVertical: theme.spacing.sm },
   signOutText: {

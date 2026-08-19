@@ -33,7 +33,9 @@ import {
   getDoc,
 } from 'firebase/firestore';
 
-const ADMIN_EMAIL = 'rohithakepati@gmail.com';
+// Must match an address in firestore.rules' isAdmin(). Reduced to this single
+// account on 2026-08-19 — see scripts/resetDatabase.ts.
+const ADMIN_EMAIL = 'admin123@gmail.com';
 const PROJECT_ID = 'the-reserve-rules-test';
 
 let testEnv: RulesTestEnvironment;

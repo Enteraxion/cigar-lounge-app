@@ -31,12 +31,15 @@ service cloud.firestore {
 
     // Mirrors src/config/admins.ts's ADMIN_EMAILS — keep both lists in
     // sync when adding/removing admins.
+    //
+    // Reduced to one address on 2026-08-19, when every account was deleted and
+    // the team restarted from a single known login (scripts/resetDatabase.ts).
+    // An address left here after its account is gone hands admin to whoever
+    // signs up with it next, so removals must happen here too, not just in
+    // Auth.
     function isAdmin() {
       return isSignedIn() && request.auth.token.email in [
-        'rohithakepati@gmail.com',
-        'rohith.akepati@enteraxion.com',
-        'julian.brinkley@enteraxion.com',
-        'julianlbrinkley@gmail.com'
+        'admin123@gmail.com'
       ];
     }
 

@@ -25,10 +25,7 @@ service firebase.storage {
     // Storage rules cannot read Firestore. Keep all three in step.
     function isAdmin() {
       return isSignedIn() && request.auth.token.email in [
-        'rohithakepati@gmail.com',
-        'rohith.akepati@enteraxion.com',
-        'julian.brinkley@enteraxion.com',
-        'julianlbrinkley@gmail.com'
+        'admin123@gmail.com'
       ];
     }
 

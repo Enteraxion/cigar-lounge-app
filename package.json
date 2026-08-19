@@ -19,7 +19,9 @@
     "test:rules": "npx firebase-tools emulators:exec --only firestore \"npx jest --selectProjects rules\"",
     "seed:demo-claim": "ts-node --project scripts/tsconfig.json scripts/seedDemoClaim.ts",
     "backfill:phones": "ts-node --project scripts/tsconfig.json scripts/backfillPhones.ts",
-    "seed:age-verification": "ts-node --project scripts/tsconfig.json scripts/seedAgeVerification.ts"
+    "seed:age-verification": "ts-node --project scripts/tsconfig.json scripts/seedAgeVerification.ts",
+    "reset:database": "ts-node --project scripts/tsconfig.json scripts/resetDatabase.ts",
+    "create:admin": "ts-node --project scripts/tsconfig.json scripts/createAdmin.ts"
   },
   "dependencies": {
     "@react-native-community/geolocation": "^3.4.0",

@@ -35,6 +35,24 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- Google Sign-In redirect. Google opens a browser to authenticate and hands
+	     the result back by opening this scheme, so without it the sign-in starts,
+	     succeeds, and then never returns to the app.
+
+	     The value is GoogleService-Info.plist's REVERSED_CLIENT_ID. That file is
+	     gitignored because it carries the project's config, but this identifier is
+	     deliberately duplicated here into a committed file: it is a public client
+	     identifier, extractable from any installed copy of the app, and Apple
+	     requires it declared in Info.plist. It is not a credential. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.345721268939-8hhh4gau0ditkr9anv2hqq0clpd43fnn</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Lounge Locator uses your camera so you can take photos to attach to reviews and collections, and photograph your ID to verify you are 21 or over.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

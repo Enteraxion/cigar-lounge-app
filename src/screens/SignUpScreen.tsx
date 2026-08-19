@@ -37,7 +37,6 @@ import {
   beginSignUpTransition,
   endSignUpTransition,
   getAuthErrorMessage,
-  signOut,
 } from '../services/firebaseAuth';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
@@ -118,10 +117,16 @@ export default function SignUpScreen() {
         // An account with no verification record reads as unverified, which is
         // the safe direction — it does not become a way in.
       });
-      await signOut(auth);
-      Alert.alert('Account Created', 'Please sign in with your new credentials.', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
-      ]);
+      // Deliberately no sign-out and no "please sign in" alert. The session
+      // stays, so AppNavigator takes the new member straight to the ID upload —
+      // which is what Dr. Brinkley asked for ("right after they sign up ...
+      // before entering the app"). Bouncing them to a login form first was a
+      // leftover from before that step existed.
+      //
+      // `endSignUpTransition` in the finally block is what releases the
+      // navigator, and it runs only after the age-verification record above is
+      // written — otherwise the gate would be evaluated against a document that
+      // does not exist yet and the member would walk straight past it.
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
     } finally {

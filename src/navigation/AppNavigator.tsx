@@ -31,6 +31,7 @@ import {
   auth,
   onAuthStateChanged,
   isSignUpTransitionActive,
+  setSignUpTransitionEndListener,
   type AuthUser,
 } from '../services/firebaseAuth';
 import { theme } from '../theme';
@@ -84,6 +85,21 @@ export default function AppNavigator() {
     });
     return unsubscribe;
   }, []);
+
+  // The listener above deliberately ignores the signed-in event that
+  // createUserWithEmailAndPassword fires, because at that moment the new
+  // member's age-verification record does not exist yet and the 21+ gate would
+  // evaluate against nothing. Sign-up releases this once the record is written,
+  // and only then does the session become visible here — which is what makes the
+  // ID upload the immediate next screen rather than a login form.
+  useEffect(() => {
+    setSignUpTransitionEndListener(() => {
+      setUser(auth.currentUser);
+      setInitializing(false);
+      reloadAge();
+    });
+    return () => setSignUpTransitionEndListener(null);
+  }, [reloadAge]);
 
   if (initializing) {
     return <SplashScreen />;

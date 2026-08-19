@@ -31,8 +31,26 @@ export function beginSignUpTransition() {
   signUpTransitionActive = true;
 }
 
+/**
+ * Notified when the sign-up transition ends.
+ *
+ * Needed because the suppression above swallows the one `onAuthStateChanged`
+ * event that would otherwise let AppNavigator in. Sign-up now keeps the session
+ * — a new member goes straight to the ID upload rather than being bounced to a
+ * login form — so something has to tell the navigator the session is ready
+ * *after* the age-verification record exists. Without that ordering the
+ * navigator would evaluate the 21+ gate against a document that has not been
+ * written yet and let the member past it.
+ */
+let onSignUpTransitionEnd: (() => void) | null = null;
+
+export function setSignUpTransitionEndListener(listener: (() => void) | null) {
+  onSignUpTransitionEnd = listener;
+}
+
 export function endSignUpTransition() {
   signUpTransitionActive = false;
+  onSignUpTransitionEnd?.();
 }
 
 export function isSignUpTransitionActive() {

@@ -34,10 +34,14 @@ import {
   type AuthUser,
 } from '../services/firebaseAuth';
 import { theme } from '../theme';
+import { useAgeVerification } from '../hooks/useAgeVerification';
+import AgeVerificationRequiredScreen from '../screens/AgeVerificationRequiredScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  /** The mandatory ID-upload step, shown instead of Main until an ID exists. */
+  AgeVerificationRequired: undefined;
   VoiceSearch: undefined;
   AIConcierge: undefined;
   Notifications: undefined;
@@ -65,6 +69,7 @@ const splashStyles = StyleSheet.create({
 export default function AppNavigator() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const { loading: ageLoading, mustUploadId, reload: reloadAge } = useAgeVerification();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, nextUser => {
@@ -84,9 +89,25 @@ export default function AppNavigator() {
     return <SplashScreen />;
   }
 
+  // Don't decide the gate while the verification read is still in flight — a
+  // signed-in member would flash the upload screen and then be bounced out of
+  // it, which reads as a glitch.
+  if (user && ageLoading) {
+    return <SplashScreen />;
+  }
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user ? (
+      {user && mustUploadId ? (
+        /* Step 2 of the 21+ flow: the ID upload is a required step immediately
+           after sign-up, so it replaces Main rather than sitting inside it —
+           there is no tab bar to escape through and nothing to skip. Only
+           reached when the record is pending AND carries no image; once one is
+           attached the member is let straight in (step 3). */
+        <Stack.Screen name="AgeVerificationRequired">
+          {() => <AgeVerificationRequiredScreen onSubmitted={reloadAge} />}
+        </Stack.Screen>
+      ) : user ? (
         <Stack.Screen name="Main" component={MainNavigator} />
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />

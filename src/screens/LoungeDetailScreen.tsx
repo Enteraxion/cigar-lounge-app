@@ -49,6 +49,8 @@ import {
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { openInMaps } from '../utils/openMaps';
+import { useAgeVerification } from '../hooks/useAgeVerification';
+import { verificationGateMessage, type GatedAction } from '../utils/verificationGate';
 import HoursCard from '../components/HoursCard';
 import AmenityCard from '../components/AmenityCard';
 import ProgressRatingBar from '../components/ProgressRatingBar';
@@ -86,6 +88,19 @@ export default function LoungeDetailScreen() {
   const [latestReview, setLatestReview] = useState<Review | null>(null);
   const [events, setEvents] = useState<LoungeEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const ageState = useAgeVerification();
+  // Step 4 of the 21+ flow: browsing is open, but these three actions need a
+  // verified member. Grandfathered accounts (no record at all) pass, so the
+  // gate cannot lock out anyone who predates the feature.
+  const requireVerified = (action: GatedAction, proceed: () => void) => {
+    if (ageState.isVerified || ageState.verification === null) {
+      proceed();
+      return;
+    }
+    const { title, body } = verificationGateMessage(action, ageState);
+    Alert.alert(title, body);
+  };
+
   const [favorited, setFavorited] = useState<boolean | null>(null);
 
   const [activeSlide, setActiveSlide] = useState(0);
@@ -321,7 +336,11 @@ export default function LoungeDetailScreen() {
           {/* ---------------- Reserve Button ---------------- */}
           <Pressable
             style={styles.reserveButton}
-            onPress={() => navigation.navigate('ReserveTable', { loungeId, loungeName: lounge.name })}
+            onPress={() =>
+              requireVerified('reservation', () =>
+                navigation.navigate('ReserveTable', { loungeId, loungeName: lounge.name }),
+              )
+            }
           >
             <Text style={styles.reserveButtonText}>Reserve a Table</Text>
             <CalendarCheck size={18} color={theme.colors.primaryBlack} />
@@ -344,7 +363,9 @@ export default function LoungeDetailScreen() {
           ) : !lounge.ownerId && lounge.claimStatus !== 'pending' ? (
             <Pressable
               style={styles.claimButton}
-              onPress={() => navigation.navigate('ClaimListing', { loungeId })}
+              onPress={() =>
+                requireVerified('claim', () => navigation.navigate('ClaimListing', { loungeId }))
+              }
             >
               <ShieldCheck size={16} color={theme.colors.secondarySilver} />
               <Text style={styles.claimButtonText}>Claim this business</Text>
@@ -499,7 +520,9 @@ export default function LoungeDetailScreen() {
               <Text style={styles.sectionLabel}>Recent Reviews</Text>
               <Pressable
                 hitSlop={8}
-                onPress={() => navigation.navigate('WriteReview', { loungeId })}
+                onPress={() =>
+                  requireVerified('review', () => navigation.navigate('WriteReview', { loungeId }))
+                }
               >
                 <Text style={styles.fullMenuLink}>Write Review</Text>
               </Pressable>

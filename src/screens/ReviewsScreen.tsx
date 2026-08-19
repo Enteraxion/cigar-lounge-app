@@ -35,6 +35,8 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { useAgeVerification } from '../hooks/useAgeVerification';
+import { verificationGateMessage, type GatedAction } from '../utils/verificationGate';
 import StarRating from '../components/StarRating';
 import FilterReviewsSheet from '../components/FilterReviewsSheet';
 import { getReviewsForLounge, type Review } from '../services/loungeService';
@@ -232,6 +234,20 @@ export default function ReviewsScreen() {
   const userId = auth.currentUser?.uid;
 
   const [reviews, setReviews] = useState<Review[] | null>(null);
+  const ageState = useAgeVerification();
+
+  // Step 4 of the 21+ flow: browsing reviews is open, writing one is not.
+  // Grandfathered accounts (no record at all) pass, so this cannot lock out
+  // anyone who predates the feature.
+  const requireVerified = (action: GatedAction, proceed: () => void) => {
+    if (ageState.isVerified || ageState.verification === null) {
+      proceed();
+      return;
+    }
+    const { title, body } = verificationGateMessage(action, ageState);
+    Alert.alert(title, body);
+  };
+
   const [error, setError] = useState<string | null>(null);
   const [filterVisible, setFilterVisible] = useState(false);
   const [appliedReviewFilters, setAppliedReviewFilters] =
@@ -402,7 +418,9 @@ export default function ReviewsScreen() {
 
       <Pressable
         style={styles.writeReviewButton}
-        onPress={() => navigation.navigate('WriteReview', { loungeId })}
+        onPress={() =>
+          requireVerified('review', () => navigation.navigate('WriteReview', { loungeId }))
+        }
       >
         <Text style={styles.writeReviewButtonText}>Write Review</Text>
       </Pressable>

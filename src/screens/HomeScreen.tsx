@@ -71,6 +71,8 @@ import {
 } from '../services/eventService';
 import { loungeImageUri } from '../utils/loungeImage';
 import { tabBarClearance, TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
+import { useAgeVerification } from '../hooks/useAgeVerification';
+import VerificationBanner from '../components/VerificationBanner';
 
 const NEARBY_COUNT = 4;
 /**
@@ -122,6 +124,7 @@ export default function HomeScreen() {
   const { profile, loading: profileLoading } = useUserProfile();
   const { count: unreadNotificationCount } = useUnreadNotificationCount();
   const { location: currentLocation } = useCurrentLocation();
+  const ageState = useAgeVerification();
   const [lounges, setLounges] = useState<Lounge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -248,6 +251,18 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Step 3: browsing is unrestricted while the ID is reviewed, so the
+            member is told that here rather than discovering it when a gated
+            action refuses them. Renders nothing when verified or ungated. */}
+        <VerificationBanner
+          awaitingReview={ageState.awaitingReview}
+          wasRejected={ageState.wasRejected}
+          onPress={() =>
+            (tabNavigation.navigate as (n: string, p?: object) => void)('Profile', {
+              screen: 'AgeVerification',
+            })
+          }
+        />
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <Pressable

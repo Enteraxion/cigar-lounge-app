@@ -40,19 +40,23 @@ export default function EmailVerificationRequiredScreen() {
   const check = async () => {
     setChecking(true);
     try {
-      // refresh() updates the hook's state, which re-evaluates the gate in
-      // AppNavigator and drops this screen if the link has been tapped.
-      refresh();
-      // Deliberately not instant: a "nothing changed" alert fired before the
-      // reload has come back would tell the member they had failed when the
-      // request was still in flight.
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      if (auth.currentUser && !auth.currentUser.emailVerified) {
+      // refresh() publishes to the shared cache every instance of the hook reads,
+      // including AppNavigator's — which is what re-evaluates the gate and drops
+      // this screen. It used to update only this screen's own copy, so a member
+      // who had genuinely confirmed tapped this and stayed exactly here.
+      //
+      // Awaited rather than timed: the previous version slept 1200ms and then
+      // re-read the user, which reported failure whenever the network was slower
+      // than the guess.
+      const verified = await refresh();
+      if (verified === false) {
         Alert.alert(
           'Not confirmed yet',
           'We still see this address as unconfirmed. Tap the link in the email, then try again — and check your spam folder.',
         );
       }
+      // `true` needs no message: the gate drops this screen and the member is in,
+      // which says it better than an alert would.
     } finally {
       setChecking(false);
     }

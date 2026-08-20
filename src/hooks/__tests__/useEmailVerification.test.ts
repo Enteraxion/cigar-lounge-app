@@ -22,7 +22,11 @@
 
 import { createElement } from 'react';
 import { act, create } from 'react-test-renderer';
-import { useEmailVerification, type EmailVerificationState } from '../useEmailVerification';
+import {
+  __resetEmailVerificationCache,
+  useEmailVerification,
+  type EmailVerificationState,
+} from '../useEmailVerification';
 
 type FakeUser = { uid: string; email: string; emailVerified: boolean } | null;
 
@@ -95,6 +99,8 @@ beforeEach(() => {
   mocked.__auth.currentUser = null;
   mocked.__listeners.length = 0;
   mocked.refreshEmailVerified.mockClear();
+  // The cache is module-level and therefore survives between tests.
+  __resetEmailVerificationCache();
 });
 
 describe('useEmailVerification', () => {
@@ -163,5 +169,78 @@ describe('useEmailVerification', () => {
     expect(mocked.__listeners.length).toBe(1);
     hook.unmount();
     expect(mocked.__listeners.length).toBe(0);
+  });
+
+  describe('sharing state between instances', () => {
+    // The second bug of 2026-08-20, which presented as a dead button. Five
+    // components call this hook. React state is per instance, so the wall
+    // screen's refresh() updated only the wall screen — while AppNavigator, which
+    // actually decides the gate, held a separate copy that never changed. A member
+    // who had genuinely confirmed their address tapped "I've confirmed" and stayed
+    // exactly where they were, with nothing failing and nothing logged.
+    //
+    // Firebase gives no help: user.reload() mutates the user but does not fire
+    // onAuthStateChanged, so there is no event for other instances to hear.
+
+    it('propagates one instance\'s refresh to every other instance', async () => {
+      const navigator = renderHook();
+      const wall = renderHook();
+
+      await signIn({ uid: 'u7', email: 'a@example.com', emailVerified: false });
+      expect(navigator.state.emailVerified).toBe(false);
+      expect(wall.state.emailVerified).toBe(false);
+
+      // The member taps the link in their inbox, so the server now says verified.
+      mocked.__auth.currentUser = { uid: 'u7', email: 'a@example.com', emailVerified: true };
+
+      // Only the wall refreshes — as only the wall has a button.
+      await act(async () => {
+        await wall.state.refresh();
+      });
+
+      // The assertion that was failing: the navigator has to see it too, or the
+      // gate never drops and the button looks dead.
+      expect(navigator.state.emailVerified).toBe(true);
+      expect(wall.state.emailVerified).toBe(true);
+
+      navigator.unmount();
+      wall.unmount();
+    });
+
+    it('resolves refresh with what it found, so the caller need not guess', async () => {
+      // The screen alerts "not confirmed yet" only on a definite false. The old
+      // version slept 1200ms and then re-read, reporting failure whenever the
+      // network was slower than the guess.
+      const hook = renderHook();
+      await signIn({ uid: 'u8', email: 'a@example.com', emailVerified: false });
+
+      let result: boolean | undefined = true;
+      await act(async () => {
+        result = await hook.state.refresh();
+      });
+      expect(result).toBe(false);
+
+      mocked.__auth.currentUser = { uid: 'u8', email: 'a@example.com', emailVerified: true };
+      await act(async () => {
+        result = await hook.state.refresh();
+      });
+      expect(result).toBe(true);
+
+      hook.unmount();
+    });
+
+    it('does not leak a stale value into a later instance after sign-out', async () => {
+      const first = renderHook();
+      await signIn({ uid: 'u9', email: 'a@example.com', emailVerified: true });
+      expect(first.state.emailVerified).toBe(true);
+      await signOut();
+      first.unmount();
+
+      // A module-level cache could hand a fresh instance the previous member's
+      // answer, which on this gate would wave an unconfirmed member straight in.
+      const second = renderHook();
+      expect(second.state.emailVerified).toBeUndefined();
+      second.unmount();
+    });
   });
 });

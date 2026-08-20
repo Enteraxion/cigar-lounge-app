@@ -7,17 +7,35 @@
  * email provider of ours — `SENDGRID_API_KEY` is still a placeholder, so a code we
  * emailed ourselves would have had nothing to send with.
  *
- * The address **is** a wall, as of later the same day: Rohith asked that nobody
- * reach the app without tapping the link, so AppNavigator holds an unconfirmed
- * member at EmailVerificationRequiredScreen ahead of the ID step. The banner and
- * action-gate branches that came from the earlier, gentler design are kept as
- * defence in depth — if a reload ever fails open they still refuse the three
- * gated actions — but they are not states a member should normally be in.
+ * The address **is** a wall: AppNavigator holds an unconfirmed member at
+ * EmailVerificationRequiredScreen ahead of the ID step. The banner and
+ * action-gate branches from the earlier, gentler design are kept as defence in
+ * depth — if a reload ever fails open they still refuse the three gated actions —
+ * but they are not states a member should normally be in.
  *
  * Worth knowing what that costs: email is where sign-up drop-off is worst. Wrong
  * address, spam folder, no signal. The screen answers all three — resend, an
  * explicit "I've confirmed" check, and a sign-out to start over — because a wall
  * standing on an email nobody received is otherwise the end of that member.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY THE STATE IS MODULE-LEVEL AND NOT PER-COMPONENT
+ *
+ * Five components call this hook, and on 2026-08-20 that broke the wall in a way
+ * that looked like a dead button. React state is per component instance, so the
+ * wall screen's `refresh()` updated the wall screen's own copy and nothing else.
+ * AppNavigator holds a *separate* copy, and the gate reads that one — so a member
+ * who had genuinely confirmed their address tapped "I've confirmed — continue",
+ * the check succeeded, and they stayed exactly where they were. Nothing failed,
+ * so nothing was logged.
+ *
+ * Firebase does not help here either: `user.reload()` mutates the user object but
+ * does not fire `onAuthStateChanged`, so there is no event for other instances to
+ * hear.
+ *
+ * One cache with a listener set means every instance agrees, whichever one did the
+ * refreshing. The public API is unchanged, so call sites did not move.
+ * ---------------------------------------------------------------------------
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -36,70 +54,103 @@ import {
  */
 const RESEND_COOLDOWN_MS = 60_000;
 
+/** `undefined` means not known yet, and must never be read as "unconfirmed". */
+type Verified = boolean | undefined;
+
+let sharedVerified: Verified;
+let sharedKnown = false;
+const subscribers = new Set<(value: Verified) => void>();
+
+/** Updates the one cache and tells every mounted instance. */
+function publish(value: Verified) {
+  sharedVerified = value;
+  sharedKnown = true;
+  subscribers.forEach(notify => notify(value));
+}
+
+/**
+ * Resets the shared cache. Tests only — the app has one session per process, so
+ * nothing in it needs to forget what it knows.
+ */
+export function __resetEmailVerificationCache() {
+  sharedVerified = undefined;
+  sharedKnown = false;
+  subscribers.clear();
+}
+
 export type EmailVerificationState = {
   /** undefined while unknown — never treat that as unconfirmed. */
-  emailVerified: boolean | undefined;
+  emailVerified: Verified;
   /** Seconds left before another email may be sent; 0 when ready. */
   cooldownSeconds: number;
   sending: boolean;
   /** Sends another link. Resolves false if it was rate-limited or failed. */
   resend: () => Promise<boolean>;
-  /** Re-reads the account, for a screen that wants to check on focus. */
-  refresh: () => void;
+  /**
+   * Re-reads the account and resolves with what it found, so a caller can act on
+   * the answer instead of guessing when it has arrived.
+   */
+  refresh: () => Promise<Verified>;
 };
 
 export function useEmailVerification(): EmailVerificationState {
-  const [emailVerified, setEmailVerified] = useState<boolean | undefined>(
-    // Read synchronously where possible: the flag is already on the cached user,
-    // so a signed-in member with a confirmed address never sees the banner flicker.
-    auth.currentUser ? auth.currentUser.emailVerified : undefined,
-  );
+  const [emailVerified, setEmailVerified] = useState<Verified>(() => {
+    if (sharedKnown) {
+      return sharedVerified;
+    }
+    // The flag is already on the cached user, so a member who is signed in and
+    // confirmed never sees the wall or the banner flicker on the way past.
+    return auth.currentUser ? auth.currentUser.emailVerified : undefined;
+  });
   const [sending, setSending] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const lastSentAt = useRef<number | null>(null);
 
-  const refresh = useCallback(() => {
+  // Every instance listens to the shared cache, so whichever one refreshes, all
+  // of them — including the navigator's, which decides the gate — agree.
+  useEffect(() => {
+    subscribers.add(setEmailVerified);
+    return () => {
+      subscribers.delete(setEmailVerified);
+    };
+  }, []);
+
+  const refresh = useCallback(async (): Promise<Verified> => {
     if (!auth.currentUser) {
-      setEmailVerified(undefined);
-      return;
+      publish(undefined);
+      return undefined;
     }
-    refreshEmailVerified().then(setEmailVerified);
+    const verified = await refreshEmailVerified();
+    publish(verified);
+    return verified;
   }, []);
 
   /**
-   * Follows the session, rather than reading it once.
+   * Follows the session rather than reading it once.
    *
-   * This is what was missing and it hung the app on the splash for every fresh
-   * sign-in and sign-up (2026-08-20). `refresh` is memoised with no dependencies,
-   * so it is created once — at mount, when nobody is signed in yet. Its effect
-   * therefore ran exactly once, set `emailVerified` to undefined, and never ran
-   * again. When a member then signed in, AppNavigator re-rendered but this hook's
-   * effect did not re-run, so `emailVerified` stayed undefined forever — and
-   * undefined means "not known yet", which the navigator answers with the splash.
-   * Anyone already signed in at launch was fine, because the initial useState
-   * above reads the cached user synchronously. That is why it looked like a
-   * sign-up bug rather than a sign-in one.
-   *
-   * Subscribing is the fix rather than keying the callback on a uid read during
-   * render: this hook is used by four screens, and it should not depend on its
-   * parent happening to re-render at the right moment to notice a new session.
+   * Without this the app hung on the splash for every fresh sign-in and sign-up
+   * (2026-08-20): the effect ran once at mount with nobody signed in, published
+   * undefined, and never ran again — and AppNavigator answers undefined with the
+   * splash. Members already signed in at launch were fine, which is why it
+   * presented as a sign-up bug.
    */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, nextUser => {
       if (!nextUser) {
-        setEmailVerified(undefined);
+        publish(undefined);
         return;
       }
-      // The cached flag first, so the gate can resolve immediately, then a reload
-      // in case the address was confirmed elsewhere since the token was minted.
-      setEmailVerified(nextUser.emailVerified);
-      refreshEmailVerified().then(setEmailVerified);
+      // The cached flag first so the gate can resolve immediately, then a reload
+      // in case the address was confirmed somewhere else since the token was
+      // minted.
+      publish(nextUser.emailVerified);
+      refreshEmailVerified().then(publish);
     });
     return unsubscribe;
   }, []);
 
   // The link is tapped in a mail app, so the moment worth re-checking is the app
-  // coming back to the foreground. Without this the banner would sit there
+  // coming back to the foreground. Without this the wall would sit there
   // insisting the address is unconfirmed until the ID token happened to refresh.
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextState => {

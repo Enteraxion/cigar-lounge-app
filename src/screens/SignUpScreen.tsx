@@ -16,6 +16,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StatusBar,
@@ -37,6 +38,7 @@ import {
   endSignUpTransition,
   getAuthErrorMessage,
   sendVerificationEmail,
+  signOut,
 } from '../services/firebaseAuth';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
@@ -123,16 +125,32 @@ export default function SignUpScreen() {
       // member can resend from the banner, and an unconfirmed address is a state
       // the app already handles rather than an error.
       await sendVerificationEmail();
-      // Deliberately no sign-out and no "please sign in" alert. The session
-      // stays, so AppNavigator takes the new member straight to the ID upload —
-      // which is what Dr. Brinkley asked for ("right after they sign up ...
-      // before entering the app"). Bouncing them to a login form first was a
-      // leftover from before that step existed.
+
+      // Signed back out on purpose, per Rohith 2026-08-20: a new member returns
+      // to the sign-in form and enters the credentials they just chose, rather
+      // than being carried into the app on the session
+      // createUserWithEmailAndPassword opens implicitly.
       //
-      // `endSignUpTransition` in the finally block is what releases the
-      // navigator, and it runs only after the age-verification record above is
-      // written — otherwise the gate would be evaluated against a document that
-      // does not exist yet and the member would walk straight past it.
+      // It costs a step, and the reason to accept that is what it buys: typing
+      // the password once more is the only point in the flow that proves they
+      // can reproduce it. Otherwise a member is carried in on an implicit session
+      // and only discovers a typo'd password days later, when the session lapses
+      // and there is nothing to recover the account with — the confirmation email
+      // being the other thing they may not have received.
+      //
+      // The age-verification record and the confirmation email are both written
+      // above, while this session still has permission to. Signing out first
+      // would leave the account with no record, which every read treats as
+      // unverified — safe, but it would put the member behind a wall with
+      // nothing to show a reviewer.
+      await signOut(auth);
+      Alert.alert(
+        'Account created',
+        'We’ve emailed you a link to confirm your address — check your spam folder if it isn’t there. Sign in below to finish setting up your account.',
+      );
+      // `endSignUpTransition` in the finally block releases the navigator. With
+      // the sign-out above, `auth.currentUser` is null by then, so it lands on
+      // the Auth stack — the sign-in form — rather than the app.
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
     } finally {

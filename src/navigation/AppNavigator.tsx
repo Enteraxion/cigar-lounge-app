@@ -19,14 +19,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import VoiceSearchScreen from '../screens/VoiceSearchScreen';
 import ConciergeNavigator from './ConciergeNavigator';
 import NotificationsScreen from '../screens/NotificationsScreen';
-import FlameIcon from '../components/FlameIcon';
 import {
   auth,
   onAuthStateChanged,
@@ -54,10 +53,28 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+/**
+ * Shown while the session and the two verification reads resolve.
+ *
+ * The logo rather than the bare flame mark, so the moment before the app appears
+ * is branded instead of looking like a stall. The asset is the same artwork as
+ * the app icon (design-reference/logo), which makes this read as a continuation
+ * of the icon the member just tapped rather than a different screen.
+ *
+ * `resizeMode="contain"` because the source is square with the gold ring's
+ * straight edges close to the frame — cover would crop the ring and it would read
+ * as a mistake rather than a crop.
+ */
 function SplashScreen() {
   return (
     <View style={splashStyles.screen}>
-      <FlameIcon size={32} color={theme.colors.secondarySilver} />
+      <Image
+        source={require('../../assets/images/lounge-locator-logo.png')}
+        style={splashStyles.logo}
+        resizeMode="contain"
+        accessibilityRole="image"
+        accessibilityLabel="Lounge Locator"
+      />
     </View>
   );
 }
@@ -65,10 +82,13 @@ function SplashScreen() {
 const splashStyles = StyleSheet.create({
   screen: {
     flex: 1,
+    // The logo carries its own near-black ground, so the screen matches it —
+    // otherwise the badge sits in a visible lighter square.
     backgroundColor: theme.colors.primaryBlack,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  logo: { width: 140, height: 140 },
 });
 
 export default function AppNavigator() {

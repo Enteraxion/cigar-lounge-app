@@ -22,7 +22,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { auth, refreshEmailVerified, sendVerificationEmail } from '../services/firebaseAuth';
+import {
+  auth,
+  onAuthStateChanged,
+  refreshEmailVerified,
+  sendVerificationEmail,
+} from '../services/firebaseAuth';
 
 /**
  * Firebase rate-limits verification emails, and a member who taps twice gets an
@@ -61,7 +66,37 @@ export function useEmailVerification(): EmailVerificationState {
     refreshEmailVerified().then(setEmailVerified);
   }, []);
 
-  useEffect(refresh, [refresh]);
+  /**
+   * Follows the session, rather than reading it once.
+   *
+   * This is what was missing and it hung the app on the splash for every fresh
+   * sign-in and sign-up (2026-08-20). `refresh` is memoised with no dependencies,
+   * so it is created once — at mount, when nobody is signed in yet. Its effect
+   * therefore ran exactly once, set `emailVerified` to undefined, and never ran
+   * again. When a member then signed in, AppNavigator re-rendered but this hook's
+   * effect did not re-run, so `emailVerified` stayed undefined forever — and
+   * undefined means "not known yet", which the navigator answers with the splash.
+   * Anyone already signed in at launch was fine, because the initial useState
+   * above reads the cached user synchronously. That is why it looked like a
+   * sign-up bug rather than a sign-in one.
+   *
+   * Subscribing is the fix rather than keying the callback on a uid read during
+   * render: this hook is used by four screens, and it should not depend on its
+   * parent happening to re-render at the right moment to notice a new session.
+   */
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, nextUser => {
+      if (!nextUser) {
+        setEmailVerified(undefined);
+        return;
+      }
+      // The cached flag first, so the gate can resolve immediately, then a reload
+      // in case the address was confirmed elsewhere since the token was minted.
+      setEmailVerified(nextUser.emailVerified);
+      refreshEmailVerified().then(setEmailVerified);
+    });
+    return unsubscribe;
+  }, []);
 
   // The link is tapped in a mail app, so the moment worth re-checking is the app
   // coming back to the foreground. Without this the banner would sit there

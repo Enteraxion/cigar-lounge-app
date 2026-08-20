@@ -208,7 +208,7 @@ export default function SignUpScreen() {
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <Image
-            source={require('../../assets/images/lounge-locator-logo.png')}
+            source={require('../../assets/images/lounge-locator-mark.png')}
             style={styles.logo}
             resizeMode="contain"
             accessibilityRole="image"
@@ -456,7 +456,9 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 16,
   },
-  logo: { width: 76, height: 76 },
+  // 96x87 matches the asset's own proportions (816x738 before scaling), so the
+  // mark fills its box exactly rather than letterboxing inside a square.
+  logo: { width: 96, height: 87 },
   heading1: {
     fontFamily: FONT_SERIF_SEMIBOLD,
     fontSize: 30,

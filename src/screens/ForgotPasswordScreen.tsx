@@ -2,9 +2,14 @@
  * ForgotPasswordScreen
  *
  * "Reset Password" screen for The Reserve (Cigar Lounge Locator).
- * Matches LoginScreen's exact visual system (same fonts, colors, card
- * sheen, input/button styles) — see that file for the design source of
- * truth. Wired to real Firebase Authentication (sendPasswordResetEmail) —
+ * Matches LoginScreen's visual system (same fonts, colours, card sheen,
+ * input/button styles) — see that file for the design source of truth.
+ *
+ * That claim was false until 2026-08-20: this screen had one flat black
+ * gradient where Login has a gold glow under a black wash, and a silver flame
+ * where Login's is gold, so it read as a screen whose theme had not loaded. It
+ * also drew its back button under the status bar, which on iOS is where taps
+ * stop reaching the app — the button was not broken, it was unreachable. Wired to real Firebase Authentication (sendPasswordResetEmail) —
  * see src/services/firebaseAuth.ts for the shared auth instance and error
  * mapping.
  */
@@ -12,6 +17,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StatusBar,
@@ -20,13 +26,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { sendPasswordResetEmail } from '@react-native-firebase/auth';
-import FlameIcon from '../components/FlameIcon';
 import { auth, getAuthErrorMessage } from '../services/firebaseAuth';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 import { theme, withAlpha } from '../theme';
@@ -43,6 +48,7 @@ type ForgotPasswordNavigationProp = NativeStackNavigationProp<AuthStackParamList
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation<ForgotPasswordNavigationProp>();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -71,9 +77,24 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
+      {/* Two layers, matching LoginScreen: a warm gold glow at the top, then
+          black over it. A single black gradient — which is what this screen had
+          — gives the card nothing to sit on, and reads as the theme not having
+          loaded. */}
       <LinearGradient
-        colors={[withAlpha(theme.colors.primaryBlack, 0.4), withAlpha(theme.colors.primaryBlack, 0.8), theme.colors.primaryBlack]}
-        locations={[0, 0.5, 1]}
+        colors={[theme.gold.glow, withAlpha(theme.colors.accentGold, 0.04), theme.colors.background]}
+        locations={[0, 0.35, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={[
+          withAlpha(theme.colors.background, 0.2),
+          withAlpha(theme.colors.background, 0.75),
+          theme.colors.background,
+        ]}
+        locations={[0, 0.55, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -81,7 +102,7 @@ export default function ForgotPasswordScreen() {
 
       <ScrollView {...keyboardAwareScrollProps}
         style={styles.main}
-        contentContainerStyle={styles.mainContent}
+        contentContainerStyle={[styles.mainContent, { paddingTop: insets.top + 12 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ---------------- Back button ---------------- */}
@@ -93,9 +114,13 @@ export default function ForgotPasswordScreen() {
 
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
-          <View style={styles.logoBadge}>
-            <FlameIcon size={24} color={theme.colors.secondarySilver} />
-          </View>
+          <Image
+            source={require('../../assets/images/lounge-locator-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityRole="image"
+            accessibilityLabel="Lounge Locator"
+          />
           <Text style={styles.heading1}>LOUNGE LOCATOR</Text>
           <Text style={styles.subtitle}>CIGAR LOUNGE SOCIETY</Text>
         </View>
@@ -227,22 +252,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
   },
-  logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: withAlpha(theme.colors.surface, 0.5),
-    borderWidth: 1,
-    borderColor: withAlpha(theme.colors.accentGold, 0.3),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 6,
-  },
+  logo: { width: 76, height: 76 },
   heading1: {
     fontFamily: FONT_SERIF_SEMIBOLD,
     fontSize: 30,

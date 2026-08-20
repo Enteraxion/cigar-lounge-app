@@ -16,6 +16,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -31,7 +32,6 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { signInWithEmailAndPassword } from '@react-native-firebase/auth';
-import FlameIcon from '../../components/FlameIcon';
 import { auth, getAuthErrorMessage } from '../../services/firebaseAuth';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -111,9 +111,13 @@ export default function LoginScreen() {
       >
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
-          <View style={styles.logoBadge}>
-            <FlameIcon size={26} color={theme.colors.accentGold} />
-          </View>
+          <Image
+            source={require('../../../assets/images/lounge-locator-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityRole="image"
+            accessibilityLabel="Lounge Locator"
+          />
           <Text style={styles.heading1}>LOUNGE LOCATOR</Text>
           <Text style={styles.subtitle}>CIGAR LOUNGE SOCIETY</Text>
         </View>
@@ -241,22 +245,7 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 16,
   },
-  logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: withAlpha(theme.colors.surface, 0.5),
-    borderWidth: 1,
-    borderColor: withAlpha(theme.colors.accentGold, 0.3),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 6,
-  },
+  logo: { width: 76, height: 76 },
   heading1: {
     fontFamily: FONT_SERIF_SEMIBOLD,
     fontSize: 30,

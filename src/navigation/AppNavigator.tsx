@@ -19,7 +19,6 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
@@ -33,9 +32,9 @@ import {
   setSignUpTransitionEndListener,
   type AuthUser,
 } from '../services/firebaseAuth';
-import { theme } from '../theme';
 import { useAgeVerification } from '../hooks/useAgeVerification';
 import { useEmailVerification } from '../hooks/useEmailVerification';
+import BrandSplash, { SPLASH_MINIMUM_MS } from '../components/BrandSplash';
 import AgeVerificationRequiredScreen from '../screens/AgeVerificationRequiredScreen';
 import EmailVerificationRequiredScreen from '../screens/EmailVerificationRequiredScreen';
 
@@ -53,49 +52,24 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-/**
- * Shown while the session and the two verification reads resolve.
- *
- * The logo rather than the bare flame mark, so the moment before the app appears
- * is branded instead of looking like a stall. The asset is the same artwork as
- * the app icon (design-reference/logo), which makes this read as a continuation
- * of the icon the member just tapped rather than a different screen.
- *
- * `resizeMode="contain"` because the source is square with the gold ring's
- * straight edges close to the frame — cover would crop the ring and it would read
- * as a mistake rather than a crop.
- */
-function SplashScreen() {
-  return (
-    <View style={splashStyles.screen}>
-      <Image
-        source={require('../../assets/images/lounge-locator-logo.png')}
-        style={splashStyles.logo}
-        resizeMode="contain"
-        accessibilityRole="image"
-        accessibilityLabel="Lounge Locator"
-      />
-    </View>
-  );
-}
 
-const splashStyles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    // The logo carries its own near-black ground, so the screen matches it —
-    // otherwise the badge sits in a visible lighter square.
-    backgroundColor: theme.colors.primaryBlack,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: { width: 140, height: 140 },
-});
 
 export default function AppNavigator() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
   const { loading: ageLoading, mustUploadId, reload: reloadAge } = useAgeVerification();
   const { emailVerified } = useEmailVerification();
+  /**
+   * Holds the splash for a floor rather than adding a delay. The timer starts
+   * once, when this navigator mounts — i.e. a cold start — so a member returning
+   * from the background is not made to watch it again. If the reads below take
+   * longer than the floor, this costs nothing at all.
+   */
+  const [splashFloorPassed, setSplashFloorPassed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSplashFloorPassed(true), SPLASH_MINIMUM_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, nextUser => {
@@ -126,8 +100,8 @@ export default function AppNavigator() {
     return () => setSignUpTransitionEndListener(null);
   }, [reloadAge]);
 
-  if (initializing) {
-    return <SplashScreen />;
+  if (initializing || !splashFloorPassed) {
+    return <BrandSplash />;
   }
 
   // Don't decide either gate while its read is still in flight — a signed-in
@@ -135,7 +109,7 @@ export default function AppNavigator() {
   // glitch. `emailVerified === undefined` is "not known yet" and must never be
   // treated as "unconfirmed", or every cold start walls a member who is fine.
   if (user && (ageLoading || emailVerified === undefined)) {
-    return <SplashScreen />;
+    return <BrandSplash />;
   }
 
   return (

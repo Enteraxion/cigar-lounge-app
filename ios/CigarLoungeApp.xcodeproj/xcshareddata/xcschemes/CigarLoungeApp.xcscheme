@@ -40,8 +40,16 @@
          </TestableReference>
       </Testables>
    </TestAction>
+   <!-- Debug, which is React Native's default and was changed to Release at some
+        point. Release bakes the JS bundle into the .app and does not connect to
+        Metro, so with Release here every `run-ios` produced a build whose
+        JavaScript was frozen at build time: Cmd+R did nothing and each JS change
+        needed a full native rebuild to be visible. That cost most of a day on
+        2026-08-19, including a stretch spent looking for a bug in code that was
+        not in the running app at all.
+        Archive and Profile stay Release, which is correct for both. -->
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"

@@ -65,12 +65,10 @@ import {
   Plane,
   Settings,
   IdCard,
-  ShieldCheck,
   Store,
   User,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
-import { isAdminEmail } from '../config/admins';
 import { auth } from '../services/firebaseAuth';
 import { getLoungesForOwner } from '../services/ownerService';
 import { getAgeVerification } from '../services/ageVerificationService';
@@ -396,18 +394,6 @@ export default function ProfileScreen() {
         ) : null}
 
         {/* ---------------- Admin: Review Age Verification ---------------- */}
-        {isAdminEmail(auth.currentUser?.email) && (
-          <Pressable style={styles.passportCard} onPress={() => navigation.navigate('AdminAgeReview')}>
-            <View style={styles.passportIconBox}>
-              <IdCard size={20} color={theme.colors.accentGold} />
-            </View>
-            <View style={styles.passportTextGroup}>
-              <Text style={styles.passportTitle}>Review Age Verification</Text>
-              <Text style={styles.passportSubtitle}>Check member IDs against declared age</Text>
-            </View>
-            <ChevronRight size={18} color={theme.colors.secondarySilver} />
-          </Pressable>
-        )}
 
         {/* ---------------- Owner: My Shops ---------------- */}
         {/* Shown only to owners/claimants — see ownsShops above. This is the
@@ -427,18 +413,6 @@ export default function ProfileScreen() {
         )}
 
         {/* ---------------- Admin: Review Claims ---------------- */}
-        {isAdminEmail(auth.currentUser?.email) && (
-          <Pressable style={styles.passportCard} onPress={() => navigation.navigate('AdminClaimReview')}>
-            <View style={styles.passportIconBox}>
-              <ShieldCheck size={20} color={theme.colors.accentGold} />
-            </View>
-            <View style={styles.passportTextGroup}>
-              <Text style={styles.passportTitle}>Review Business Claims</Text>
-              <Text style={styles.passportSubtitle}>Approve or reject pending listing claims</Text>
-            </View>
-            <ChevronRight size={18} color={theme.colors.secondarySilver} />
-          </Pressable>
-        )}
 
         {/* ---------------- Achievements ---------------- */}
         <View style={styles.field}>

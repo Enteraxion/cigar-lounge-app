@@ -30,6 +30,21 @@
         "**/.*",
         "**/node_modules/**"
       ]
+    },
+    {
+      "target": "admin-portal",
+      "public": "admin-portal/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
     }
   ],
   "storage": {

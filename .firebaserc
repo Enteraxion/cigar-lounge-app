@@ -7,6 +7,9 @@
       "hosting": {
         "owner-portal": [
           "reserve-owner-portal"
+        ],
+        "admin-portal": [
+          "reserve-admin-portal"
         ]
       }
     }

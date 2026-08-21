@@ -4,6 +4,12 @@
  * Stack for the Profile tab: the Profile home screen, the Cigar Passport
  * flow (Passport home, Travel Timeline, Achievements), and the AI
  * Settings / AI Feedback pair (reached via the gear icon on Profile).
+ *
+ * No admin routes. AdminAgeReview and AdminClaimReview lived here until
+ * 2026-08-21 and now live in admin-portal/ — reviewing two photographs of a
+ * document against a date of birth is desk work that a phone makes harder, and
+ * keeping them here meant the admin's email address shipped inside every
+ * member's app bundle where anyone could read it out of a downloaded build.
  */
 
 import React from 'react';
@@ -16,10 +22,8 @@ import AchievementsScreen from '../screens/AchievementsScreen';
 import AISettingsScreen from '../screens/AISettingsScreen';
 import AIFeedbackScreen from '../screens/AIFeedbackScreen';
 import MyReviewsScreen from '../screens/MyReviewsScreen';
-import AdminClaimReviewScreen from '../screens/AdminClaimReviewScreen';
 import MyShopsScreen from '../screens/MyShopsScreen';
 import AgeVerificationScreen from '../screens/AgeVerificationScreen';
-import AdminAgeReviewScreen from '../screens/AdminAgeReviewScreen';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -30,8 +34,6 @@ export type ProfileStackParamList = {
   AISettings: undefined;
   AIFeedback: undefined;
   MyReviews: undefined;
-  /** Only reachable from ProfileScreen's admin-only entry card — see src/config/admins.ts. */
-  AdminClaimReview: undefined;
   /**
    * Owner-facing. ProfileScreen only shows the entry card to members who own
    * or have claimed a lounge, so most members never see this exists.
@@ -39,8 +41,6 @@ export type ProfileStackParamList = {
   MyShops: undefined;
   /** Member-facing 21+ ID upload. Only surfaced while there is something to do. */
   AgeVerification: undefined;
-  /** Admin-only, like AdminClaimReview — see src/config/admins.ts. */
-  AdminAgeReview: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -56,10 +56,8 @@ export default function ProfileNavigator() {
       <Stack.Screen name="AISettings" component={AISettingsScreen} />
       <Stack.Screen name="AIFeedback" component={AIFeedbackScreen} />
       <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
-      <Stack.Screen name="AdminClaimReview" component={AdminClaimReviewScreen} />
       <Stack.Screen name="MyShops" component={MyShopsScreen} />
       <Stack.Screen name="AgeVerification" component={AgeVerificationScreen} />
-      <Stack.Screen name="AdminAgeReview" component={AdminAgeReviewScreen} />
     </Stack.Navigator>
   );
 }

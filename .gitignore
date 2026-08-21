@@ -103,3 +103,10 @@ ios/*build.log
 # Firestore emulator log, produced by `npm run test:rules`
 firestore-debug.log
 ui-debug.log
+
+# Google Places API key, pasted locally for the backfill scripts — never commit.
+google-places-key.txt
+
+# Built output for the admin portal — same as owner-portal/dist.
+admin-portal/dist
+admin-portal/node_modules

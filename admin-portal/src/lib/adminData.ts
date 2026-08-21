@@ -193,3 +193,66 @@ export async function rejectClaim(loungeId: string): Promise<void> {
     /* see above */
   }
 }
+
+// ---------------------------------------------------------------- claimed lounges
+
+/**
+ * Every lounge that currently has an owner.
+ *
+ * This exists because approving a claim **deletes** `claimStatus`, which is the
+ * field the pending queue filters on — so the moment a claim is approved it
+ * disappears from that queue for good. The mobile screen this portal replaced had
+ * a "Claimed listings" section for exactly this reason, added on 2026-08-17 after
+ * approved lounges were found to be falling off the admin's view permanently. It
+ * was dropped when the queue was rebuilt here and is restored now.
+ *
+ * `!=` in Firestore also excludes documents where the field is absent, which is
+ * what makes this work: an unclaimed lounge has no `ownerId` at all.
+ */
+export async function getClaimedLounges(): Promise<ClaimingLounge[]> {
+  const snapshot = await getDocs(query(collection(db, 'lounges'), where('ownerId', '!=', null)));
+  return snapshot.docs
+    .map(document => ({ id: document.id, ...(document.data() as Omit<ClaimingLounge, 'id'>) }))
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+}
+
+/**
+ * Takes a lounge back off its owner, returning it to unclaimed.
+ *
+ * The member is notified **before** the write, unlike approve and reject. That
+ * ordering is deliberate and copied from the app's ownerService: the write clears
+ * `ownerId`, which is the only record of who to tell. Notify afterwards and there
+ * is nobody left to address.
+ */
+export async function revokeOwnership(loungeId: string): Promise<void> {
+  const reference = doc(db, 'lounges', loungeId);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists()) {
+    throw new Error('This lounge no longer exists.');
+  }
+  const lounge = snapshot.data() as ClaimingLounge;
+  if (!lounge.ownerId) {
+    throw new Error('This lounge has no owner to remove.');
+  }
+
+  try {
+    await setDoc(doc(collection(db, 'users', lounge.ownerId, 'notifications')), {
+      type: 'ownership_revoked',
+      title: 'Your business listing access has ended',
+      body:
+        `You no longer manage ${lounge.name} in Lounge Locator. Its listing stays ` +
+        'published — only your access to edit it has been removed. If you think ' +
+        'this is a mistake, reply to our team and we’ll look into it.',
+      read: false,
+      createdAt: Timestamp.now(),
+      data: { loungeId },
+    });
+  } catch {
+    // Best effort. Failing to notify must not stop ownership being removed —
+    // that is the action the admin actually asked for.
+  }
+
+  // ownerId included here, unlike the claim paths above, because this is the one
+  // operation whose whole purpose is removing it.
+  await updateDoc(reference, { ownerId: deleteField(), ...CLAIM_FIELDS });
+}

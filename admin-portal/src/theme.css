@@ -982,3 +982,12 @@ a {
   .navitem__soon { display: none; }
   .content { padding: var(--space-lg); }
 }
+
+/* A count of state rather than of work — gold would put it on the same footing
+   as the queues, which is exactly the confusion the Claimed tab exists to fix. */
+.tab__badge--quiet {
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+  color: var(--silver);
+  font-weight: 500;
+}

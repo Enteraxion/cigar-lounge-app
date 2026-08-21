@@ -3,10 +3,12 @@ import AdminShell from '../components/AdminShell';
 import {
   approveClaim,
   approveVerification,
+  getClaimedLounges,
   getPendingClaims,
   getPendingVerifications,
   rejectClaim,
   rejectVerification,
+  revokeOwnership,
 } from '../lib/adminData';
 import type { ClaimingLounge, IdDocumentType, PendingVerification } from '../lib/types';
 
@@ -87,21 +89,33 @@ function ageFromIso(iso: string): number | null {
   return age;
 }
 
-type Tab = 'ids' | 'claims';
+/**
+ * `claimed` is not a queue — nothing there is waiting on a decision. It is here
+ * because approving a claim deletes `claimStatus` and so removes it from the
+ * pending tab forever; without this tab an admin has no way to see which lounges
+ * are claimed, or to undo one.
+ */
+type Tab = 'ids' | 'claims' | 'claimed';
 
 export default function ApprovalsPage() {
   const [tab, setTab] = useState<Tab>('ids');
   const [verifications, setVerifications] = useState<PendingVerification[] | null>(null);
   const [claims, setClaims] = useState<ClaimingLounge[] | null>(null);
+  const [claimed, setClaimed] = useState<ClaimingLounge[] | null>(null);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const [v, c] = await Promise.all([getPendingVerifications(), getPendingClaims()]);
+      const [v, c, owned] = await Promise.all([
+        getPendingVerifications(),
+        getPendingClaims(),
+        getClaimedLounges(),
+      ]);
       setVerifications(v);
       setClaims(c);
+      setClaimed(owned);
     } catch (caught) {
       // Almost always permission-denied from a non-admin account, so say that
       // rather than "something went wrong".
@@ -131,6 +145,7 @@ export default function ApprovalsPage() {
 
   const idCount = verifications?.length ?? 0;
   const claimCount = claims?.length ?? 0;
+  const claimedCount = claimed?.length ?? 0;
 
   return (
     <AdminShell
@@ -157,6 +172,14 @@ export default function ApprovalsPage() {
         >
           Business claims
           {claimCount > 0 && <span className="tab__badge">{claimCount}</span>}
+        </button>
+        <button
+          className={`tab${tab === 'claimed' ? ' tab--active' : ''}`}
+          onClick={() => setTab('claimed')}
+        >
+          Claimed
+          {/* Muted, not gold: this is a count of state, not of work outstanding. */}
+          {claimedCount > 0 && <span className="tab__badge tab__badge--quiet">{claimedCount}</span>}
         </button>
       </div>
 
@@ -255,6 +278,63 @@ export default function ApprovalsPage() {
                       onClick={() => act(record.userId, () => approveVerification(record.userId))}
                     >
                       {busy ? 'Working…' : 'Verify'}
+                    </button>
+                  </footer>
+                </section>
+              );
+            })}
+          </div>
+        )
+      ) : tab === 'claimed' ? (
+        claimed === null ? (
+          <p className="muted">Loading…</p>
+        ) : claimed.length === 0 ? (
+          <div className="empty">No lounges are claimed yet.</div>
+        ) : (
+          <div className="stack">
+            {claimed.map(lounge => {
+              const busy = busyId === lounge.id;
+              return (
+                <section className="card" key={lounge.id}>
+                  <header className="card__head">
+                    <div>
+                      <h2 className="card__title">{lounge.name}</h2>
+                      <p className="card__meta">
+                        {lounge.address}
+                        {lounge.city ? `, ${lounge.city}` : ''}
+                      </p>
+                    </div>
+                    <span className="pill">Claimed</span>
+                  </header>
+
+                  <dl className="facts">
+                    <div>
+                      <dt>Owner account</dt>
+                      {/* The uid rather than a name: ownerName is one of the
+                          fields cleared on approval, so it is genuinely gone by
+                          this point. Resolving uid to email needs a members
+                          lookup, which is a later phase. */}
+                      <dd style={{ fontSize: 13 }}>{lounge.ownerId}</dd>
+                    </div>
+                  </dl>
+
+                  <footer className="card__foot">
+                    <button
+                      className="btn btn--reject"
+                      disabled={busy}
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `Remove ${lounge.name} from its owner? The listing stays published — ` +
+                              'only their access to edit it is removed. They will be notified.',
+                          )
+                        ) {
+                          return;
+                        }
+                        act(lounge.id, () => revokeOwnership(lounge.id));
+                      }}
+                    >
+                      {busy ? 'Working…' : 'Revoke ownership'}
                     </button>
                   </footer>
                 </section>

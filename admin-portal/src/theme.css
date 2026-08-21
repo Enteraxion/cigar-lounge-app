@@ -991,3 +991,89 @@ a {
   color: var(--silver);
   font-weight: 500;
 }
+
+/* ---- lounge directory ---- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: flex-end;
+  margin-bottom: var(--space-md);
+}
+.field--inline { flex: 0 0 auto; }
+.field--grow { flex: 1 1 240px; }
+.input--select { appearance: none; padding-right: var(--space-lg); }
+
+.hint {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0 0 var(--space-md);
+}
+
+/* Wide table scrolls inside its own box rather than stretching the page. */
+.tablewrap {
+  overflow-x: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--white);
+  vertical-align: middle;
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover { background: var(--surface-raised); }
+.cell--name { font-weight: 600; max-width: 240px; }
+.cell--dim { color: var(--muted); }
+/* A missing value is the point of this table, so it is coloured, not blank. */
+.cell--gap { color: var(--danger); }
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  flex-wrap: wrap;
+}
+.pager__meta { color: var(--muted); font-size: 12.5px; }
+.pager__buttons { display: flex; gap: var(--space-sm); }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  z-index: 50;
+}
+.modal__card {
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-height: 88vh;
+  overflow-y: auto;
+}

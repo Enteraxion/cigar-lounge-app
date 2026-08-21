@@ -5,6 +5,7 @@ import { auth } from './lib/firebase';
 import { isAdminEmail } from './lib/admins';
 import LoginPage from './pages/LoginPage';
 import ApprovalsPage from './pages/ApprovalsPage';
+import LoungesPage from './pages/LoungesPage';
 
 function Splash() {
   return <div className="splash">Loading…</div>;
@@ -70,6 +71,7 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route path="/approvals" element={<ApprovalsPage />} />
+        <Route path="/lounges" element={<LoungesPage />} />
         {/* Approvals is the landing page for now because it is the only built
             section and the only one with work waiting in it. Dashboard takes
             over once it exists. */}

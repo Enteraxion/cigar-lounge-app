@@ -33,7 +33,7 @@ type Section = { id: SectionId; label: string; to?: string; hint: string };
 const SECTIONS: Section[] = [
   { id: 'dashboard', label: 'Dashboard', hint: 'System health at a glance' },
   { id: 'approvals', label: 'Approvals', to: '/approvals', hint: 'IDs and business claims' },
-  { id: 'lounges', label: 'Lounges', hint: 'All 8,496 listings' },
+  { id: 'lounges', label: 'Lounges', to: '/lounges', hint: 'All 8,496 listings' },
   { id: 'members', label: 'Members', hint: 'Accounts and verification status' },
   { id: 'reports', label: 'Reports', hint: 'Issues members have reported' },
   { id: 'reviews', label: 'Reviews', hint: 'Moderation' },

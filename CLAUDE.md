@@ -281,3 +281,54 @@ a travel "passport" feature, and an AI concierge.
   ID capture, single-page passport capture, and the legacy "currently on
   file" block all render. tsc clean, ESLint 0 errors, 241 unit tests, 34
   rules tests, production iOS bundle clean.
+- 2026-08-21/22: Built the admin portal (`admin-portal/`, live at
+  https://reserve-admin-portal.web.app) and took admin out of the members' app.
+  Seven sections: Dashboard, Approvals (ID verifications, business claims,
+  claimed listings), Lounges, Members, Reports, Reviews, Operations. Same stack
+  and stylesheet as `owner-portal/`, own Hosting target `reserve-admin-portal`.
+  Deleted `AdminAgeReviewScreen`, `AdminClaimReviewScreen` and
+  `src/config/admins.ts` from the app — that last one shipped the admin's email
+  address inside every member's bundle, readable from a downloaded build
+  (verified afterwards: 0 occurrences in a production bundle). MyShops and
+  EditListing deliberately stay in the app; they are owner-facing.
+  New admin-only Cloud Functions: `adminDeleteMember` (Auth + Firestore +
+  Storage, in that order — Auth last because it is the only thing that makes a
+  uid findable), `adminBackfillCities`, `adminRebuildCityStats`.
+  `firestore.rules` gained an admin read plus a collection-group read for
+  `users/{uid}/issueReports`, which the app had been writing since 2026-08-10
+  and **nothing had ever read**.
+  * **The directory was never US-only.** Reported to Julian as such on 08-20 and
+    that was wrong: 408 international lounges across 43 cities — Berlin 166,
+    London 92, Munich 35, Toronto 33 — Germany, the UK and Canada. 344 came from
+    the Yelp import with city values intact, invisible only because Yelp's region
+    codes ("Berlin, BE", "Munich, BY") were unrecognisable in the city list. The
+    other 64 were Google-sourced with **no `city` field at all**, which was true
+    of all 3,328 Google documents — 39% of the directory absent from every city
+    search. Backfilled `city` on all 3,328 by parsing the address (no API calls,
+    no cost; took four passes to reach 100% — US-only regex, then international,
+    then an optional leading comma for addresses with no street part, then a
+    district-chain rule for "München-Altstadt-Lehel"). Then normalised all 408
+    international labels from region codes to country names, because the backfill
+    had used "City, Country" while Yelp used codes and the same city was
+    appearing two or three times in search. 2,017 cities in the index now.
+  * **`refreshCityLounges` was silently wiping owner edits.** It writes with
+    `merge: true`, which only protects fields the incoming object does not
+    mention — and both builders mentioned four of the five fields
+    `isOwnListingEdit` lets an owner change, as empty values (`description: ''`,
+    `amenities: []`, `humidorItems: []`, `priceRange: ''`). So a refresh of a
+    city blanked whatever its owners had filled in; `humidorItems` is only ever
+    populated by an owner, so the import could only ever destroy it. Latent (3
+    claimed lounges, no refresh since) but very hard to diagnose after the fact.
+    Fixed: those fields are no longer written at all, `hours` is written only
+    when real, and real-but-owner-editable data (Yelp price tier, Google
+    amenities) is withheld from claimed lounges — which needed one `getAll` per
+    city to know who is claimed.
+  * Found while measuring, and corrected in TEST-REPORT.md: **4,163 lounges have
+    no photograph** (only 20 of 3,328 Google documents do). The original report
+    marked this PASS because it queried `imageUrl`; the field is `images`.
+  * Still open: phone absent on all 8,496 and 5,080 placeholder hours, both
+    fixed by `npm run backfill:google -- --confirm` (~$192, Julian approved
+    Google over Yelp at $299/month); `GOOGLE_PLACES_API_KEY` is still a
+    placeholder secret so Operations cannot run it from the portal yet. Reviews
+    cannot be deleted from the portal — the rules only permit a review's author,
+    and widening that is a deliberate decision not yet taken.

@@ -6,6 +6,11 @@ import { isAdminEmail } from './lib/admins';
 import LoginPage from './pages/LoginPage';
 import ApprovalsPage from './pages/ApprovalsPage';
 import LoungesPage from './pages/LoungesPage';
+import DashboardPage from './pages/DashboardPage';
+import MembersPage from './pages/MembersPage';
+import ReportsPage from './pages/ReportsPage';
+import ReviewsPage from './pages/ReviewsPage';
+import OperationsPage from './pages/OperationsPage';
 
 function Splash() {
   return <div className="splash">Loading…</div>;
@@ -72,10 +77,14 @@ export default function App() {
       <Routes>
         <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/lounges" element={<LoungesPage />} />
-        {/* Approvals is the landing page for now because it is the only built
-            section and the only one with work waiting in it. Dashboard takes
-            over once it exists. */}
-        <Route path="*" element={<Navigate to="/approvals" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/members" element={<MembersPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/reviews" element={<ReviewsPage />} />
+        <Route path="/operations" element={<OperationsPage />} />
+        {/* Dashboard is the landing page now that it exists — it answers "is
+            there anything to do" before you have to click anything. */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </HashRouter>
   );

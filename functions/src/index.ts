@@ -48,6 +48,8 @@ import {
 import { optionalString, requireEmail, requireString } from './validation';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { getStorage } from 'firebase-admin/storage';
 import { logger } from 'firebase-functions';
 import sgMail from '@sendgrid/mail';
 
@@ -882,3 +884,265 @@ export const askConcierge = onCall(
     return { reply: parsed.reply ?? '', loungeIds };
   },
 );
+
+// ---------------------------------------------------------------------------
+// Admin-only operations, called from admin-portal/
+// ---------------------------------------------------------------------------
+
+/**
+ * Who may call the functions below.
+ *
+ * A fourth copy of the list, which is not ideal — src/config/admins.ts was
+ * deleted on 2026-08-21 so the app no longer carries one, but firestore.rules,
+ * storage.rules and admin-portal/src/lib/admins.ts each still do. Custom claims
+ * on the Auth token would collapse all of them into one check; deliberately not
+ * done while there is exactly one admin, since a claims-provisioning flow for a
+ * single person is machinery without a purpose. Keep these in step by hand until
+ * then.
+ */
+const ADMIN_EMAILS = ['admin123@gmail.com'];
+
+function requireAdmin(request: { auth?: { token?: { email?: string } } | null }): void {
+  const email = request.auth?.token?.email?.toLowerCase();
+  if (!email || !ADMIN_EMAILS.includes(email)) {
+    // Same message either way — telling a caller "you are signed in but not an
+    // admin" confirms the endpoint exists and is worth attacking.
+    throw new HttpsError('permission-denied', 'Not permitted.');
+  }
+}
+
+/**
+ * Deletes a member completely: Auth account, Firestore documents, and the
+ * photographs of their identity document in Storage.
+ *
+ * Has to be a Cloud Function rather than portal code: the web SDK cannot delete
+ * another user's Auth account at all, and it cannot recursively delete a
+ * document's subcollections. Rohith approved this capability on 2026-08-21.
+ *
+ * Order matters. Storage first, then Firestore, then Auth — because the Auth
+ * account is the only thing that makes the uid discoverable in the console. Delete
+ * it first and a failure halfway leaves orphaned ID photographs that nobody can
+ * find, which is exactly the state 7 user documents were already in when this was
+ * written.
+ */
+export const adminDeleteMember = onCall({ cors: true }, async request => {
+  requireAdmin(request);
+
+  const userId = requireString(request.data?.userId, 'userId');
+  if (ADMIN_EMAILS.length === 1) {
+    // Guard against deleting the only admin and locking everyone out.
+    const target = await getAuth().getUser(userId).catch(() => null);
+    if (target?.email && ADMIN_EMAILS.includes(target.email.toLowerCase())) {
+      throw new HttpsError('failed-precondition', 'Refusing to delete the admin account.');
+    }
+  }
+
+  const bucket = getStorage().bucket();
+  let filesDeleted = 0;
+  try {
+    const [files] = await bucket.getFiles({ prefix: `users/${userId}/` });
+    filesDeleted = files.length;
+    if (files.length > 0) {
+      await bucket.deleteFiles({ prefix: `users/${userId}/`, force: true });
+    }
+  } catch (error) {
+    logger.warn('adminDeleteMember: storage cleanup failed', { userId, error });
+  }
+
+  // recursiveDelete takes the subcollections with it — favorites, collections,
+  // notifications, issueReports, conversations and the rest. A plain delete would
+  // orphan them: still readable by their own paths, invisible to every query.
+  await getFirestore().recursiveDelete(getFirestore().doc(`users/${userId}`));
+
+  let authDeleted = false;
+  try {
+    await getAuth().deleteUser(userId);
+    authDeleted = true;
+  } catch (error) {
+    // Already gone is a success, not a failure — this is how the 7 orphaned
+    // documents came about, and cleaning them up must not error.
+    logger.info('adminDeleteMember: no Auth account to delete', { userId, error });
+  }
+
+  logger.info('adminDeleteMember complete', { userId, filesDeleted, authDeleted });
+  return { userId, filesDeleted, authDeleted };
+});
+
+/**
+ * Fills in `city` on the lounges that have none by parsing it out of the address.
+ *
+ * All 3,328 Google-sourced documents are missing `city`, which is the field the
+ * Search tab groups by and the field `aggregates/cityStats` is built from — so 39%
+ * of the directory is invisible to every city search in the app. The addresses
+ * already contain the city, so this costs no API calls and no money.
+ *
+ * Conservative on purpose: it only writes when the address ends in the
+ * "…, City, ST 12345" shape the US imports produce, and skips anything it cannot
+ * parse confidently rather than guessing. A wrong city is worse than none — it
+ * would file a lounge under a place it is not in.
+ */
+/**
+ * Reads a city out of a postal address, in the "City, ST" shape the app stores.
+ *
+ * Two branches, because the directory turned out to contain both. A first version
+ * handled only the US form and left 73 lounges unparseable — every one of them in
+ * London or Berlin. Those are real venues that the Google import brought in and
+ * that nobody has ever been able to find: with no `city` field they are absent
+ * from the Search tab and from `aggregates/cityStats` entirely. Julian asked for
+ * international cities on 2026-08-13 and asked again about a Munich shop on
+ * 2026-08-20; some of what he wanted was already sitting in the database, unseen.
+ *
+ * International cities are stored as "Berlin, Germany" rather than with a state
+ * code, matching how src/utils/cityAutocomplete.ts already represents them.
+ *
+ * Returns null rather than guessing. A wrong city is worse than none — it files a
+ * lounge under a place it is not in, and the member who drives there is the one
+ * who finds out.
+ */
+function cityFromAddress(address: string): string | null {
+  // "1234 Main St, Houston, TX 77002, USA" -> "Houston, TX". The two-letter state
+  // and the ZIP together are what stop a street name containing a comma being
+  // mistaken for a city.
+  // `(?:^|,)` rather than `,` — an address with no street part, e.g.
+  // "North Myrtle Beach, SC 29582, USA", has no comma before the city and was
+  // silently skipped by the first version.
+  const us = /(?:^|,)\s*([A-Za-z .'-]+),\s*([A-Z]{2})\s+\d{5}/.exec(address);
+  if (us) {
+    return `${us[1].trim()}, ${us[2]}`;
+  }
+
+  // "Ackerstraße 145, 10115 Berlin, Germany" / "19 New Bridge St, London EC4V 6DB, UK"
+  // The country is the last segment and the city sits in the one before it,
+  // alongside a postcode that may come before or after the name.
+  const parts = address.split(',').map(part => part.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    const country = parts[parts.length - 1];
+    const candidate = parts[parts.length - 2];
+    // Anything that is not plainly a country name is refused, so a malformed US
+    // address cannot fall through to this branch and be filed under a state code.
+    // Accented letters included, or "Schöneberg" and "Zürich" fail on the ö/ü.
+    const NAME = /^[A-Za-z\u00C0-\u024F .'-]{2,}$/;
+    if (NAME.test(country) && country.toUpperCase() !== 'USA') {
+      const city = candidate
+        // Strip postcodes on either side: "10115 Berlin", "London EC4V 6DB".
+        .replace(/\b\d{4,6}\b/g, '')
+        .replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d?[A-Z]{0,2}\b/g, '')
+        // Berlin's boroughs arrive as "Berlin-Bezirk Pankow". They are all Berlin,
+        // and filing them separately would create cities nobody searches for.
+        .replace(/-Bezirk\s+.*$/i, '')
+        // Likewise "München-Altstadt-Lehel" — a district chain, not a city. Two or
+        // more hyphens is the tell; genuine multi-word city names like "Kingston
+        // upon Thames" use spaces, so they are untouched.
+        .replace(/^([^-]{3,})-[^-]+-.*$/, '$1')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      if (NAME.test(city)) {
+        return `${city}, ${country}`;
+      }
+    }
+  }
+  return null;
+}
+
+export const adminBackfillCities = onCall({ cors: true, timeoutSeconds: 540 }, async request => {
+  requireAdmin(request);
+  const dryRun = request.data?.dryRun !== false;
+
+  const db = getFirestore();
+  const snapshot = await db.collection('lounges').get();
+
+  let missing = 0;
+  let parsed = 0;
+  let unparseable = 0;
+  const samples: string[] = [];
+  let batch = db.batch();
+  let pending = 0;
+
+  for (const document of snapshot.docs) {
+    const data = document.data();
+    if (data.city) {
+      continue;
+    }
+    missing += 1;
+    const address = typeof data.address === 'string' ? data.address : '';
+    const city = cityFromAddress(address);
+    if (!city) {
+      unparseable += 1;
+      if (samples.length < 10) {
+        samples.push(address || '(no address)');
+      }
+      continue;
+    }
+    parsed += 1;
+    if (dryRun) {
+      continue;
+    }
+    batch.update(document.ref, { city });
+    pending += 1;
+    if (pending === 400) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (!dryRun && pending > 0) {
+    await batch.commit();
+  }
+
+  logger.info('adminBackfillCities', { dryRun, missing, parsed, unparseable });
+  return {
+    dryRun,
+    missing,
+    parsed,
+    unparseable,
+    // Returned so the admin can see WHY something could not be parsed rather
+    // than being told a number and left to wonder.
+    unparseableSamples: samples,
+  };
+});
+
+/**
+ * Rebuilds `aggregates/cityStats` — the single document SearchScreen reads
+ * instead of counting 8,496 lounges in the client.
+ *
+ * It is a snapshot, not a live view, and nothing regenerates it. Until now the
+ * only way to refresh it was `npm run build:city-stats` on Rohith's laptop with
+ * the service-account key, so if he was away the Search tab's city counts simply
+ * drifted. Same reason the other operations moved here.
+ */
+export const adminRebuildCityStats = onCall({ cors: true, timeoutSeconds: 540 }, async request => {
+  requireAdmin(request);
+
+  const db = getFirestore();
+  const snapshot = await db.collection('lounges').get();
+
+  const byCity = new Map<string, { city: string; count: number; image: string }>();
+  for (const document of snapshot.docs) {
+    const data = document.data();
+    const city = typeof data.city === 'string' ? data.city.trim() : '';
+    if (!city) {
+      continue;
+    }
+    const existing = byCity.get(city);
+    const image = Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : '';
+    if (existing) {
+      existing.count += 1;
+      if (!existing.image && image) {
+        existing.image = image;
+      }
+    } else {
+      byCity.set(city, { city, count: 1, image });
+    }
+  }
+
+  const cities = [...byCity.values()].sort((a, b) => b.count - a.count);
+  await db.doc('aggregates/cityStats').set({
+    cities,
+    generatedAt: Timestamp.now(),
+    // Recorded so a future reader can tell a portal rebuild from a script run.
+    generatedBy: 'adminRebuildCityStats',
+  });
+
+  logger.info('adminRebuildCityStats', { cities: cities.length, lounges: snapshot.size });
+  return { cities: cities.length, lounges: snapshot.size, top: cities.slice(0, 5) };
+});

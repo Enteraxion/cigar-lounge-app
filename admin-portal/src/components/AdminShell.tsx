@@ -13,10 +13,9 @@ import { auth } from '../lib/firebase';
  * table of 8,496 lounges, a member list — and needs all of them one click away
  * with the current one visibly marked.
  *
- * Sections that are not built yet are still listed, marked "soon" and not
- * clickable. Hiding them would make the portal look finished and leave no hint of
- * what is coming; a dead link that silently does nothing is worse than a label
- * that admits it.
+ * Every section is built as of 2026-08-21, so nothing is marked "soon" any more.
+ * The disabled branch below is kept rather than deleted: the next section added
+ * will want it, and it is three lines.
  */
 
 export type SectionId =
@@ -31,13 +30,13 @@ export type SectionId =
 type Section = { id: SectionId; label: string; to?: string; hint: string };
 
 const SECTIONS: Section[] = [
-  { id: 'dashboard', label: 'Dashboard', hint: 'System health at a glance' },
+  { id: 'dashboard', to: '/dashboard', label: 'Dashboard', hint: 'System health at a glance' },
   { id: 'approvals', label: 'Approvals', to: '/approvals', hint: 'IDs and business claims' },
   { id: 'lounges', label: 'Lounges', to: '/lounges', hint: 'All 8,496 listings' },
-  { id: 'members', label: 'Members', hint: 'Accounts and verification status' },
-  { id: 'reports', label: 'Reports', hint: 'Issues members have reported' },
-  { id: 'reviews', label: 'Reviews', hint: 'Moderation' },
-  { id: 'operations', label: 'Operations', hint: 'Imports and backfills' },
+  { id: 'members', to: '/members', label: 'Members', hint: 'Accounts and verification status' },
+  { id: 'reports', to: '/reports', label: 'Reports', hint: 'Issues members have reported' },
+  { id: 'reviews', to: '/reviews', label: 'Reviews', hint: 'Moderation' },
+  { id: 'operations', to: '/operations', label: 'Operations', hint: 'Imports and backfills' },
 ];
 
 export default function AdminShell({

@@ -203,6 +203,14 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // Collection-group read so the admin portal can list issue reports across
+    // every member (one query instead of 8,000 per-user reads). Admin-only, and
+    // deliberately narrower than the reviews rule below it — a review is public,
+    // whereas a member reporting a problem is writing to us, not publishing.
+    match /{path=**}/issueReports/{reportId} {
+      allow read: if isAdmin();
+    }
+
     // Collection-group read for HomeScreen's "Member Events" rail, which
     // shows upcoming events across every lounge rather than one at a time
     // (eventService.getUpcomingEventsAcrossLounges). Writes are NOT
@@ -258,8 +266,15 @@ service cloud.firestore {
       match /savedFilters/{filterId} {
         allow read, write: if isOwner(userId);
       }
+      // Members file these from "Report Issue" in the app. Until 2026-08-21
+      // NOTHING read them — no screen, no function — so every issue ever
+      // reported sat unread. The admin portal's Reports page is the reader, so
+      // isAdmin() is added here and a collection-group read is granted below.
+      // Writes stay owner-only: an admin has no reason to author a report as
+      // somebody else.
       match /issueReports/{reportId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId);
       }
       // Saved AI Concierge conversations and the feedback a member leaves
       // on a recommendation. Both are private to the member — nobody else,

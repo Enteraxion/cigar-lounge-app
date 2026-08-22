@@ -261,22 +261,35 @@ function ratingsFromYelp(rating: number | undefined) {
   };
 }
 
-function toLoungeDocument(business: YelpBusiness, hours: string, now: Timestamp) {
+/**
+ * OWNER-EDITABLE FIELDS ARE NOT WRITTEN HERE, and that is the point.
+ *
+ * `firestore.rules`'s `isOwnListingEdit` lets a shop owner change five fields:
+ * description, hours, priceRange, amenities and humidorItems. This builder used
+ * to write four of them as empty values — `description: ''`, `amenities: []`,
+ * `humidorItems: []` — and because the write is `set(..., { merge: true })`,
+ * merge only protects fields the incoming object does not mention. So every
+ * refresh of a city silently blanked whatever its owners had filled in.
+ *
+ * `humidorItems` was the worst of them: nothing but an owner typing into the
+ * Owner Portal ever populates it, so the import could only ever destroy it.
+ * Nobody had hit this yet — 3 lounges are claimed and no city has been refreshed
+ * since they were — so it was latent rather than theoretical. Found on 2026-08-22
+ * while asking whether an admin should be allowed to edit hours at all.
+ *
+ * `hours` is passed separately and only when it is real; see the caller.
+ */
+function toLoungeDocument(business: YelpBusiness, now: Timestamp) {
   const images = business.image_url ? [business.image_url] : [];
   return {
     name: business.name,
-    description: '',
     address: business.location.display_address.join(', '),
     coordinates: { lat: business.coordinates.latitude, lng: business.coordinates.longitude },
-    hours,
     status: business.is_closed ? 'closed' : 'open',
     images,
-    amenities: [],
     tags: ['imported-from-yelp'],
-    priceRange: business.price ?? '',
     ratings: ratingsFromYelp(business.rating),
     reviewCount: business.review_count ?? 0,
-    humidorItems: [],
     createdAt: now,
     updatedAt: now,
     city:
@@ -286,16 +299,24 @@ function toLoungeDocument(business: YelpBusiness, hours: string, now: Timestamp)
   };
 }
 
+/**
+ * Yelp's price tier, kept out of the main builder so it can be withheld from a
+ * claimed lounge. It is real data rather than a blank, so overwriting an
+ * unclaimed lounge with it is an improvement — but an owner who set their own
+ * price range is more authoritative than Yelp.
+ */
+function yelpPriceRange(business: YelpBusiness): Record<string, string> {
+  return business.price ? { priceRange: business.price } : {};
+}
+
+/** Same rule as toLoungeDocument — no owner-editable field is written here. */
 function toLoungeDocumentFromGoogle(
   place: GooglePlace,
-  hours: string,
   now: Timestamp,
   images: string[] = [],
 ) {
-  const amenities = amenitiesFromGoogle(place);
   return {
     name: place.displayName?.text ?? 'Unnamed Lounge',
-    description: '',
     address: place.formattedAddress ?? '',
     // Prefer the locale-formatted number; fall back to the international form
     // so German listings still get one (Germany came into scope 2026-08-17).
@@ -303,20 +324,28 @@ function toLoungeDocumentFromGoogle(
       ? { phone: place.nationalPhoneNumber || place.internationalPhoneNumber }
       : {}),
     coordinates: { lat: place.location?.latitude ?? 0, lng: place.location?.longitude ?? 0 },
-    hours,
     status: 'open' as const,
     images,
-    amenities,
     // The amenities double as tags so they're visible on cards, not just
     // filterable — displayTags strips the internal imported-from-* marker.
-    tags: ['imported-from-google', ...amenities],
-    priceRange: '',
+    // `tags` is not owner-editable, so it stays here; `amenities`, which is,
+    // moved to googleAmenities() below.
+    tags: ['imported-from-google', ...amenitiesFromGoogle(place)],
     ratings: ratingsFromYelp(place.rating),
     reviewCount: place.userRatingCount ?? 0,
-    humidorItems: [] as never[],
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/**
+ * Google's derived amenities, withheld from claimed lounges for the same reason
+ * as priceRange: real data, but the owner's own list wins. Empty is never
+ * written — blanking an owner's amenities is pure loss.
+ */
+function googleAmenities(place: GooglePlace): Record<string, string[]> {
+  const amenities = amenitiesFromGoogle(place);
+  return amenities.length > 0 ? { amenities } : {};
 }
 
 function slugifyCity(city: string): string {
@@ -409,6 +438,49 @@ export const refreshCityLounges = onCall(
     const batch = db.batch();
     const matchedGoogleIds = new Set<string>();
 
+    /**
+     * Which of the lounges we are about to write already have an owner.
+     *
+     * One `getAll` for the whole city — a few dozen documents — so the refresh
+     * can withhold owner-editable fields from a claimed listing. Without it the
+     * import would overwrite an owner's own opening hours with Google's, and the
+     * owner is the more authoritative source about their own shop.
+     */
+    const targetIds = [
+      ...relevantBusinesses.map(b => `yelp-${b.id}`),
+      ...relevantGooglePlaces.map(p => `google-${p.id}`),
+    ];
+    const claimedIds = new Set<string>();
+    if (targetIds.length > 0) {
+      const existing = await db.getAll(
+        ...targetIds.map(id => db.collection('lounges').doc(id)),
+      );
+      existing.forEach(snapshot => {
+        if (snapshot.exists && snapshot.get('ownerId')) {
+          claimedIds.add(snapshot.id);
+        }
+      });
+    }
+
+    /**
+     * Real opening hours only, and never onto a claimed lounge.
+     *
+     * Two separate protections. Omitting the field when we have no real hours
+     * stops a placeholder overwriting hours somebody already supplied; omitting it
+     * for a claimed lounge stops the import overruling the owner. A merge write
+     * leaves out what it does not mention, so omission is the whole mechanism.
+     */
+    const hoursField = (
+      weekdays: string[] | undefined,
+      docId: string,
+    ): Record<string, string> => {
+      if (claimedIds.has(docId)) {
+        return {};
+      }
+      const joined = weekdays?.join('; ');
+      return joined ? { hours: joined } : {};
+    };
+
     for (const business of relevantBusinesses) {
       const candidates = googleByName.get(normalizeName(business.name)) ?? [];
       const match = candidates.find(
@@ -420,14 +492,22 @@ export const refreshCityLounges = onCall(
           ) <= MATCH_DISTANCE_MILES,
       );
 
-      const hours =
-        match?.regularOpeningHours?.weekdayDescriptions?.join('; ') ?? 'Hours not yet available';
       if (match) {
         matchedGoogleIds.add(match.id);
       }
 
-      const docRef = db.collection('lounges').doc(`yelp-${business.id}`);
-      batch.set(docRef, toLoungeDocument(business, hours, now), { merge: true });
+      const docId = `yelp-${business.id}`;
+      const docRef = db.collection('lounges').doc(docId);
+      batch.set(
+        docRef,
+        {
+          ...toLoungeDocument(business, now),
+          ...hoursField(match?.regularOpeningHours?.weekdayDescriptions, docId),
+          // Withheld from a claimed lounge — the owner's own price range wins.
+          ...(claimedIds.has(docId) ? {} : yelpPriceRange(business)),
+        },
+        { merge: true },
+      );
     }
 
     // Google-only businesses (no Yelp match) — new venues Yelp doesn't cover.
@@ -446,13 +526,18 @@ export const refreshCityLounges = onCall(
       }),
     );
     googleOnly.forEach((place, index) => {
-      const hours =
-        place.regularOpeningHours?.weekdayDescriptions?.join('; ') ?? 'Hours not yet available';
       const uri = photoUris[index];
-      const docRef = db.collection('lounges').doc(`google-${place.id}`);
-      batch.set(docRef, toLoungeDocumentFromGoogle(place, hours, now, uri ? [uri] : []), {
-        merge: true,
-      });
+      const docId = `google-${place.id}`;
+      const docRef = db.collection('lounges').doc(docId);
+      batch.set(
+        docRef,
+        {
+          ...toLoungeDocumentFromGoogle(place, now, uri ? [uri] : []),
+          ...hoursField(place.regularOpeningHours?.weekdayDescriptions, docId),
+          ...(claimedIds.has(docId) ? {} : googleAmenities(place)),
+        },
+        { merge: true },
+      );
     });
 
     batch.set(refreshRef, { lastRefreshedAt: now, city });

@@ -1146,3 +1146,10 @@ a {
   white-space: nowrap;
 }
 .hint a { color: var(--gold); }
+
+/* A read-only field must not look editable — the cursor and the ground both say so. */
+.input[readonly] {
+  color: var(--muted);
+  background: var(--bg);
+  cursor: not-allowed;
+}

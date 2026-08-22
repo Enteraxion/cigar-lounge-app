@@ -270,11 +270,17 @@ export default function LoungesPage() {
 /**
  * Editing the fields worth correcting by hand.
  *
- * Deliberately not name, address or coordinates: those come from the Yelp and
- * Google imports, and `refreshCityLounges` rewrites them the next time that city
- * is refreshed — so a hand edit there would be quietly undone and look like data
- * loss. City is editable precisely because it is the field the Google import
- * never wrote.
+ * Not name, address or coordinates: those come from the imports and
+ * `refreshCityLounges` rewrites them, so a hand edit would be quietly undone and
+ * look like data loss. City is editable precisely because it is the field the
+ * Google import never wrote.
+ *
+ * **Hours are read-only on a claimed lounge.** Rohith, 2026-08-22: only the owner
+ * should set their own hours, and he is right — they know, and an admin is
+ * guessing. Editing over them would also be invisible to them. On an unclaimed
+ * lounge there is nobody else to do it, so the field is open; but it is for
+ * correcting a wrong value, not for filling 5,080 empty ones. That is what the
+ * Places backfill is for.
  */
 function EditDialog({
   lounge,
@@ -290,6 +296,7 @@ function EditDialog({
   const [hours, setHours] = useState(lounge.hours ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const ownedByMember = !!lounge.ownerId;
 
   const save = async () => {
     setSaving(true);
@@ -298,7 +305,9 @@ function EditDialog({
       await updateLounge(lounge.id, {
         phone: phone.trim() || undefined,
         city: city.trim() || undefined,
-        hours: hours.trim() || undefined,
+        // Never sent for a claimed lounge, so an accidental keystroke cannot
+        // overrule an owner even if the field were somehow editable.
+        ...(ownedByMember ? {} : { hours: hours.trim() || undefined }),
       });
       onSaved();
     } catch {
@@ -324,14 +333,26 @@ function EditDialog({
           <input className="input" value={city} onChange={e => setCity(e.target.value)} />
         </label>
         <label className="field">
-          <span className="field__label">Opening hours</span>
+          <span className="field__label">
+            Opening hours
+            {ownedByMember && ' — managed by the owner'}
+          </span>
           <textarea
             className="input"
             rows={3}
             value={hours}
             onChange={e => setHours(e.target.value)}
+            readOnly={ownedByMember}
           />
         </label>
+
+        {ownedByMember && (
+          <p className="hint">
+            This lounge is claimed, so its hours belong to the owner — they know them
+            and you would be guessing. Revoke ownership from Approvals → Claimed if
+            they genuinely need changing from here.
+          </p>
+        )}
 
         <p className="hint">
           Name, address and coordinates are not editable — the city refresh would

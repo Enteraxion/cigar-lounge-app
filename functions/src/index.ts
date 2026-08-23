@@ -1343,6 +1343,31 @@ export const sendEmailVerificationCode = onCall(
 
       const code = generateCode();
 
+      // Emulator only: log the code instead of emailing it.
+      //
+      // This is how the flow gets tested before a real sender exists — no
+      // SendGrid key, no verified From address, no DNS. The gate is
+      // FUNCTIONS_EMULATOR, which the emulator sets and which is never present
+      // in a deployed function, so there is no configuration mistake that turns
+      // this on in production. Logged at warn level so it is impossible to
+      // mistake for normal output if it ever appeared where it should not.
+      if (process.env.FUNCTIONS_EMULATOR === 'true') {
+        logger.warn('[emulator] verification code — NEVER logged in production', {
+          uid,
+          email,
+          code,
+        });
+        await ref.set({
+          codeHash: hashCode(uid, code),
+          expiresAt: Timestamp.fromMillis(now + CODE_TTL_MS),
+          attempts: 0,
+          sentAt: Timestamp.fromMillis(now),
+          sendCount: sendCount + 1,
+          windowStartedAt: Timestamp.fromMillis(inWindow ? windowStartedAt : now),
+        });
+        return { sent: true, expiresInSeconds: CODE_TTL_MS / 1000 };
+      }
+
       // Emailed BEFORE the document is written, so a SendGrid failure does not
       // leave a stored code the member never received — which would burn their
       // cooldown and their hourly allowance for nothing.

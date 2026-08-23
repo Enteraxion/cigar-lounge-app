@@ -562,3 +562,61 @@ describe('aggregates rules', () => {
     await assertFails(setDoc(doc(admin(), 'aggregates', 'cityStats'), { cities: [] }));
   });
 });
+
+describe('email verification code rules', () => {
+  /**
+   * The 6-digit codes (functions/src/index.ts's sendEmailVerificationCode).
+   *
+   * The whole security model rests on these being invisible and immutable to
+   * clients, so it is worth pinning against the real rules engine rather than
+   * trusting a comment:
+   *
+   * - a READ would hand the member the sha256 of their own code, and a 6-digit
+   *   space is brute-forced instantly, so the attempt limit would stop meaning
+   *   anything;
+   * - a WRITE would let them reset `attempts` to zero and guess all million.
+   *
+   * Both are denied to everyone. The Admin SDK ignores rules, which is how the
+   * functions still work.
+   */
+  const uid = 'member-1';
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'emailVerificationCodes', uid), {
+        codeHash: 'a'.repeat(64),
+        attempts: 0,
+      });
+    });
+  });
+
+  it('refuses to let a member read their own code document', async () => {
+    await assertFails(getDoc(doc(member(), 'emailVerificationCodes', uid)));
+  });
+
+  it('refuses to let a member reset the attempt counter', async () => {
+    await assertFails(
+      setDoc(doc(member(), 'emailVerificationCodes', uid), { attempts: 0 }, { merge: true }),
+    );
+  });
+
+  it('refuses to let a member plant a code hash they know', async () => {
+    await assertFails(
+      setDoc(doc(member(), 'emailVerificationCodes', uid), {
+        codeHash: 'b'.repeat(64),
+        attempts: 0,
+      }),
+    );
+  });
+
+  it('refuses an admin too — there is no legitimate client access at all', async () => {
+    await assertFails(getDoc(doc(admin(), 'emailVerificationCodes', uid)));
+    await assertFails(setDoc(doc(admin(), 'emailVerificationCodes', uid), { attempts: 0 }));
+  });
+
+  it('refuses a signed-out visitor', async () => {
+    await assertFails(
+      getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'emailVerificationCodes', uid)),
+    );
+  });
+});

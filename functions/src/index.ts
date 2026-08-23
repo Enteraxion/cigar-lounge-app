@@ -49,6 +49,8 @@ import { optionalString, requireEmail, requireString } from './validation';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { timingSafeEqual } from 'node:crypto';
+import { generateCode, hashCode } from './emailCode';
 import { getStorage } from 'firebase-admin/storage';
 import { logger } from 'firebase-functions';
 import sgMail from '@sendgrid/mail';
@@ -1251,4 +1253,190 @@ export const adminRebuildCityStats = onCall({ cors: true, timeoutSeconds: 540 },
     withPhoto: cities.filter(city => city.imageUri).length,
   });
   return { cities: cities.length, lounges: snapshot.size, top: cities.slice(0, 5) };
+});
+
+// ---------------------------------------------------------------------------
+// Email verification by 6-digit code, instead of a link
+// ---------------------------------------------------------------------------
+
+/**
+ * Rohith asked for this on 2026-08-23, after a friend's app (built on Clerk)
+ * delivered its codes to the inbox while our verification link kept landing in
+ * spam. He was right, and for a better reason than either of us first said.
+ *
+ * Firebase's own verification email is almost entirely a link to
+ * `<project>.firebaseapp.com/__/auth/action?oobCode=…`. That is a shared domain
+ * used by every Firebase project including phishing sites, and an email whose
+ * whole payload is a click-through to it is a strong spam signal on its own. A
+ * code has no link in it at all, which removes that signal completely.
+ *
+ * **What this deliberately does NOT change.** It still sets Firebase's own
+ * `emailVerified` flag — the same flag `sendEmailVerification` would have set.
+ * So AppNavigator's login wall, useEmailVerification, the 46 files that read
+ * `auth.currentUser`, firestore.rules and both web portals are all untouched.
+ * Only the way a member proves the address is theirs changes. That is the whole
+ * reason not to move to a third-party auth provider for this: our security
+ * rules are written against `request.auth.uid` and `request.auth.token.email`,
+ * which are Firebase claims, so anything else would have to mint Firebase
+ * tokens anyway and we would be running two identity systems to gain nothing.
+ *
+ * Both endpoints require a signed-in caller. That is not a limitation — the
+ * member has already been signed in by createUserWithEmailAndPassword when they
+ * reach the wall, so keying everything on `request.auth.uid` means there is no
+ * email-enumeration surface and rate limiting is per account rather than per
+ * whatever string an attacker sends.
+ */
+
+/** Codes live under this collection, which firestore.rules denies to every client. */
+const EMAIL_CODES = 'emailVerificationCodes';
+
+const CODE_TTL_MS = 10 * 60 * 1000;
+/** Wrong guesses before the code is destroyed and a new one must be sent. */
+const MAX_CODE_ATTEMPTS = 5;
+/** Minimum gap between sends, so "Resend" cannot be used to spam an inbox. */
+const RESEND_COOLDOWN_MS = 60 * 1000;
+/** Sends allowed per hour per account. */
+const MAX_SENDS_PER_HOUR = 5;
+
+export const sendEmailVerificationCode = onCall(
+  { secrets: [sendgridApiKey] },
+  async request => {
+    const uid = request.auth?.uid;
+    const email = request.auth?.token?.email;
+    if (!uid || !email) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+    if (request.auth?.token?.email_verified) {
+      // Already done. Not an error — the app can race this against a token
+      // refresh — but there is nothing to send.
+      return { sent: false, reason: 'already-verified' as const };
+    }
+
+    return guarded('sendEmailVerificationCode', async () => {
+      const ref = db.collection(EMAIL_CODES).doc(uid);
+      const existing = (await ref.get()).data() as
+        | { sentAt?: Timestamp; sendCount?: number; windowStartedAt?: Timestamp }
+        | undefined;
+
+      const now = Date.now();
+      const sentAt = existing?.sentAt?.toMillis() ?? 0;
+      if (now - sentAt < RESEND_COOLDOWN_MS) {
+        // 'resource-exhausted' rather than a silent success: the app shows the
+        // member how long to wait, which is friendlier than a button that
+        // appears to work and sends nothing.
+        throw new HttpsError(
+          'resource-exhausted',
+          `Wait ${Math.ceil((RESEND_COOLDOWN_MS - (now - sentAt)) / 1000)} seconds before asking for another code.`,
+        );
+      }
+
+      // Rolling hourly window, reset once it lapses.
+      const windowStartedAt = existing?.windowStartedAt?.toMillis() ?? 0;
+      const inWindow = now - windowStartedAt < 60 * 60 * 1000;
+      const sendCount = inWindow ? (existing?.sendCount ?? 0) : 0;
+      if (sendCount >= MAX_SENDS_PER_HOUR) {
+        throw new HttpsError(
+          'resource-exhausted',
+          'Too many codes requested. Try again in an hour, or contact support.',
+        );
+      }
+
+      const code = generateCode();
+
+      // Emailed BEFORE the document is written, so a SendGrid failure does not
+      // leave a stored code the member never received — which would burn their
+      // cooldown and their hourly allowance for nothing.
+      sgMail.setApiKey(sendgridApiKey.value());
+      await sgMail.send({
+        to: email,
+        from: FROM_EMAIL,
+        subject: `${code} is your Lounge Locator verification code`,
+        // No link, no HTML, no images. That is the entire point: the reason the
+        // old email went to spam was that it was a bare click-through to a
+        // shared domain. Putting the code in the subject line as well means a
+        // member can often read it from the notification without opening
+        // anything.
+        text: [
+          `Your Lounge Locator verification code is ${code}`,
+          '',
+          'Enter it in the app to confirm your email address.',
+          'It expires in 10 minutes.',
+          '',
+          'If you did not create a Lounge Locator account, you can ignore this email.',
+        ].join('\n'),
+      });
+
+      await ref.set({
+        codeHash: hashCode(uid, code),
+        expiresAt: Timestamp.fromMillis(now + CODE_TTL_MS),
+        attempts: 0,
+        sentAt: Timestamp.fromMillis(now),
+        sendCount: sendCount + 1,
+        windowStartedAt: Timestamp.fromMillis(inWindow ? windowStartedAt : now),
+      });
+
+      logger.info('sendEmailVerificationCode', { uid, sendCount: sendCount + 1 });
+      return { sent: true, expiresInSeconds: CODE_TTL_MS / 1000 };
+    });
+  },
+);
+
+export const confirmEmailVerificationCode = onCall(async request => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError('unauthenticated', 'Sign in required.');
+  }
+  const submitted = requireString(request.data?.code, 'code', 6).trim();
+  if (!/^\d{6}$/.test(submitted)) {
+    throw new HttpsError('invalid-argument', 'Enter the 6-digit code from your email.');
+  }
+
+  return guarded('confirmEmailVerificationCode', async () => {
+    const ref = db.collection(EMAIL_CODES).doc(uid);
+    const snapshot = await ref.get();
+    const stored = snapshot.data() as
+      | { codeHash?: string; expiresAt?: Timestamp; attempts?: number }
+      | undefined;
+
+    if (!stored?.codeHash || !stored.expiresAt) {
+      throw new HttpsError('not-found', 'Ask for a new code — this one is no longer valid.');
+    }
+    if (stored.expiresAt.toMillis() < Date.now()) {
+      await ref.delete();
+      throw new HttpsError('deadline-exceeded', 'That code has expired. Ask for a new one.');
+    }
+
+    const attempts = stored.attempts ?? 0;
+    if (attempts >= MAX_CODE_ATTEMPTS) {
+      await ref.delete();
+      throw new HttpsError(
+        'permission-denied',
+        'Too many wrong attempts. Ask for a new code.',
+      );
+    }
+
+    // timingSafeEqual on the hex digests. Both are 64 hex characters by
+    // construction, so the length precondition cannot throw.
+    const expected = Buffer.from(stored.codeHash, 'utf8');
+    const actual = Buffer.from(hashCode(uid, submitted), 'utf8');
+    if (!timingSafeEqual(expected, actual)) {
+      await ref.update({ attempts: attempts + 1 });
+      const left = MAX_CODE_ATTEMPTS - (attempts + 1);
+      throw new HttpsError(
+        'invalid-argument',
+        left > 0
+          ? `That code is not right. ${left} ${left === 1 ? 'try' : 'tries'} left.`
+          : 'That code is not right. Ask for a new code.',
+      );
+    }
+
+    // The one line that matters: Firebase's own flag, set exactly as
+    // sendEmailVerification's link would have set it. Everything downstream —
+    // the login wall, the rules, both portals — is unchanged because of this.
+    await getAuth().updateUser(uid, { emailVerified: true });
+    await ref.delete();
+
+    logger.info('confirmEmailVerificationCode', { uid, verified: true });
+    return { verified: true };
+  });
 });

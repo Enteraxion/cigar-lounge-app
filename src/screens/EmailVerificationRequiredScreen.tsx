@@ -22,20 +22,109 @@
  * confirmed on a laptop never backgrounds the app — so there is an explicit
  * check-again button. Without it that member is stuck staring at a wall they have
  * already cleared.
+ *
+ * ---------------------------------------------------------------------------
+ * 2026-08-23 — a 6-digit code, entered here, is now the primary path.
+ *
+ * Rohith asked for this after a friend's Clerk-based app delivered its codes to
+ * the inbox while our link kept landing in spam. The reason is not that Clerk is
+ * better at email: Firebase's verification email is essentially nothing but a
+ * link to `<project>.firebaseapp.com`, a shared domain that thousands of
+ * projects — phishing sites included — send links to. An email whose entire
+ * payload is that click-through is a strong spam signal by itself. A code has no
+ * link in it, which removes the signal.
+ *
+ * It is also simply less to ask. Typing six digits beats leaving the app,
+ * finding an email, tapping a link and coming back — and this is a HARD wall, so
+ * every step in that chain is a step where a real member gives up.
+ *
+ * The link still works and the button for it is still here, because accounts
+ * created before today were sent one and there is no reason to break them.
+ *
+ * Nothing else in the app changed. confirmEmailVerificationCode sets Firebase's
+ * own `emailVerified` flag, the same one the link sets, so the gate below, the
+ * security rules and both web portals never learn that any of this happened.
  */
 
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MailCheck, RefreshCw } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { auth, signOut } from '../services/firebaseAuth';
 import { useEmailVerification } from '../hooks/useEmailVerification';
+import { requestEmailCode, submitEmailCode } from '../services/emailCodeService';
 
 export default function EmailVerificationRequiredScreen() {
   const { cooldownSeconds, sending, resend, refresh } = useEmailVerification();
   const [checking, setChecking] = useState(false);
   const email = auth.currentUser?.email;
+
+  const [code, setCode] = useState('');
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeSent, setCodeSent] = useState(false);
+  // Whether the link is on offer at all. Hidden by default now: showing both
+  // routes at once asks the member to choose between two things they do not
+  // care about, and the code is the one we want them to use.
+  const [showLink, setShowLink] = useState(false);
+
+  const sendCode = async () => {
+    setCodeBusy(true);
+    setCodeError(null);
+    try {
+      const result = await requestEmailCode();
+      if (!result.ok) {
+        // The function's own message says how long to wait or how many sends
+        // are left, which is more use than a generic failure.
+        setCodeError(result.message);
+        return;
+      }
+      if (result.alreadyVerified) {
+        // Server says this address is already confirmed and our token has not
+        // caught up. Refreshing drops the wall rather than leaving the member
+        // waiting for a code that will never come.
+        await refresh();
+        return;
+      }
+      setCodeSent(true);
+    } finally {
+      setCodeBusy(false);
+    }
+  };
+
+  const confirmCode = async () => {
+    const entered = code.trim();
+    if (entered.length !== 6) {
+      setCodeError('Enter all six digits.');
+      return;
+    }
+    setCodeBusy(true);
+    setCodeError(null);
+    try {
+      const result = await submitEmailCode(entered);
+      if (!result.ok) {
+        setCodeError(result.message);
+        setCode('');
+        return;
+      }
+      // The server has set emailVerified; refresh() is what publishes it to
+      // AppNavigator's copy of the hook and drops this screen. Without it the
+      // member sits behind a wall they have just cleared — the same bug the
+      // "I've confirmed" button had on 2026-08-21.
+      await refresh();
+    } finally {
+      setCodeBusy(false);
+    }
+  };
 
   const check = async () => {
     setChecking(true);
@@ -81,45 +170,119 @@ export default function EmailVerificationRequiredScreen() {
 
         <Text style={styles.title}>Confirm your email</Text>
         <Text style={styles.body}>
-          We've sent a link to{' '}
-          <Text style={styles.email}>{email ?? 'your email address'}</Text>. Tap it and you're in.
+          {codeSent
+            ? "Enter the 6-digit code we've just sent to "
+            : "We'll send a 6-digit code to "}
+          <Text style={styles.email}>{email ?? 'your email address'}</Text>
+          {codeSent ? '.' : ' so you can confirm it here.'}
         </Text>
 
-        <View style={styles.hint}>
-          <Text style={styles.hintText}>
-            Not there? Check your spam or junk folder — the email comes from a noreply address, so
-            it often lands there.
-          </Text>
-        </View>
+        {codeSent ? (
+          <>
+            <TextInput
+              style={[styles.codeInput, !!codeError && styles.codeInputError]}
+              value={code}
+              onChangeText={text => {
+                // Digits only, six of them. Members paste the code out of a mail
+                // app and bring spaces with it.
+                setCode(text.replace(/\D/g, '').slice(0, 6));
+                setCodeError(null);
+              }}
+              keyboardType="number-pad"
+              // iOS reads the code out of the SMS/email notification and offers
+              // it above the keyboard, so it can be filled without switching apps.
+              textContentType="oneTimeCode"
+              autoComplete="one-time-code"
+              maxLength={6}
+              autoFocus
+              placeholder="000000"
+              placeholderTextColor={theme.colors.mutedGray}
+              accessibilityLabel="Six digit verification code"
+            />
 
-        <Pressable
-          style={[styles.primaryButton, checking && styles.buttonDisabled]}
-          onPress={check}
-          disabled={checking}
-        >
-          {checking ? (
-            <ActivityIndicator color={theme.colors.primaryBlack} />
-          ) : (
-            <>
-              <RefreshCw size={16} color={theme.colors.primaryBlack} />
-              <Text style={styles.primaryButtonText}>I've confirmed — continue</Text>
-            </>
-          )}
-        </Pressable>
+            {codeError ? <Text style={styles.errorText}>{codeError}</Text> : null}
 
-        <Pressable
-          style={[styles.secondaryButton, (sending || cooldownSeconds > 0) && styles.buttonDisabled]}
-          onPress={sendAgain}
-          disabled={sending || cooldownSeconds > 0}
-        >
-          {sending ? (
-            <ActivityIndicator color={theme.colors.accentGold} />
-          ) : (
-            <Text style={styles.secondaryButtonText}>
-              {cooldownSeconds > 0 ? `Resend in ${cooldownSeconds}s` : 'Send the link again'}
-            </Text>
-          )}
-        </Pressable>
+            <Pressable
+              style={[
+                styles.primaryButton,
+                (codeBusy || code.length !== 6) && styles.buttonDisabled,
+              ]}
+              onPress={confirmCode}
+              disabled={codeBusy || code.length !== 6}
+            >
+              {codeBusy ? (
+                <ActivityIndicator color={theme.colors.primaryBlack} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Confirm</Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={[styles.secondaryButton, codeBusy && styles.buttonDisabled]}
+              onPress={sendCode}
+              disabled={codeBusy}
+            >
+              <Text style={styles.secondaryButtonText}>Send a new code</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            {codeError ? <Text style={styles.errorText}>{codeError}</Text> : null}
+            <Pressable
+              style={[styles.primaryButton, codeBusy && styles.buttonDisabled]}
+              onPress={sendCode}
+              disabled={codeBusy}
+            >
+              {codeBusy ? (
+                <ActivityIndicator color={theme.colors.primaryBlack} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Email me a code</Text>
+              )}
+            </Pressable>
+          </>
+        )}
+
+        {/* The link route, kept but demoted. Accounts created before 2026-08-23
+            were sent a link and some members will have it open in front of them;
+            breaking that to make a point about codes would be gratuitous. */}
+        {showLink ? (
+          <>
+            <Pressable
+              style={[styles.secondaryButton, checking && styles.buttonDisabled]}
+              onPress={check}
+              disabled={checking}
+            >
+              {checking ? (
+                <ActivityIndicator color={theme.colors.accentGold} />
+              ) : (
+                <>
+                  <RefreshCw size={15} color={theme.colors.accentGold} />
+                  <Text style={styles.secondaryButtonText}>I've tapped the link — continue</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable
+              style={[
+                styles.secondaryButton,
+                (sending || cooldownSeconds > 0) && styles.buttonDisabled,
+              ]}
+              onPress={sendAgain}
+              disabled={sending || cooldownSeconds > 0}
+            >
+              {sending ? (
+                <ActivityIndicator color={theme.colors.accentGold} />
+              ) : (
+                <Text style={styles.secondaryButtonText}>
+                  {cooldownSeconds > 0 ? `Resend in ${cooldownSeconds}s` : 'Send the link again'}
+                </Text>
+              )}
+            </Pressable>
+          </>
+        ) : (
+          <Pressable style={styles.linkToggle} onPress={() => setShowLink(true)} hitSlop={8}>
+            <Text style={styles.linkToggleText}>Use an email link instead</Text>
+          </Pressable>
+        )}
 
         {/* A wall with no exit is hostile. Signing out is not a way past the
             check — the requirement is still there next time — but it means nobody
@@ -135,6 +298,41 @@ export default function EmailVerificationRequiredScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.background },
+  codeInput: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.bold,
+    // Wide letter spacing so six digits read as six digits rather than a number.
+    fontSize: 28,
+    letterSpacing: 10,
+    textAlign: 'center',
+    color: theme.colors.white,
+    height: 62,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
+    marginBottom: theme.spacing.sm,
+  },
+  codeInputError: {
+    borderColor: theme.colors.danger,
+  },
+  errorText: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    color: theme.colors.danger,
+    textAlign: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  linkToggle: {
+    alignSelf: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  linkToggleText: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    color: theme.colors.mutedGray,
+    textDecorationLine: 'underline',
+  },
   content: {
     flex: 1,
     justifyContent: 'center',

@@ -70,6 +70,25 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------
+    // emailVerificationCodes/{userId}
+    // ---------------------------------------------------------------
+    // The 6-digit email verification codes (functions/src/index.ts's
+    // sendEmailVerificationCode / confirmEmailVerificationCode).
+    //
+    // Denied to every client, including the member the code belongs to. There
+    // is no legitimate client read: the app never needs to see the code, it
+    // submits a guess to a Cloud Function and the function compares. A member
+    // able to read their own document could read the hash — and a 6-digit space
+    // is small enough to brute-force a hash instantly, which would defeat the
+    // attempt limit that is the actual defence. A member able to WRITE it could
+    // reset `attempts` to zero and guess forever.
+    //
+    // The Admin SDK ignores rules, so the functions are unaffected by this.
+    match /emailVerificationCodes/{userId} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------------
     // lounges/{loungeId}
     // ---------------------------------------------------------------
     match /lounges/{loungeId} {

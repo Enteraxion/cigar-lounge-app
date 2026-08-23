@@ -35,9 +35,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
-import { useAgeVerification } from '../hooks/useAgeVerification';
-import { useEmailVerification } from '../hooks/useEmailVerification';
-import { verificationGateMessage, type GatedAction } from '../utils/verificationGate';
+import { useVerificationGate } from '../hooks/useVerificationGate';
 import StarRating from '../components/StarRating';
 import FilterReviewsSheet from '../components/FilterReviewsSheet';
 import { getReviewsForLounge, type Review } from '../services/loungeService';
@@ -235,48 +233,10 @@ export default function ReviewsScreen() {
   const userId = auth.currentUser?.uid;
 
   const [reviews, setReviews] = useState<Review[] | null>(null);
-  const ageState = useAgeVerification();
-  const emailState = useEmailVerification();
-
-  // Step 4 of the 21+ flow: browsing reviews is open, writing one is not.
-  // Grandfathered accounts (no record at all) pass, so this cannot lock out
-  // anyone who predates the feature.
-  const requireVerified = (action: GatedAction, proceed: () => void) => {
-    // Email confirmation applies to everyone, including accounts that predate the
-    // 21+ gate — it is about the address being real, not about age, so the
-    // grandfathering below deliberately does not cover it.
-    const gateState = { ...ageState, emailVerified: emailState.emailVerified };
-    if (emailState.emailVerified !== false && (ageState.isVerified || ageState.verification === null)) {
-      proceed();
-      return;
-    }
-    const { title, body, offerResend } = verificationGateMessage(action, gateState);
-    // A dead OK on a message that asks for an email link leaves the member to go
-    // find the resend themselves. When a link is part of what's outstanding, the
-    // alert can just send it.
-    Alert.alert(
-      title,
-      body,
-      offerResend
-        ? [
-            { text: 'Not now', style: 'cancel' },
-            {
-              text: 'Send link',
-              onPress: () => {
-                emailState.resend().then(sent => {
-                  Alert.alert(
-                    sent ? 'Link sent' : "Couldn't send that",
-                    sent
-                      ? 'Check your inbox — and your spam folder, just in case.'
-                      : 'Wait a minute and try again, or resend from the banner on Home.',
-                  );
-                });
-              },
-            },
-          ]
-        : undefined,
-    );
-  };
+  // One shared gate — see src/hooks/useVerificationGate.ts. This check used
+  // to be written out by hand here and in three other screens, which is how
+  // two of them ended up without it (QA BUG-008).
+  const { requireVerified } = useVerificationGate();
 
   const [error, setError] = useState<string | null>(null);
   const [filterVisible, setFilterVisible] = useState(false);

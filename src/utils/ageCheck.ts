@@ -14,6 +14,20 @@
 export const MINIMUM_AGE = 21;
 
 /**
+ * The oldest age the form will accept.
+ *
+ * QA (BUG-007, 2026-08-23) entered 1820 and the account was created, because the
+ * only test was "does this come out as 21 or over". A birth year that would make
+ * somebody 206 is a typo or a test, not a member — and it lands in the admin's
+ * verification queue looking like real data, next to a real date of birth, for a
+ * reviewer to puzzle over.
+ *
+ * 120 rather than a round 100: the oldest verified human lived to 122, so this
+ * refuses the impossible without refusing anybody who actually exists.
+ */
+export const MAXIMUM_AGE = 120;
+
+/**
  * A date of birth as three numbers, which is what a form collects. Kept
  * separate from `Date` because constructing a Date from user input invites
  * timezone drift: `new Date('2005-08-18')` is parsed as UTC midnight, so for
@@ -65,7 +79,11 @@ export function isFuture(birth: BirthDate, on: Date = new Date()): boolean {
 
 export type AgeCheck =
   | { ok: true; age: number }
-  | { ok: false; reason: 'incomplete' | 'invalid-date' | 'future' | 'too-young'; age?: number };
+  | {
+      ok: false;
+      reason: 'incomplete' | 'invalid-date' | 'future' | 'implausible' | 'too-young';
+      age?: number;
+    };
 
 /**
  * The single decision the sign-up flow asks for.
@@ -94,6 +112,9 @@ export function checkMinimumAge(
     return { ok: false, reason: 'future' };
   }
   const age = ageOn(complete, on);
+  if (age > MAXIMUM_AGE) {
+    return { ok: false, reason: 'implausible', age };
+  }
   if (age < MINIMUM_AGE) {
     return { ok: false, reason: 'too-young', age };
   }
@@ -116,6 +137,10 @@ export function ageCheckMessage(check: AgeCheck): string | null {
       // Deliberately does not say their age back to them — it reads as an
       // accusation, and it is not information they need.
       return `You must be ${MINIMUM_AGE} or over to join.`;
+    case 'implausible':
+      // Names the field rather than the person: "please check the year" reads as
+      // a typo, which it almost always is.
+      return 'Please check the year of birth you entered.';
   }
 }
 

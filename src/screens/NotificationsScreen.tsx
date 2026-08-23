@@ -19,11 +19,11 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Bell, ChevronLeft } from 'lucide-react-native';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import {
   getUserNotifications,
@@ -42,7 +42,7 @@ function NotificationRow({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={[styles.row, !notification.read && styles.rowUnread]} onPress={onPress}>
       {!notification.read ? <View style={styles.unreadDot} /> : <View style={styles.unreadDotSpacer} />}
       <View style={styles.rowTextGroup}>
         <Text style={[styles.rowTitle, !notification.read && styles.rowTitleUnread]} numberOfLines={2}>
@@ -94,10 +94,30 @@ export default function NotificationsScreen() {
       try {
         await markNotificationRead(userId, notification.id);
       } catch {
-        // Best-effort — the local read state already reflects the tap.
+        // Put the dot back. This used to be swallowed as "best-effort — the
+        // local read state already reflects the tap", which is exactly the
+        // problem: a write that failed looked identical to one that
+        // succeeded, right up until the next focus refetch brought the
+        // notification back unread with no explanation. QA logged that as
+        // "unclear whether it was ever marked as read" (BUG-005, 2026-08-23).
+        // Showing it as still unread is the truth.
+        setNotifications(prev =>
+          prev ? prev.map(n => (n.id === notification.id ? { ...n, read: false } : n)) : prev,
+        );
+        Alert.alert(
+          "Couldn't mark that as read",
+          'Check your connection — it will still be here next time.',
+        );
+        return;
       }
     }
 
+    // Only some notification types carry a destination. age_verified and
+    // age_rejected (ageVerificationService) carry no `data` at all, so tapping
+    // one navigates nowhere and the screen deliberately stays put — there is
+    // nothing to open. That used to be indistinguishable from a dead button,
+    // because the only response was an 8px dot going out; the unread styling
+    // above now carries it (gold edge and tint, both gone once read).
     const loungeId = notification.data?.loungeId;
     if (loungeId) {
       // This screen is a root-level modal (see AppNavigator's
@@ -114,15 +134,18 @@ export default function NotificationsScreen() {
 
   const markAllRead = async () => {
     if (!userId || !notifications?.some(n => !n.read)) return;
+    const before = notifications;
     setNotifications(prev => (prev ? prev.map(n => ({ ...n, read: true })) : prev));
     try {
       await markAllNotificationsRead(userId);
     } catch {
-      // Best-effort — a refetch on next focus will reconcile either way.
+      setNotifications(before);
+      Alert.alert("Couldn't mark those as read", 'Check your connection and try again.');
     }
   };
 
-  const hasUnread = notifications?.some(n => !n.read) ?? false;
+  const unreadCount = notifications?.filter(n => !n.read).length ?? 0;
+  const hasUnread = unreadCount > 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -132,7 +155,19 @@ export default function NotificationsScreen() {
           accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={24} color={theme.colors.white} />
         </Pressable>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <View style={styles.headerTitleGroup}>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          {/* The count is the thing a member watches to decide whether reading
+              worked. Without it, "cleared" was a judgement about the size of a
+              dot. */}
+          {notifications !== null && (
+            <Text style={styles.headerCount}>
+              {unreadCount === 0
+                ? 'All caught up'
+                : `${unreadCount} unread`}
+            </Text>
+          )}
+        </View>
         <Pressable
           onPress={markAllRead}
           hitSlop={8}
@@ -199,11 +234,20 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.md,
   },
+  headerTitleGroup: {
+    alignItems: 'center',
+  },
   headerTitle: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.bold,
     fontSize: 18,
     color: theme.colors.white,
+  },
+  headerCount: {
+    ...theme.typography.medium,
+    fontSize: 11,
+    color: theme.colors.mutedGray,
+    marginTop: 1,
   },
   markAllButton: {
     paddingHorizontal: theme.spacing.sm,
@@ -240,6 +284,14 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.large,
     backgroundColor: theme.colors.surface,
     ...theme.shadows.soft,
+  },
+  // Unread needs to be legible at arm's length, not an 8px dot. A gold left
+  // edge on a lifted card reads as unread even to someone who has never seen
+  // the screen before, and makes "it cleared" visible from across the room.
+  rowUnread: {
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.accentGold,
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.07),
   },
   unreadDot: {
     width: 8,

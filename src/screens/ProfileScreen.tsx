@@ -58,6 +58,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   BookMarked,
   Camera,
+  CalendarClock,
   ChevronRight,
   Crown,
   MessageSquare,
@@ -394,6 +395,25 @@ export default function ProfileScreen() {
         ) : null}
 
         {/* ---------------- Admin: Review Age Verification ---------------- */}
+
+        {/* ---------------- My Reservations ---------------- */}
+        {/* Unconditional, unlike My Shops: any member can book a table, and
+            until 2026-08-23 a booking vanished the moment the confirmation
+            screen closed — written to Firestore, listed in the Owner Portal,
+            and invisible to the person who made it (BUG-001). */}
+        <Pressable
+          style={styles.passportCard}
+          onPress={() => navigation.navigate('MyReservations')}
+        >
+          <View style={styles.passportIconBox}>
+            <CalendarClock size={20} color={theme.colors.accentGold} />
+          </View>
+          <View style={styles.passportTextGroup}>
+            <Text style={styles.passportTitle}>My Reservations</Text>
+            <Text style={styles.passportSubtitle}>Your table bookings, upcoming and past</Text>
+          </View>
+          <ChevronRight size={18} color={theme.colors.secondarySilver} />
+        </Pressable>
 
         {/* ---------------- Owner: My Shops ---------------- */}
         {/* Shown only to owners/claimants — see ownsShops above. This is the

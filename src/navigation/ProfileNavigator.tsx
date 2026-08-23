@@ -23,6 +23,7 @@ import AISettingsScreen from '../screens/AISettingsScreen';
 import AIFeedbackScreen from '../screens/AIFeedbackScreen';
 import MyReviewsScreen from '../screens/MyReviewsScreen';
 import MyShopsScreen from '../screens/MyShopsScreen';
+import MyReservationsScreen from '../screens/MyReservationsScreen';
 import AgeVerificationScreen from '../screens/AgeVerificationScreen';
 
 export type ProfileStackParamList = {
@@ -39,6 +40,7 @@ export type ProfileStackParamList = {
    * or have claimed a lounge, so most members never see this exists.
    */
   MyShops: undefined;
+  MyReservations: undefined;
   /** Member-facing 21+ ID upload. Only surfaced while there is something to do. */
   AgeVerification: undefined;
 };
@@ -57,6 +59,7 @@ export default function ProfileNavigator() {
       <Stack.Screen name="AIFeedback" component={AIFeedbackScreen} />
       <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
       <Stack.Screen name="MyShops" component={MyShopsScreen} />
+      <Stack.Screen name="MyReservations" component={MyReservationsScreen} />
       <Stack.Screen name="AgeVerification" component={AgeVerificationScreen} />
     </Stack.Navigator>
   );

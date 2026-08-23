@@ -51,16 +51,18 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MailCheck, RefreshCw } from 'lucide-react-native';
+import { ChevronLeft, MailCheck, RefreshCw } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { auth, signOut } from '../services/firebaseAuth';
 import { useEmailVerification } from '../hooks/useEmailVerification';
+import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 import { requestEmailCode, submitEmailCode } from '../services/emailCodeService';
 
 export default function EmailVerificationRequiredScreen() {
@@ -163,7 +165,33 @@ export default function EmailVerificationRequiredScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <View style={styles.content}>
+      {/* A real back affordance. This is a wall, so there is nowhere "back" to
+          go inside the app — but signing out and returning to the sign-in form
+          is what a member means when they look for it, and until now the only
+          way to do that was a "Sign out" link at the very bottom of a centred
+          column, which the keyboard pushed off screen entirely. Rohith reported
+          it as "no back navigation" on 2026-08-23 and that is exactly what it
+          amounted to. */}
+      <Pressable
+        style={styles.backButton}
+        onPress={() => signOut(auth).catch(() => {})}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Back to sign in"
+      >
+        <ChevronLeft size={22} color={theme.colors.secondarySilver} />
+        <Text style={styles.backText}>Sign in as someone else</Text>
+      </Pressable>
+
+      {/* Scrolls rather than avoiding: with the code field focused the keyboard
+          takes half the screen, and a centred flex:1 column simply had its
+          bottom half — Confirm, resend, sign out — pushed out of reach. Same
+          mechanism as every other form in the app (src/utils/keyboardAware.ts). */}
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.badge}>
           <MailCheck size={26} color={theme.colors.accentGold} />
         </View>
@@ -291,7 +319,7 @@ export default function EmailVerificationRequiredScreen() {
         <Pressable style={styles.signOutButton} onPress={() => signOut(auth).catch(() => {})}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -334,10 +362,26 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   content: {
-    flex: 1,
+    // flexGrow so it still centres on a tall screen but may exceed the viewport
+    // once the keyboard is up, which is what makes the buttons reachable.
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
     gap: theme.spacing.md,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    alignSelf: 'flex-start',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+  backText: {
+    ...theme.typography.medium,
+    fontSize: 13,
+    color: theme.colors.secondarySilver,
   },
   badge: {
     alignSelf: 'center',

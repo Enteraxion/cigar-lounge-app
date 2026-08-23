@@ -17,16 +17,16 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   StatusBar,
   StyleSheet,
   Text,
+  ScrollView,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { keyboardAwareScrollProps } from '../../utils/keyboardAware';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -105,9 +105,20 @@ export default function LoginScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <KeyboardAvoidingView
-        style={styles.main}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      {/* A ScrollView with automaticallyAdjustKeyboardInsets, not a
+          KeyboardAvoidingView. This screen is a logo, a card with two fields and
+          a footer link — taller than the space left when the keyboard is up on a
+          smaller phone. `behavior="padding"` only compresses what is already
+          there, so the password field ended up under the keyboard with no way to
+          reach it (Rohith, 2026-08-23). Scrolling means nothing is ever
+          unreachable, whatever the phone.
+
+          Same mechanism the rest of the app's forms use — see
+          src/utils/keyboardAware.ts. */}
+      <ScrollView
+        {...keyboardAwareScrollProps}
+        contentContainerStyle={styles.main}
+        showsVerticalScrollIndicator={false}
       >
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
@@ -223,7 +234,7 @@ export default function LoginScreen() {
             </Text>
           </Text>
         </View>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -234,7 +245,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryBlack,
   },
   main: {
-    flex: 1,
+    // flexGrow, not flex — as a ScrollView contentContainerStyle this still
+    // fills the screen when the content is short, but is allowed to grow past it
+    // once the keyboard takes half the viewport.
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 32,
   },

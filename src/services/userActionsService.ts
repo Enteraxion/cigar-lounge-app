@@ -413,6 +413,72 @@ export async function getUserCollection(
 }
 
 /**
+ * Renames a collection / edits its description, category or privacy.
+ *
+ * Collections were creatable and never editable: createCollection existed from
+ * the start, addLoungeToCollection existed, and nothing else. A member who
+ * mistyped a collection name was stuck with it permanently, and one they no
+ * longer wanted stayed on the Saved tab forever (QA, BUG-006 on 2026-08-23).
+ *
+ * firestore.rules needed no change for any of this — `allow read, write: if
+ * isOwner(userId)` on users/{userId}/collections has always permitted it.
+ * There was simply no caller. `updatedAt` is stamped here so the field stops
+ * being a value only ever written once, at creation.
+ */
+export type UpdateCollectionInput = Partial<
+  Pick<CreateCollectionInput, 'name' | 'description' | 'category' | 'isPrivate'>
+>;
+
+export async function updateCollection(
+  userId: string,
+  collectionId: string,
+  input: UpdateCollectionInput,
+): Promise<void> {
+  const data: Record<string, unknown> = { updatedAt: Timestamp.now() };
+  if (input.name !== undefined) {
+    data.name = input.name.trim();
+  }
+  if (input.description !== undefined) {
+    data.description = input.description.trim();
+  }
+  if (input.category !== undefined) {
+    data.category = input.category;
+  }
+  if (input.isPrivate !== undefined) {
+    data.isPrivate = input.isPrivate;
+  }
+  await updateDoc(doc(db, 'users', userId, 'collections', collectionId), data);
+}
+
+/**
+ * Takes a lounge out of a collection.
+ *
+ * arrayRemove rather than a read-modify-write, so two devices removing
+ * different lounges at once cannot clobber each other's change.
+ */
+export async function removeLoungeFromCollection(
+  userId: string,
+  collectionId: string,
+  loungeId: string,
+): Promise<void> {
+  await updateDoc(doc(db, 'users', userId, 'collections', collectionId), {
+    loungeIds: arrayRemove(loungeId),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Deletes a collection.
+ *
+ * Only the collection document — the lounges it referenced are untouched, and
+ * a lounge that was also favorited stays favorited. A collection is a grouping,
+ * not a container, so deleting one must not look like deleting what was in it.
+ */
+export async function deleteCollection(userId: string, collectionId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId, 'collections', collectionId));
+}
+
+/**
  * Flips a collection's `isFavorited` flag (favoriting the collection
  * itself, not the lounges inside it) and writes it back with
  * `merge: true`. Returns the new value so callers can reconcile an

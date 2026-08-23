@@ -37,6 +37,7 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,14 +52,19 @@ import {
   Heart,
   Lock,
   MapPin,
+  MoreVertical,
   Share2,
   Star,
+  Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import {
+  deleteCollection,
   getUserCollection,
+  removeLoungeFromCollection,
   toggleCollectionFavorite,
+  updateCollection,
   type UserCollection,
 } from '../services/userActionsService';
 import { getLoungesByIds, type Lounge } from '../services/loungeService';
@@ -73,7 +79,16 @@ type CollectionDetailRouteProp = RouteProp<SavedStackParamList, 'CollectionDetai
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GALLERY_HEIGHT = 320;
 
-function SavedLoungeRow({ lounge, onPress }: { lounge: Lounge; onPress: () => void }) {
+function SavedLoungeRow({
+  lounge,
+  onPress,
+  onRemove,
+}: {
+  lounge: Lounge;
+  onPress: () => void;
+  /** Takes the lounge out of this collection — not out of the member's favorites. */
+  onRemove: () => void;
+}) {
   return (
     <View style={styles.loungeCard}>
       <View style={styles.loungeImageWrapper}>
@@ -95,6 +110,18 @@ function SavedLoungeRow({ lounge, onPress }: { lounge: Lounge; onPress: () => vo
             </Text>
           </View>
         </View>
+        {/* Remove sits next to the chevron rather than behind a swipe: a
+            swipe gesture inside a horizontally-paging gallery screen is easy
+            to trigger by accident and impossible to discover on purpose. */}
+        <Pressable
+          style={styles.loungeRemoveButton}
+          onPress={onRemove}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${lounge.name} from this collection`}
+        >
+          <Trash2 size={15} color={theme.colors.mutedGray} />
+        </Pressable>
         <Pressable style={styles.loungeChevronButton} onPress={onPress} hitSlop={8}>
           <ChevronRight size={18} color={theme.colors.primaryBlack} />
         </Pressable>
@@ -118,6 +145,14 @@ export default function CollectionDetailScreen() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [favorited, setFavorited] = useState(false);
   const [favoritePending, setFavoritePending] = useState(false);
+
+  // Renaming happens inline in a small dialog rather than by reusing
+  // CreateCollectionScreen: that screen is a full-page create flow with a
+  // cover-image picker, and pushing it in "edit" mode would make a rename look
+  // like starting again.
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId || !collectionId) {
@@ -170,6 +205,108 @@ export default function CollectionDetailScreen() {
     } finally {
       setFavoritePending(false);
     }
+  };
+
+  /** Rename — the single edit QA actually asked for, and the one that matters. */
+  const submitRename = async () => {
+    const trimmed = draftName.trim();
+    if (!userId || !collectionId || !trimmed || savingName) {
+      return;
+    }
+    setSavingName(true);
+    try {
+      await updateCollection(userId, collectionId, { name: trimmed });
+      setCollection(prev => (prev ? { ...prev, name: trimmed } : prev));
+      setRenaming(false);
+    } catch {
+      Alert.alert("Couldn't rename it", 'Check your connection and try again.');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!userId || !collectionId || !collection) {
+      return;
+    }
+    Alert.alert(
+      `Delete “${collection.name}”?`,
+      // Said explicitly, because it is the thing a member is afraid of. A
+      // collection is a grouping, not a folder that holds the only copy.
+      'The collection is removed. The lounges in it stay saved and stay in your favorites.',
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCollection(userId, collectionId);
+              navigation.goBack();
+            } catch {
+              Alert.alert("Couldn't delete it", 'Check your connection and try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const confirmRemoveLounge = (lounge: Lounge) => {
+    if (!userId || !collectionId) {
+      return;
+    }
+    Alert.alert(
+      `Remove ${lounge.name}?`,
+      'It comes out of this collection only — it stays saved elsewhere.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            // Optimistic, then reconciled by the focus refetch. Removing a row
+            // that visibly stays put reads as a broken button.
+            setLounges(prev => prev.filter(item => item.id !== lounge.id));
+            setCollection(prev =>
+              prev
+                ? { ...prev, loungeIds: prev.loungeIds.filter(id => id !== lounge.id) }
+                : prev,
+            );
+            try {
+              await removeLoungeFromCollection(userId, collectionId, lounge.id);
+            } catch {
+              Alert.alert("Couldn't remove it", 'Check your connection and try again.');
+              load();
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  /**
+   * Rename / Delete, in an action sheet off the header.
+   *
+   * Alert with three buttons rather than a custom sheet component — this app
+   * has no shared action-sheet primitive, and inventing one for two options
+   * would be more surface than the feature.
+   */
+  const openManageMenu = () => {
+    if (!collection) {
+      return;
+    }
+    Alert.alert(collection.name, undefined, [
+      {
+        text: 'Rename',
+        onPress: () => {
+          setDraftName(collection.name);
+          setRenaming(true);
+        },
+      },
+      { text: 'Delete collection', style: 'destructive', onPress: confirmDelete },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const openLounge = (loungeId: string) => {
@@ -249,6 +386,15 @@ export default function CollectionDetailScreen() {
               <Pressable style={styles.headerButton} onPress={onShare} hitSlop={8}>
                 <Share2 size={18} color={theme.colors.white} />
               </Pressable>
+              <Pressable
+                style={styles.headerButton}
+                onPress={openManageMenu}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Rename or delete this collection"
+              >
+                <MoreVertical size={18} color={theme.colors.white} />
+              </Pressable>
             </View>
           </View>
 
@@ -306,6 +452,7 @@ export default function CollectionDetailScreen() {
                     key={lounge.id}
                     lounge={lounge}
                     onPress={() => openLounge(lounge.id)}
+                    onRemove={() => confirmRemoveLounge(lounge)}
                   />
                 ))}
               </View>
@@ -313,6 +460,47 @@ export default function CollectionDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Rename dialog. A plain absolutely-positioned overlay rather than a
+          Modal: this screen is already inside a native-stack screen, and a
+          Modal over it fights the header's safe-area insets on iOS. */}
+      {renaming && (
+        <View style={styles.renameBackdrop}>
+          <View style={styles.renameCard}>
+            <Text style={styles.renameTitle}>Rename collection</Text>
+            <TextInput
+              style={styles.renameInput}
+              value={draftName}
+              onChangeText={setDraftName}
+              placeholder="Collection name"
+              placeholderTextColor={theme.colors.mutedGray}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={submitRename}
+              maxLength={60}
+            />
+            <View style={styles.renameActions}>
+              <Pressable
+                style={styles.renameCancel}
+                onPress={() => setRenaming(false)}
+                disabled={savingName}
+              >
+                <Text style={styles.renameCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.renameSave,
+                  (!draftName.trim() || savingName) && styles.renameSaveDisabled,
+                ]}
+                onPress={submitRename}
+                disabled={!draftName.trim() || savingName}
+              >
+                <Text style={styles.renameSaveText}>{savingName ? 'Saving…' : 'Save'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -549,5 +737,82 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accentGold,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loungeRemoveButton: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.xs,
+  },
+
+  renameBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: withAlpha(theme.colors.primaryBlack, 0.75),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.lg,
+  },
+  renameCard: {
+    width: '100%',
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surface,
+    gap: theme.spacing.md,
+  },
+  renameTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 16,
+    color: theme.colors.white,
+  },
+  renameInput: {
+    ...theme.typography.medium,
+    fontSize: 15,
+    color: theme.colors.white,
+    height: 46,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.background,
+  },
+  renameActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
+  },
+  renameCancel: {
+    paddingHorizontal: theme.spacing.md,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  renameCancelText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 13,
+    color: theme.colors.secondarySilver,
+  },
+  renameSave: {
+    paddingHorizontal: theme.spacing.lg,
+    height: 40,
+    borderRadius: theme.radius.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accentGold,
+  },
+  renameSaveDisabled: {
+    opacity: 0.4,
+  },
+  renameSaveText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 13,
+    color: theme.colors.primaryBlack,
   },
 });

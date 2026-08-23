@@ -27,8 +27,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -202,10 +200,13 @@ export default function WriteReviewScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoider}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* No KeyboardAvoidingView here, deliberately. The ScrollView below already
+          sets `automaticallyAdjustKeyboardInsets`, and wrapping that in a
+          KeyboardAvoidingView with behavior="padding" made BOTH of them
+          compensate for the keyboard — roughly twice the keyboard's height of
+          inset, which left almost nothing of the form visible. QA reported it as
+          "keyboard covers most of the screen" (BUG-004, 2026-08-23). One
+          mechanism, not two. */}
       <ScrollView {...keyboardAwareScrollProps}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -369,7 +370,6 @@ export default function WriteReviewScreen() {
           )}
         </Pressable>
       </View>
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -378,9 +378,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  keyboardAvoider: {
-    flex: 1,
   },
 
   // ---- Header ----

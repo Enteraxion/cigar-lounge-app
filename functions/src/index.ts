@@ -1201,7 +1201,15 @@ export const adminRebuildCityStats = onCall({ cors: true, timeoutSeconds: 540 },
   const db = getFirestore();
   const snapshot = await db.collection('lounges').get();
 
-  const byCity = new Map<string, { city: string; count: number; image: string }>();
+  // The field names here are NOT free to choose. src/services/loungeService.ts
+  // reads this document into its CityHighlight type — {id, name, count,
+  // imageUri} — and scripts/buildCityStats.ts, the other writer, has always
+  // produced that shape. This function originally wrote {city, count, image},
+  // which type-checked perfectly and silently broke the entire Search tab:
+  // the app read `name` off entries that had none, so every city rendered as
+  // the string "undefined" and no city ever had a photo. Nothing failed, so
+  // nothing reported it. Keep these four keys in step with CityHighlight.
+  const byCity = new Map<string, { name: string; count: number; imageUri: string | null }>();
   for (const document of snapshot.docs) {
     const data = document.data();
     const city = typeof data.city === 'string' ? data.city.trim() : '';
@@ -1209,18 +1217,27 @@ export const adminRebuildCityStats = onCall({ cors: true, timeoutSeconds: 540 },
       continue;
     }
     const existing = byCity.get(city);
-    const image = Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : '';
+    const image =
+      Array.isArray(data.images) && typeof data.images[0] === 'string' ? data.images[0] : null;
     if (existing) {
       existing.count += 1;
-      if (!existing.image && image) {
-        existing.image = image;
+      if (!existing.imageUri && image) {
+        existing.imageUri = image;
       }
     } else {
-      byCity.set(city, { city, count: 1, image });
+      byCity.set(city, { name: city, count: 1, imageUri: image });
     }
   }
 
-  const cities = [...byCity.values()].sort((a, b) => b.count - a.count);
+  const cities = [...byCity.values()]
+    .sort((a, b) => b.count - a.count)
+    .map(entry => ({
+      // Same slug rule as the app's cityId() and buildCityStats.ts.
+      id: entry.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      name: entry.name,
+      count: entry.count,
+      imageUri: entry.imageUri,
+    }));
   await db.doc('aggregates/cityStats').set({
     cities,
     generatedAt: Timestamp.now(),
@@ -1228,6 +1245,10 @@ export const adminRebuildCityStats = onCall({ cors: true, timeoutSeconds: 540 },
     generatedBy: 'adminRebuildCityStats',
   });
 
-  logger.info('adminRebuildCityStats', { cities: cities.length, lounges: snapshot.size });
+  logger.info('adminRebuildCityStats', {
+    cities: cities.length,
+    lounges: snapshot.size,
+    withPhoto: cities.filter(city => city.imageUri).length,
+  });
   return { cities: cities.length, lounges: snapshot.size, top: cities.slice(0, 5) };
 });

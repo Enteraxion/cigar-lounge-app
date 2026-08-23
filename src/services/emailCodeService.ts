@@ -13,38 +13,11 @@
  */
 
 import { getApp } from '@react-native-firebase/app';
-import {
-  connectFunctionsEmulator,
-  getFunctions,
-  httpsCallable,
-} from '@react-native-firebase/functions';
+import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 
+// Emulator wiring, when it is on, lives in src/config/devEmulators.ts and is
+// applied to this same default instance from index.js before anything here runs.
 const functions = getFunctions(getApp());
-
-/**
- * Points the app at a local Functions emulator instead of production.
- *
- * Off by default, and honestly labelled: on its own this is NOT enough to drive
- * the code flow from the app. The account lives in production Auth, the
- * emulator's function calls `getAuth().updateUser` against the emulator's own
- * (empty) Auth, and the uid is not there — so confirming fails. Pointing Auth
- * and Firestore at emulators too would fix it, at the cost of a fresh sign-up
- * every run.
- *
- * The way this flow was actually verified was function-side, against the
- * emulator with `--only functions,firestore,auth`: sign an account up through
- * the Auth emulator's REST API, call both endpoints with its real token, read
- * the code out of the emulator terminal. That covers the server; the screen is
- * covered by testing against a real sender.
- *
- * Left here because it is the right hook for whoever wires the rest of it, and
- * because a commented-out URL in a diff is worse than a named flag.
- */
-const USE_FUNCTIONS_EMULATOR = false;
-
-if (__DEV__ && USE_FUNCTIONS_EMULATOR) {
-  connectFunctionsEmulator(functions, 'localhost', 5001);
-}
 
 export type SendCodeResult =
   | { ok: true; alreadyVerified: boolean }

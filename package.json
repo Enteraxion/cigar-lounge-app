@@ -23,7 +23,7 @@
     "reset:database": "ts-node --project scripts/tsconfig.json scripts/resetDatabase.ts",
     "create:admin": "ts-node --project scripts/tsconfig.json scripts/createAdmin.ts",
     "backfill:google": "ts-node --project scripts/tsconfig.json scripts/backfillFromGoogle.ts",
-    "emulate:functions": "npm --prefix functions run build && npx firebase-tools emulators:start --only functions,firestore"
+    "emulate": "npm --prefix functions run build && npx firebase-tools emulators:start --only functions,firestore,auth"
   },
   "dependencies": {
     "@react-native-community/geolocation": "^3.4.0",

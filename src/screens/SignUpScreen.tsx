@@ -39,7 +39,6 @@ import {
   beginSignUpTransition,
   endSignUpTransition,
   getAuthErrorMessage,
-  sendVerificationEmail,
   signOut,
 } from '../services/firebaseAuth';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -122,12 +121,19 @@ export default function SignUpScreen() {
         // An account with no verification record reads as unverified, which is
         // the safe direction — it does not become a way in.
       });
-      // Ask Firebase to email the confirmation link. Fire-and-forget by design:
-      // sendVerificationEmail never throws, because a failure here would surface
-      // as "couldn't create your account" over an account that was created. The
-      // member can resend from the banner, and an unconfirmed address is a state
-      // the app already handles rather than an error.
-      await sendVerificationEmail();
+      // No verification email is sent here any more.
+      //
+      // Verification is a 6-digit code now (2026-08-23), and the endpoint that
+      // sends one requires a signed-in caller — which this member is about to
+      // stop being, two lines below. Sending a code here would also start its
+      // 10-minute expiry and its 60-second resend cooldown before the member had
+      // even reached the sign-in form, so someone who took five minutes to type
+      // their password would arrive at a wall holding a code that had already
+      // died.
+      //
+      // The wall asks for the code itself, once, when the member is actually
+      // standing in front of it. One tap, and no state to keep in step across a
+      // sign-out.
 
       // Signed back out on purpose, per Rohith 2026-08-20: a new member returns
       // to the sign-in form and enters the credentials they just chose, rather
@@ -141,15 +147,14 @@ export default function SignUpScreen() {
       // and there is nothing to recover the account with — the confirmation email
       // being the other thing they may not have received.
       //
-      // The age-verification record and the confirmation email are both written
-      // above, while this session still has permission to. Signing out first
-      // would leave the account with no record, which every read treats as
-      // unverified — safe, but it would put the member behind a wall with
-      // nothing to show a reviewer.
+      // The age-verification record is written above, while this session still
+      // has permission to. Signing out first would leave the account with no
+      // record, which every read treats as unverified — safe, but it would put
+      // the member behind a wall with nothing to show a reviewer.
       await signOut(auth);
       Alert.alert(
         'Account created',
-        'We’ve emailed you a link to confirm your address — check your spam folder if it isn’t there. Sign in below to finish setting up your account.',
+        'Sign in below, and we’ll email you a 6-digit code to confirm your address.',
       );
       // `endSignUpTransition` in the finally block releases the navigator. With
       // the sign-out above, `auth.currentUser` is null by then, so it lands on

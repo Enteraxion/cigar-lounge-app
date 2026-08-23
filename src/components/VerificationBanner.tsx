@@ -28,7 +28,7 @@ export default function VerificationBanner({
 }: AccountPromptInput & {
   /** Opens the ID screen, so a member can act on the age prompts immediately. */
   onPress?: () => void;
-  /** Sends another confirmation link. Absent means the email prompt is read-only. */
+  /** Sends another confirmation code. Absent means the email prompt is read-only. */
   onResendEmail?: () => void;
   resendingEmail?: boolean;
   resendCooldownSeconds?: number;
@@ -75,11 +75,19 @@ export default function VerificationBanner({
       case 'needs-id':
         return 'Verify your age to write reviews, reserve tables and claim a business.';
       case 'confirm-email':
-        // Says where the link is and what to do, because "verify your email" on its
-        // own sends people looking for a screen in the app that does not exist.
+        // Currently unreachable, and worth saying so rather than leaving a
+        // reader to work it out: email confirmation is a hard wall in
+        // AppNavigator, so a member with an unconfirmed address never renders a
+        // screen that has this banner on it. Kept accurate in case the wall is
+        // ever softened back to a banner — which is what it was before
+        // 2026-08-19.
+        //
+        // Copy says "code", not "link": verification became a 6-digit code on
+        // 2026-08-23 and telling someone to look for a link they will never
+        // receive is worse than saying nothing.
         return resendCooldownSeconds > 0
-          ? `Confirmation link sent — check your inbox. Resend in ${resendCooldownSeconds}s.`
-          : 'Check your inbox for a link to confirm your email — tap here to resend it.';
+          ? `Code sent — check your inbox. Resend in ${resendCooldownSeconds}s.`
+          : 'Confirm your email to unlock reviews and reservations — tap to get a code.';
       default:
         return 'Your ID is being reviewed. Reviews and reservations unlock once you’re verified.';
     }

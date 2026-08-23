@@ -214,9 +214,39 @@ const NEARBY_SEARCH_RADIUS_MILES = 60;
  * so it returns every lounge unfiltered.
  */
 
-export async function searchLounges(searchQuery: string): Promise<Lounge[]> {
+/**
+ * How wide a blank "browse near me" search reaches. Deliberately much larger
+ * than NEARBY_SEARCH_RADIUS_MILES: this is a browse, not a search for a
+ * specific place, so it should still find something for a member who is not in
+ * a city the directory covers well.
+ */
+const BROWSE_RADIUS_MILES = 250;
+
+export async function searchLounges(
+  searchQuery: string,
+  /**
+   * The member's location, when known. Only used for a BLANK query — every
+   * filter chip on the Search tab navigates to SearchResultsScreen with no
+   * `query`, which used to mean `getAllLounges()`: all 8,496 documents, about
+   * 6.8 MB, before a single result could be filtered or drawn. That is the
+   * "Search tab is slow to load" half of BUG-003 (2026-08-23).
+   *
+   * Browsing lounges 2,000 miles away was never the useful answer to "show me
+   * premium lounges" on a phone, so a blank query now reads a bounded radius
+   * around the member instead. Without a location there is no radius to use
+   * and it still falls back to the whole directory — rare, and better than an
+   * empty screen.
+   */
+  near?: { lat: number; lng: number } | null,
+): Promise<Lounge[]> {
   const needle = searchQuery.trim().toLowerCase();
   if (!needle) {
+    if (near) {
+      const nearby = await getLoungesNear(near, BROWSE_RADIUS_MILES, 500);
+      if (nearby.length > 0) {
+        return nearby;
+      }
+    }
     return getAllLounges();
   }
 
@@ -278,7 +308,7 @@ export async function searchLounges(searchQuery: string): Promise<Lounge[]> {
 
 export type CitySuggestion = { id: string; name: string };
 
-type CityHighlight = { id: string; name: string; count: number; imageUri?: string };
+export type CityHighlight = { id: string; name: string; count: number; imageUri?: string };
 
 /**
  * Distinct `city` values across all lounges (only populated on
@@ -294,6 +324,11 @@ type CityHighlight = { id: string; name: string; count: number; imageUri?: strin
  * rather than through getAllLounges() so the array reference stays stable
  * (getAllLounges hands out copies to protect callers that sort in place).
  */
+/** The slug form of a city name. Shared so every producer of a CityHighlight agrees. */
+function cityId(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
 const deriveCityHighlights = memoizeOnIdentity((lounges: Lounge[]): CityHighlight[] => {
   const byCity = new Map<string, { count: number; imageUri?: string }>();
   for (const lounge of lounges) {
@@ -310,12 +345,57 @@ const deriveCityHighlights = memoizeOnIdentity((lounges: Lounge[]): CityHighligh
   return Array.from(byCity.entries())
     .sort((a, b) => b[1].count - a[1].count)
     .map(([city, data]) => ({
-      id: city.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      id: cityId(city),
       name: city,
       count: data.count,
       imageUri: data.imageUri,
     }));
 });
+
+/**
+ * Turns the stored `aggregates/cityStats` entries into CityHighlights.
+ *
+ * Exported only so there is a test for it. This is the function that broke the
+ * entire Search tab between 2026-08-22 and 2026-08-23 without a single error:
+ * two writers produce that document — scripts/buildCityStats.ts and the admin
+ * portal's adminRebuildCityStats Cloud Function — and they disagreed on the
+ * field names ({id, name, count, imageUri} vs {city, count, image}). The old
+ * code did `String(entry.name)` on entries that had no `name`, so every city
+ * in the app was titled "undefined" and none had a photo, which silently
+ * emptied Popular Destinations and the Featured Travel Guide (both filter on a
+ * photo) and made Trending Cities four identical rows of the word "undefined".
+ *
+ * Both spellings are accepted, and an entry this cannot name is dropped rather
+ * than coerced. See its test for what each of those means in practice.
+ */
+export function normalizeCityStats(entries: unknown[]): CityHighlight[] {
+  const highlights: CityHighlight[] = [];
+  for (const entry of entries) {
+    const raw = entry as {
+      id?: unknown;
+      name?: unknown;
+      city?: unknown;
+      count?: unknown;
+      imageUri?: unknown;
+      image?: unknown;
+    };
+    const name =
+      typeof raw.name === 'string' ? raw.name : typeof raw.city === 'string' ? raw.city : '';
+    if (!name.trim()) {
+      continue;
+    }
+    const photo = raw.imageUri ?? raw.image;
+    highlights.push({
+      id: typeof raw.id === 'string' && raw.id ? raw.id : cityId(name),
+      name,
+      count: Number(raw.count) || 0,
+      // Stored as null when the city has no lounge photo; the rails that
+      // need one filter on this being present.
+      ...(typeof photo === 'string' && photo ? { imageUri: photo } : {}),
+    });
+  }
+  return highlights;
+}
 
 /**
  * Reads the ranking from the single pre-computed `aggregates/cityStats`
@@ -337,14 +417,23 @@ const cityStatsCache = createAsyncCache(async (): Promise<CityHighlight[] | null
     if (!Array.isArray(cities) || cities.length === 0) {
       return null;
     }
-    return cities.map(city => ({
-      id: String(city.id),
-      name: String(city.name),
-      count: Number(city.count) || 0,
-      // Stored as null when the city has no lounge photo; the rails that
-      // need one filter on this being present.
-      imageUri: city.imageUri ?? undefined,
-    }));
+    // Two writers produce this document and they disagreed on the field
+    // names: scripts/buildCityStats.ts writes {id, name, count, imageUri},
+    // the admin portal's adminRebuildCityStats Cloud Function wrote
+    // {city, count, image}. From the portal rebuild on 2026-08-22 until
+    // 2026-08-23 this reader did `String(city.name)` against a document
+    // that had no `name`, so every city on the Search tab was literally
+    // titled "undefined" — Trending Cities was four rows of it, Popular
+    // Destinations and the Featured Travel Guide were empty (both filter on
+    // a photo, and `imageUri` was never there either), and tapping any of
+    // them searched for a city called "undefined".
+    //
+    // The function now writes the canonical shape, so this accepts both
+    // only to survive a stale document, and no longer coerces a missing
+    // name into the string "undefined" — an entry it cannot name is
+    // dropped. Rendering the word "undefined" to a member is worse than
+    // showing one city fewer.
+    return normalizeCityStats(cities);
   } catch {
     return null;
   }

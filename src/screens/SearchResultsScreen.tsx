@@ -127,18 +127,53 @@ const defaultSearchFilters: SearchFilters = {
   loungeTypes: [],
 };
 
+/**
+ * How many result cards are mounted at once, and how many more each "Show more"
+ * adds.
+ *
+ * The list renders with `.map()` inside a ScrollView, so every card it is given
+ * is mounted immediately — image, rating badge and all — with no windowing. A
+ * blank query used to hand it all 8,496 lounges (every filter chip on the
+ * Search tab navigates here with no `query`), which is thousands of mounted
+ * views and thousands of image decodes on one frame. That is the "Search is
+ * slow, then crashes" in BUG-003.
+ *
+ * A page at a time keeps the mounted count flat regardless of how broad the
+ * search was, and 30 is comfortably more than a phone screen holds.
+ */
+const RESULTS_PAGE_SIZE = 30;
+
+/**
+ * Marker cap, matching MapScreen's MAX_PINS and for the same reason: each
+ * Marker is a real native view, so a few hundred is seconds of unresponsive
+ * map and a few thousand is a crash. MapScreen was capped during the
+ * 2026-08-17 performance pass; this screen has its own MapView and was missed.
+ */
+const MAX_MAP_PINS = 150;
+
 /** Fits a region around every result's real coordinates, falling back to
  * the app's default region (see mockMap.ts) when there's nothing to plot. */
 function regionForResults(results: Lounge[]): Region {
   if (results.length === 0) {
     return defaultRegion;
   }
-  const lats = results.map(r => r.coordinates.lat);
-  const lngs = results.map(r => r.coordinates.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
+  // Accumulated in one pass rather than Math.min(...lats). The spread form
+  // pushes one argument per result onto the JS stack; V8 survives 8,496 of
+  // them and Hermes' limit is lower but I could not measure it from here (only
+  // hermesc ships in node_modules, not the VM). So this is a latent risk
+  // removed while fixing BUG-003, NOT the proven cause of the crash — that is
+  // the thousands of mounted views below. It is also simply cheaper: one pass
+  // instead of two array copies and four spreads.
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+  for (const result of results) {
+    minLat = Math.min(minLat, result.coordinates.lat);
+    maxLat = Math.max(maxLat, result.coordinates.lat);
+    minLng = Math.min(minLng, result.coordinates.lng);
+    maxLng = Math.max(maxLng, result.coordinates.lng);
+  }
   return {
     latitude: (minLat + maxLat) / 2,
     longitude: (minLng + maxLng) / 2,
@@ -176,13 +211,26 @@ export default function SearchResultsScreen() {
 
   const userId = auth.currentUser?.uid;
   const { location: currentLocation } = useCurrentLocation();
+  // useCurrentLocation speaks MapView's {latitude, longitude}; the lounge
+  // services speak Firestore's {lat, lng}. Converted once, here — and memoised
+  // on the coordinates rather than the object, or runSearch would see a new
+  // dependency on every render and re-run the query forever.
+  const latitude = currentLocation?.latitude;
+  const longitude = currentLocation?.longitude;
+  const browseCenter = useMemo(
+    () =>
+      latitude !== undefined && longitude !== undefined
+        ? { lat: latitude, lng: longitude }
+        : null,
+    [latitude, longitude],
+  );
 
   const runSearch = useCallback(async () => {
     setError(null);
     setResults(null);
     try {
       const [initialFound, favoritedIds, refreshed] = await Promise.all([
-        searchLounges(query),
+        searchLounges(query, browseCenter),
         userId ? getUserFavoriteIds(userId) : Promise.resolve<string[]>([]),
         // Awaited (not fire-and-forget) so a city no one has searched
         // before still gets a real shot at showing results on the first
@@ -195,7 +243,7 @@ export default function SearchResultsScreen() {
         // header comment for why lounge/brand-name searches skip it.
         isKnownUsCityName(query) ? refreshCityLounges(query) : Promise.resolve(false),
       ]);
-      const found = refreshed ? await searchLounges(query) : initialFound;
+      const found = refreshed ? await searchLounges(query, browseCenter) : initialFound;
       setResults(found);
       setFavoriteIds(new Set(favoritedIds));
       if (userId && query.trim()) {
@@ -206,7 +254,7 @@ export default function SearchResultsScreen() {
     } catch {
       setError("Couldn't load results. Check your connection and try again.");
     }
-  }, [query, userId]);
+  }, [query, userId, browseCenter]);
 
   useEffect(() => {
     runSearch();
@@ -250,6 +298,16 @@ export default function SearchResultsScreen() {
     });
     return sortLounges(filtered, appliedSort, currentLocation ?? defaultRegion);
   }, [results, appliedFilters, selectedChips, appliedSort, currentLocation]);
+
+  // Reset paging whenever the result set itself changes, so a new search never
+  // inherits the previous one's scroll depth.
+  const [visibleCount, setVisibleCount] = useState(RESULTS_PAGE_SIZE);
+  useEffect(() => {
+    setVisibleCount(RESULTS_PAGE_SIZE);
+  }, [displayResults]);
+
+  const pagedResults = displayResults?.slice(0, visibleCount) ?? [];
+  const remainingCount = (displayResults?.length ?? 0) - pagedResults.length;
 
   const hasActiveFilters =
     selectedChips.length > 0 ||
@@ -496,7 +554,7 @@ export default function SearchResultsScreen() {
               contentContainerStyle={styles.resultsList}
               showsVerticalScrollIndicator={false}
             >
-              {displayResults.map(result => (
+              {pagedResults.map(result => (
                 <SearchResultCard
                   key={result.id}
                   result={result}
@@ -516,6 +574,26 @@ export default function SearchResultsScreen() {
                   onPressSave={() => setSavingResult(result)}
                 />
               ))}
+
+              {/* Stated, not silent. A list that quietly stops at 30 of 8,496
+                  reads as "that's all there is", which is exactly the wrong
+                  impression for a directory this size. */}
+              {remainingCount > 0 && (
+                <Pressable
+                  style={styles.showMoreButton}
+                  onPress={() =>
+                    setVisibleCount(current => current + RESULTS_PAGE_SIZE)
+                  }
+                >
+                  <Text style={styles.showMoreText}>
+                    Show {Math.min(remainingCount, RESULTS_PAGE_SIZE)} more
+                  </Text>
+                  <Text style={styles.showMoreMeta}>
+                    {remainingCount.toLocaleString()} more{' '}
+                    {remainingCount === 1 ? 'lounge' : 'lounges'} match
+                  </Text>
+                </Pressable>
+              )}
             </ScrollView>
           )
         ) : error ? (
@@ -536,7 +614,7 @@ export default function SearchResultsScreen() {
           // real MapView's Marker onCalloutPress below. See MapScreen.tsx's
           // comment for the full context.
           <SimplifiedMapView
-            lounges={displayResults}
+            lounges={displayResults.slice(0, MAX_MAP_PINS)}
             onPressLounge={lounge =>
               navigation.navigate('LoungeDetail', { loungeId: lounge.id })
             }
@@ -548,7 +626,7 @@ export default function SearchResultsScreen() {
             userInterfaceStyle="dark"
             region={regionForResults(displayResults)}
           >
-            {displayResults.map(result => (
+            {displayResults.slice(0, MAX_MAP_PINS).map(result => (
               <Marker
                 key={result.id}
                 coordinate={{
@@ -563,6 +641,18 @@ export default function SearchResultsScreen() {
               />
             ))}
           </MapView>
+        )}
+
+        {/* Same rule as the list: a cap the member cannot see is a cap that
+            misleads them about how much the app found. */}
+        {viewMode === 'map' && (displayResults?.length ?? 0) > MAX_MAP_PINS && (
+          <View style={styles.mapCapNotice}>
+            <Text style={styles.mapCapNoticeText}>
+              Showing the nearest {MAX_MAP_PINS} of{' '}
+              {displayResults?.length.toLocaleString()} — zoom in or filter to narrow it
+              down
+            </Text>
+          </View>
         )}
       </View>
 
@@ -704,6 +794,41 @@ const styles = StyleSheet.create({
   },
 
   // ---- Results list ----
+  mapCapNotice: {
+    position: 'absolute',
+    left: theme.spacing.md,
+    right: theme.spacing.md,
+    bottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.medium,
+    backgroundColor: withAlpha(theme.colors.primaryBlack, 0.85),
+  },
+  mapCapNoticeText: {
+    ...theme.typography.medium,
+    fontSize: 11,
+    color: theme.colors.secondarySilver,
+    textAlign: 'center',
+  },
+  showMoreButton: {
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    gap: 2,
+  },
+  showMoreText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.accentGold,
+  },
+  showMoreMeta: {
+    ...theme.typography.medium,
+    fontSize: 11,
+    color: theme.colors.mutedGray,
+  },
   resultsList: {
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: TAB_BAR_SCROLL_CLEARANCE,

@@ -55,7 +55,13 @@ export default function ClaimSubmittedScreen() {
       <View style={styles.footer}>
         <Pressable
           style={styles.primaryButton}
-          onPress={() => navigation.navigate('LoungeDetail', { loungeId })}
+          // popTo, not navigate. `navigate` pushes a SECOND LoungeDetail when the
+          // params do not match the one already on the stack, so back then walks
+          // through the confirmation and form again — which is what QA reported as
+          // "behaves like an embedded website" (BUG-002, 2026-08-23). There is no
+          // webview anywhere in this app; it was a stack that kept growing.
+          // popTo unwinds to the existing screen instead.
+          onPress={() => navigation.popTo('LoungeDetail', { loungeId })}
         >
           <Text style={styles.primaryButtonText}>Return to Lounge</Text>
           <ArrowRight size={18} color={theme.colors.primaryBlack} />

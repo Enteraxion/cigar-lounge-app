@@ -142,3 +142,39 @@ describe('iso round trip', () => {
     expect(checkMinimumAge(birth, TODAY).ok).toBe(true);
   });
 });
+
+describe('implausible birth years (QA BUG-007)', () => {
+  // QA entered 1820 and the account was created, because the only test was
+  // "does this come out as 21 or over". A date that makes somebody 206 is a typo,
+  // and it reaches the admin's verification queue looking like real data.
+
+  it('refuses a year that would make somebody older than anyone has ever been', () => {
+    const result = checkMinimumAge({ year: 1820, month: 5, day: 12 });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toBe('implausible');
+  });
+
+  it('tells them to check the year rather than blaming their age', () => {
+    const message = ageCheckMessage(checkMinimumAge({ year: 1820, month: 5, day: 12 }));
+    expect(message).not.toBeNull();
+    expect(message!.toLowerCase()).toContain('year');
+    // Must not read as "you are too young" — the opposite of the problem.
+    expect(message!).not.toContain('21 or over');
+  });
+
+  it('still accepts a genuinely old member', () => {
+    // 100 is plausible. The cut-off exists to catch typos, not to refuse people.
+    const year = new Date().getFullYear() - 100;
+    expect(checkMinimumAge({ year, month: 1, day: 1 }).ok).toBe(true);
+  });
+
+  it('accepts the oldest age a human has actually reached', () => {
+    const year = new Date().getFullYear() - 120;
+    expect(checkMinimumAge({ year, month: 1, day: 1 }).ok).toBe(true);
+  });
+
+  it('refuses one year beyond that', () => {
+    const year = new Date().getFullYear() - 121;
+    expect(checkMinimumAge({ year, month: 1, day: 1 }).ok).toBe(false);
+  });
+});

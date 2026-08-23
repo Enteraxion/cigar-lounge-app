@@ -34,6 +34,7 @@ import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Calendar, ChevronDown, ChevronLeft, History, MapPin, Navigation } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { useVerificationGate } from '../hooks/useVerificationGate';
 import { conciergeUser } from '../data/mockConcierge';
 import { defaultSelectedPreferenceIds, preferenceOptions } from '../data/mockTripPlanner';
 import { getAllLounges } from '../services/loungeService';
@@ -105,6 +106,7 @@ function RouteStopCard({
 }
 
 export default function TripPlannerScreen() {
+  const { requireVerified } = useVerificationGate();
   const navigation = useNavigation<ConciergeNavigationProp>();
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   // Empty rather than a prefilled London → Edinburgh trip nobody asked for.
@@ -304,11 +306,15 @@ export default function TripPlannerScreen() {
                 stop={stop}
                 order={index + 1}
                 match={preferenceMatch(stop.lounge, preferenceLabels)}
+                // Gated — see HomeScreen. This was the second unguarded route
+                // to a reservation (QA BUG-008).
                 onReserve={() =>
-                  (tabNavigation.navigate as (n: string, p?: object) => void)('Search', {
-                    screen: 'ReserveTable',
-                    params: { loungeId: stop.lounge.id, loungeName: stop.lounge.name },
-                  })
+                  requireVerified('reservation', () =>
+                    (tabNavigation.navigate as (n: string, p?: object) => void)('Search', {
+                      screen: 'ReserveTable',
+                      params: { loungeId: stop.lounge.id, loungeName: stop.lounge.name },
+                    }),
+                  )
                 }
               />
             ))}

@@ -74,6 +74,7 @@ import { tabBarClearance, TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout
 import { useAgeVerification } from '../hooks/useAgeVerification';
 import VerificationBanner from '../components/VerificationBanner';
 import { useEmailVerification } from '../hooks/useEmailVerification';
+import { useVerificationGate } from '../hooks/useVerificationGate';
 
 const NEARBY_COUNT = 4;
 /**
@@ -127,6 +128,7 @@ export default function HomeScreen() {
   const { location: currentLocation } = useCurrentLocation();
   const ageState = useAgeVerification();
   const emailState = useEmailVerification();
+  const { requireVerified } = useVerificationGate();
   const [lounges, setLounges] = useState<Lounge[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -350,11 +352,22 @@ export default function HomeScreen() {
                   </View>
                   <Pressable
                     style={styles.reserveButton}
+                    // Gated. This button was a way straight past the 21+ check
+                    // until 2026-08-23 (QA BUG-008) — the lounge screen refused
+                    // an unverified member and this one did not.
                     onPress={() =>
-                      (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
-                        screen: 'ReserveTable',
-                        params: { loungeId: featuredLounge.id, loungeName: featuredLounge.name },
-                      })
+                      requireVerified('reservation', () =>
+                        (tabNavigation.navigate as (name: string, params?: object) => void)(
+                          'Search',
+                          {
+                            screen: 'ReserveTable',
+                            params: {
+                              loungeId: featuredLounge.id,
+                              loungeName: featuredLounge.name,
+                            },
+                          },
+                        ),
+                      )
                     }
                   >
                     <Text style={styles.reserveButtonText}>Reserve a Table</Text>

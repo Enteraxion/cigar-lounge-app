@@ -15,7 +15,18 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, View, Image, Pressable } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  Image,
+  Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,6 +46,7 @@ import {
 import { theme, withAlpha } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
 import { auth, signOut } from '../services/firebaseAuth';
+import { deleteMyAccount } from '../services/accountService';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { saveAiPreferences } from '../services/conciergeMemoryService';
 import { CIGAR_BRANDS } from '../data/cigarBrands';
@@ -130,6 +142,8 @@ export default function AISettingsScreen() {
     }
   };
 
+  const [deleting, setDeleting] = useState(false);
+
   const handleLogOut = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -145,6 +159,55 @@ export default function AISettingsScreen() {
         },
       },
     ]);
+  };
+
+  /**
+   * Delete account. Apple guideline 5.1.1(v) requires this to exist in the app
+   * and to be reachable without contacting support, which is why it sits beside
+   * Log Out rather than behind a web form.
+   *
+   * Two confirmations, not one. Log Out is a destructive-styled button whose
+   * worst case is signing back in; this one cannot be undone, and the two are
+   * adjacent — a mis-tap on the wrong red row should not end an account. The
+   * second step lists what actually goes, because "your data" means nothing.
+   */
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert(
+              'Delete everything?',
+              'Your account, reviews, photos, saved lounges, collections and table reservations will be permanently deleted, along with any ID document you uploaded. This cannot be undone.',
+              [
+                { text: 'Keep my account', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setDeleting(true);
+                    const result = await deleteMyAccount();
+                    if (!result.ok) {
+                      setDeleting(false);
+                      Alert.alert('Account not deleted', result.message);
+                      return;
+                    }
+                    // No sign-out and no navigation: the Auth account is gone, so
+                    // onAuthStateChanged fires and AppNavigator returns to the
+                    // sign-in screen by itself. Signing out here would be a call
+                    // against a user that no longer exists.
+                  },
+                },
+              ],
+            ),
+        },
+      ],
+    );
   };
 
   const toggleAtmosphere = (id: string) => {
@@ -354,11 +417,36 @@ export default function AISettingsScreen() {
         </View>
 
         {/* ---------------- Log Out ---------------- */}
-        <View style={[styles.section, styles.lastSection]}>
+        <View style={styles.section}>
           <Pressable style={styles.logOutButton} onPress={handleLogOut}>
             <LogOut size={18} color={theme.colors.danger} />
             <Text style={styles.logOutButtonText}>Log Out</Text>
           </Pressable>
+        </View>
+
+        {/* ---------------- Delete Account ---------------- */}
+        {/* Apple guideline 5.1.1(v): an app that lets you make an account must
+            let you delete it in-app. Placed here, under Log Out, because that is
+            where a member looks for it and where a reviewer looks for it.
+            Visually quieter than Log Out on purpose — findable when wanted, not
+            competing with the button people actually press. */}
+        <View style={[styles.section, styles.lastSection]}>
+          <Pressable
+            style={styles.deleteAccountButton}
+            onPress={handleDeleteAccount}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Delete my account permanently"
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color={theme.colors.mutedGray} />
+            ) : (
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            )}
+          </Pressable>
+          <Text style={styles.deleteAccountHint}>
+            Permanently removes your account, reviews and saved lounges.
+          </Text>
         </View>
       </ScrollView>
       <Modal
@@ -672,6 +760,24 @@ const styles = StyleSheet.create({
     ...theme.typography.medium,
     fontSize: 14,
     color: theme.colors.white,
+  },
+
+  // ---- Delete Account ----
+  deleteAccountButton: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+  },
+  deleteAccountText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14,
+    color: theme.colors.danger,
+  },
+  deleteAccountHint: {
+    ...theme.typography.medium,
+    fontSize: 11,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
   },
 
   // ---- Log Out ----

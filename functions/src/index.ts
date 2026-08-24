@@ -47,7 +47,7 @@ import {
 } from './relevance';
 import { optionalString, requireEmail, requireString } from './validation';
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { timingSafeEqual } from 'node:crypto';
 import { generateCode, hashCode } from './emailCode';
@@ -1033,6 +1033,165 @@ function requireAdmin(request: { auth?: { token?: { email?: string } } | null })
  * find, which is exactly the state 7 user documents were already in when this was
  * written.
  */
+
+/**
+ * Erases everything a member left behind, everywhere it lives.
+ *
+ * Shared by `deleteMyAccount` (Apple guideline 5.1.1(v) — an app that lets you
+ * create an account must let you delete it from inside the app) and by
+ * `adminDeleteMember`.
+ *
+ * Sharing it is not tidiness. adminDeleteMember previously deleted the user
+ * document, the ID photographs and the Auth account, and nothing else — so a
+ * "deleted" member's name, avatar, review text and photos stayed scattered
+ * across the directory, and their phone number stayed on every reservation.
+ * Building the member-facing version made that gap obvious, and one routine
+ * means it cannot drift apart again.
+ *
+ * Order matters at the end: Auth last, because the uid is the only handle on
+ * everything above. Delete the account first and a failure halfway through
+ * leaves data nobody can find to clean up.
+ */
+async function purgeMember(userId: string): Promise<{
+  reviews: number;
+  reservations: number;
+  favourites: number;
+  helpfulVotes: number;
+  loungesReleased: number;
+  filesDeleted: number;
+  authDeleted: boolean;
+}> {
+  const db = getFirestore();
+  const counts = {
+    reviews: 0,
+    reservations: 0,
+    favourites: 0,
+    helpfulVotes: 0,
+    loungesReleased: 0,
+    filesDeleted: 0,
+    authDeleted: false,
+  };
+
+  // Reviews carry userName, userAvatar, the text and the photographs — the most
+  // personal thing this member published, and the reason "delete my account"
+  // cannot just mean "delete the login".
+  const reviews = await db.collectionGroup('reviews').where('userId', '==', userId).get();
+  await Promise.all(reviews.docs.map(d => d.ref.delete()));
+  counts.reviews = reviews.size;
+
+  // Reservations carry a real name and phone number.
+  const reservations = await db
+    .collectionGroup('reservations')
+    .where('userId', '==', userId)
+    .get();
+  await Promise.all(reservations.docs.map(d => d.ref.delete()));
+  counts.reservations = reservations.size;
+
+  // The uid is mirrored into each lounge's favoritedByUserIds.
+  const favourited = await db
+    .collection('lounges')
+    .where('favoritedByUserIds', 'array-contains', userId)
+    .get();
+  await Promise.all(
+    favourited.docs.map(d => d.ref.update({ favoritedByUserIds: FieldValue.arrayRemove(userId) })),
+  );
+  counts.favourites = favourited.size;
+
+  // "Helpful" votes this member left on OTHER people's reviews. helpfulCount is
+  // denormalised alongside the array, so both move together or the count drifts.
+  const helpful = await db
+    .collectionGroup('reviews')
+    .where('helpfulUserIds', 'array-contains', userId)
+    .get();
+  await Promise.all(
+    helpful.docs.map(d =>
+      d.ref.update({
+        helpfulUserIds: FieldValue.arrayRemove(userId),
+        helpfulCount: FieldValue.increment(-1),
+      }),
+    ),
+  );
+  counts.helpfulVotes = helpful.size;
+
+  // A lounge owned or claimed by an account that no longer exists can never be
+  // edited, revoked or re-claimed — it would be stranded permanently.
+  for (const field of ['ownerId', 'claimantUserId'] as const) {
+    const owned = await db.collection('lounges').where(field, '==', userId).get();
+    await Promise.all(
+      owned.docs.map(d =>
+        d.ref.update({
+          ownerId: FieldValue.delete(),
+          claimantUserId: FieldValue.delete(),
+          claimStatus: FieldValue.delete(),
+        }),
+      ),
+    );
+    counts.loungesReleased += owned.size;
+  }
+
+  // The identity documents. Failing here must not abort the rest — a member who
+  // asked to be deleted should not stay because a storage call timed out.
+  try {
+    const bucket = getStorage().bucket();
+    const [files] = await bucket.getFiles({ prefix: `users/${userId}/` });
+    counts.filesDeleted = files.length;
+    if (files.length > 0) {
+      await bucket.deleteFiles({ prefix: `users/${userId}/`, force: true });
+    }
+  } catch (error) {
+    logger.warn('purgeMember: storage cleanup failed', { userId, error });
+  }
+
+  // recursiveDelete takes the subcollections with it — favorites, collections,
+  // notifications, issueReports, conversations and the rest. A plain delete would
+  // orphan them: still readable by their own paths, invisible to every query.
+  await db.recursiveDelete(db.doc(`users/${userId}`));
+
+  try {
+    await getAuth().deleteUser(userId);
+    counts.authDeleted = true;
+  } catch (error) {
+    // Already gone is a success, not a failure.
+    logger.info('purgeMember: no Auth account to delete', { userId, error });
+  }
+
+  logger.info('purgeMember complete', { userId, ...counts });
+  return counts;
+}
+
+/**
+ * Lets a member delete their own account, from inside the app.
+ *
+ * Required by Apple guideline 5.1.1(v) for any app offering account creation,
+ * and one of the most common App Store rejections. Until 2026-08-24 nothing in
+ * the app could do this at all.
+ *
+ * Takes NO arguments on purpose. The uid comes from `request.auth`, never from
+ * the caller — accepting a userId here would let any signed-in member delete
+ * anybody, which is the same endpoint as adminDeleteMember minus the admin
+ * check.
+ */
+export const deleteMyAccount = onCall(async request => {
+  const userId = request.auth?.uid;
+  if (!userId) {
+    throw new HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  return guarded('deleteMyAccount', async () => {
+    // Refuse to delete the only admin — the same guard adminDeleteMember has,
+    // because an admin deleting themselves from the phone locks everyone out of
+    // the portal just as effectively.
+    const email = request.auth?.token?.email?.toLowerCase();
+    if (email && ADMIN_EMAILS.includes(email)) {
+      throw new HttpsError(
+        'failed-precondition',
+        'This account administers Lounge Locator and cannot be deleted from the app.',
+      );
+    }
+    return purgeMember(userId);
+  });
+});
+
 export const adminDeleteMember = onCall({ cors: true }, async request => {
   requireAdmin(request);
 
@@ -1045,35 +1204,14 @@ export const adminDeleteMember = onCall({ cors: true }, async request => {
     }
   }
 
-  const bucket = getStorage().bucket();
-  let filesDeleted = 0;
-  try {
-    const [files] = await bucket.getFiles({ prefix: `users/${userId}/` });
-    filesDeleted = files.length;
-    if (files.length > 0) {
-      await bucket.deleteFiles({ prefix: `users/${userId}/`, force: true });
-    }
-  } catch (error) {
-    logger.warn('adminDeleteMember: storage cleanup failed', { userId, error });
-  }
-
-  // recursiveDelete takes the subcollections with it — favorites, collections,
-  // notifications, issueReports, conversations and the rest. A plain delete would
-  // orphan them: still readable by their own paths, invisible to every query.
-  await getFirestore().recursiveDelete(getFirestore().doc(`users/${userId}`));
-
-  let authDeleted = false;
-  try {
-    await getAuth().deleteUser(userId);
-    authDeleted = true;
-  } catch (error) {
-    // Already gone is a success, not a failure — this is how the 7 orphaned
-    // documents came about, and cleaning them up must not error.
-    logger.info('adminDeleteMember: no Auth account to delete', { userId, error });
-  }
-
-  logger.info('adminDeleteMember complete', { userId, filesDeleted, authDeleted });
-  return { userId, filesDeleted, authDeleted };
+  // Shares purgeMember with the member-facing deleteMyAccount. This function
+  // used to inline a shorter version that deleted the user document, the ID
+  // photographs and the Auth account and nothing else — so an admin-deleted
+  // member's name, avatar, review text and photos stayed published across the
+  // directory, and their phone number stayed on every reservation. One routine
+  // now, so the two cannot drift apart again.
+  const counts = await purgeMember(userId);
+  return { userId, ...counts };
 });
 
 /**

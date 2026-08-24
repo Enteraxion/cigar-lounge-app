@@ -573,7 +573,21 @@ export const refreshCityLounges = onCall(
 // as a sender in SendGrid once SENDGRID_API_KEY is a real key, otherwise
 // SendGrid will reject the send regardless of the API key being valid.
 const SALES_INQUIRY_EMAIL = 'sean@joalcigar.com';
-const FROM_EMAIL = 'no-reply@REPLACE_WITH_REAL_DOMAIN.com';
+/**
+ * The address every outbound email is sent from.
+ *
+ * Must be a sender SendGrid has verified, or it rejects the send outright.
+ * rohith.akepati@enteraxion.com was verified as a Single Sender on 2026-08-23 —
+ * single-sender verification needs no DNS, which is what let this go live
+ * without waiting on the enteraxion.com records.
+ *
+ * That is also the trade-off: without the domain's DKIM/SPF records naming
+ * SendGrid, Gmail has nothing vouching for these messages and may file them as
+ * spam. Once Sarthad adds SendGrid's three CNAMEs to enteraxion.com in GoDaddy,
+ * this should become no-reply@enteraxion.com — a role address rather than a
+ * person's, so it does not break when someone leaves.
+ */
+const FROM_EMAIL = 'rohith.akepati@enteraxion.com';
 
 /**
  * Emails the sales team a business's claim inquiry (see

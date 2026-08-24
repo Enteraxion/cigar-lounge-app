@@ -37,7 +37,6 @@ import {
   Mic,
   Search as SearchIcon,
   Share2,
-  Sparkles,
   Sun,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
@@ -46,7 +45,6 @@ import SimplifiedMapView from '../components/SimplifiedMapView';
 // TODO: the Concierge suggestion is still a fixed string — see the header.
 // The weather widget is real now (weatherService + patioWeather).
 import {
-  conciergeSuggestion,
   defaultRegion,
   LOCATED_ZOOM_DELTA,
   mapFilterChips,
@@ -306,9 +304,6 @@ export default function MapScreen() {
     });
   };
 
-  const openConcierge = () => {
-    (tabNavigation.navigate as (name: string, params?: object) => void)('AIConcierge');
-  };
 
   const openListView = () => {
     // Cross-tab navigation into the Search stack's SearchResults screen —
@@ -438,14 +433,22 @@ export default function MapScreen() {
           </View>
         ) : null}
 
-        {/* ---------------- Concierge card ---------------- */}
-        <Pressable style={styles.conciergeCard} onPress={openConcierge}>
-          <View style={styles.conciergeHeaderRow}>
-            <Sparkles size={14} color={theme.colors.white} />
-            <Text style={styles.conciergeLabel}>Concierge</Text>
-          </View>
-          <Text style={styles.conciergeMessage}>{conciergeSuggestion.message}</Text>
-        </Pressable>
+        {/* The Concierge card is not rendered, and this is its only entry point
+            in the whole app — so hiding it here takes the entire Concierge stack
+            (Home, Inspiration, Results, Saved Conversations, Trip Planner) out of
+            reach.
+            
+            Removed on 2026-08-24 for the App Store submission. askConcierge is
+            deployed and grounded, but ANTHROPIC_API_KEY is still a placeholder, so
+            the live function answers "The concierge isn't switched on yet — it's
+            built and waiting on an API key". That degrades honestly, which is the
+            right behaviour and the wrong thing for a reviewer to read: Apple
+            guideline 2.1 rejects apps with placeholder or incomplete features, and
+            this was one tap from the Map tab.
+            
+            The card's text was a fixed string anyway ("Looking for a mild Robusto
+            nearby?"), not a real suggestion. Put this back the day the key lands —
+            nothing else was removed. */}
 
         {/* ---------------- Map controls ---------------- */}
         <View style={styles.controlsColumn}>
@@ -599,33 +602,6 @@ const styles = StyleSheet.create({
   },
 
   // ---- Concierge ----
-  conciergeCard: {
-    alignSelf: 'flex-end',
-    width: 190,
-    marginRight: theme.spacing.lg,
-    marginTop: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: theme.radius.large,
-    backgroundColor: theme.colors.surface,
-    gap: 4,
-    ...theme.shadows.soft,
-  },
-  conciergeHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  conciergeLabel: {
-    ...theme.typography.caption,
-    fontSize: 9,
-    color: theme.colors.accentGold,
-  },
-  conciergeMessage: {
-    ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
-    fontSize: 13,
-    color: theme.colors.white,
-  },
 
   // ---- Map controls ----
   controlsColumn: {

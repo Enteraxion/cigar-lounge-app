@@ -43,15 +43,20 @@ import {
 import { theme, withAlpha } from '../theme';
 import FilterChip from '../components/FilterChip';
 import SimplifiedMapView from '../components/SimplifiedMapView';
-// TODO(firestore): weather widget and Concierge suggestion aren't
-// modeled in Firestore yet — see header comment above.
+// TODO: the Concierge suggestion is still a fixed string — see the header.
+// The weather widget is real now (weatherService + patioWeather).
 import {
   conciergeSuggestion,
   defaultRegion,
   LOCATED_ZOOM_DELTA,
   mapFilterChips,
-  weatherWidget,
 } from '../data/mockMap';
+import { getCurrentConditions } from '../services/weatherService';
+import {
+  formatTemperature,
+  patioVerdict,
+  type PatioConditions,
+} from '../utils/patioWeather';
 import { getLoungesNear, type Lounge } from '../services/loungeService';
 import { nearbyCacheKey, radiusForViewport } from '../utils/geoQuery';
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
@@ -164,6 +169,12 @@ export default function MapScreen() {
    */
   const requestRef = useRef(0);
 
+  /**
+   * Real conditions for wherever the map is looking, or null when there are
+   * none to be had — outside the US, or offline. Null hides the card entirely.
+   */
+  const [weather, setWeather] = useState<PatioConditions | null>(null);
+
   const loadLounges = useCallback(async () => {
     const token = ++requestRef.current;
     setError(null);
@@ -213,6 +224,31 @@ export default function MapScreen() {
     }
     loadLounges();
   }, [locationSettled, loadLounges]);
+
+  // Follows the viewport, so panning to another city reports that city's weather
+  // rather than the member's. Cached for half an hour per ~1km square, so a pan
+  // is not a request. Same stale-response guard as the lounges: a slow reply for
+  // somewhere the map has left must not overwrite a fresh one.
+  useEffect(() => {
+    if (!locationSettled) {
+      return;
+    }
+    let current = true;
+    getCurrentConditions(viewport.lat, viewport.lng)
+      .then(result => {
+        if (current) {
+          setWeather(result);
+        }
+      })
+      .catch(() => {
+        if (current) {
+          setWeather(null);
+        }
+      });
+    return () => {
+      current = false;
+    };
+  }, [locationSettled, viewport.lat, viewport.lng]);
 
   // initialRegion only applies at first mount; if the GPS fix resolves
   // after the map has already rendered with the fallback defaultRegion,
@@ -385,14 +421,22 @@ export default function MapScreen() {
           ))}
         </View>
 
-        {/* ---------------- Weather widget ---------------- */}
-        <View style={styles.weatherCard}>
-          <View style={styles.weatherRow}>
-            <Sun size={18} color={theme.colors.accentGold} />
-            <Text style={styles.weatherTemp}>{weatherWidget.temperature}</Text>
+        {/* ---------------- Weather ---------------- */}
+        {/* Rendered only when there is a real reading. This card used to show a
+            fixed "72° — Perfect weather for patio smoking" to everyone, always;
+            the temperature was invented and the recommendation was made without
+            knowing anything. Outside the US api.weather.gov has no data, and no
+            card is the honest answer. */}
+        {weather ? (
+          <View style={styles.weatherCard}>
+            <View style={styles.weatherRow}>
+              <Sun size={18} color={theme.colors.accentGold} />
+              <Text style={styles.weatherTemp}>{formatTemperature(weather.temperatureF)}</Text>
+            </View>
+            <Text style={styles.weatherMessage}>{patioVerdict(weather).message}</Text>
+            <Text style={styles.weatherSource}>{weather.shortForecast} · NWS</Text>
           </View>
-          <Text style={styles.weatherMessage}>{weatherWidget.message}</Text>
-        </View>
+        ) : null}
 
         {/* ---------------- Concierge card ---------------- */}
         <Pressable style={styles.conciergeCard} onPress={openConcierge}>
@@ -518,6 +562,14 @@ const styles = StyleSheet.create({
   },
 
   // ---- Weather ----
+  // Named so a member can tell where the number came from — and so it is
+  // obvious at a glance that it is no longer a hardcoded string.
+  weatherSource: {
+    ...theme.typography.medium,
+    fontSize: 10,
+    color: theme.colors.mutedGray,
+    marginTop: 2,
+  },
   weatherCard: {
     alignSelf: 'flex-end',
     width: 190,

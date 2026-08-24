@@ -139,11 +139,6 @@ export const mapFilterChips = [
   { id: 'open-now', label: 'Open Now' },
 ];
 
-export const weatherWidget = {
-  temperature: '72°',
-  message: 'Perfect weather for patio smoking.',
-};
-
 export const conciergeSuggestion = {
   message: 'Looking for a mild Robusto nearby?',
 };

@@ -94,13 +94,13 @@ export default function ReportsPage() {
             <section className="card" key={report.id}>
               <header className="card__head">
                 <div>
-                  <h2 className="card__title">{report.subject || 'Issue reported'}</h2>
+                  <h2 className="card__title">Issue reported</h2>
                   <p className="card__meta">
                     {report.createdAt
                       ? report.createdAt.toDate().toLocaleString()
                       : 'no date recorded'}
                     {' · member '}
-                    {report.userId}
+                    {report.reporterEmail ?? report.userId}
                   </p>
                 </div>
                 {report.resolved ? (
@@ -110,15 +110,19 @@ export default function ReportsPage() {
                 )}
               </header>
 
-              {report.message && <p className="body">{report.message}</p>}
-              {report.loungeId && (
-                <dl className="facts">
-                  <div>
-                    <dt>About lounge</dt>
-                    <dd style={{ fontSize: 13 }}>{report.loungeId}</dd>
-                  </div>
-                </dl>
+              {/* The report itself. An empty one is worth saying out loud rather
+                  than rendering nothing, which is indistinguishable from the
+                  field-name bug this page had until 2026-08-23. */}
+              {report.description?.trim() ? (
+                <p className="body">{report.description}</p>
+              ) : (
+                <p className="hint">This report was submitted with no description.</p>
               )}
+              {/* No "About lounge" block. IssueReportDocument has no loungeId —
+                  ReportIssueModal collects free text only, so this rendered
+                  nothing and was part of the same invented-shape mistake as
+                  `message` and `subject`. If a report ever needs to name a
+                  lounge, the app has to write it first. */}
 
               <footer className="card__foot">
                 <button

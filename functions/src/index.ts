@@ -1386,6 +1386,15 @@ export const sendEmailVerificationCode = onCall(
       // leave a stored code the member never received — which would burn their
       // cooldown and their hourly allowance for nothing.
       sgMail.setApiKey(sendgridApiKey.value());
+      // Logged because a SendGrid 403 says "the from address does not match a
+      // verified Sender Identity" without telling you which address it saw, and
+      // its error body's trailing "null" is the help-link field, not the value —
+      // which is easy to misread as the address being null. Never the code, and
+      // never the key.
+      logger.info('sendEmailVerificationCode: handing to SendGrid', {
+        from: FROM_EMAIL,
+        to: email,
+      });
       await sgMail.send({
         to: email,
         from: FROM_EMAIL,

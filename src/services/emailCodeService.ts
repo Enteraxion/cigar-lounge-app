@@ -26,22 +26,43 @@ export type SendCodeResult =
 export type ConfirmCodeResult = { ok: true } | { ok: false; message: string };
 
 /**
- * Firebase Functions errors arrive as `{ code: 'functions/resource-exhausted',
- * message }`. The function sets messages deliberately — how many seconds to
- * wait, how many tries are left — so the message is shown as written rather
- * than replaced with something generic, which is the whole reason those
- * messages say what they say.
+ * Turns a Firebase Functions error into a sentence a member can act on.
+ *
+ * The function sets its own messages deliberately — how many seconds to wait,
+ * how many tries are left — so those are shown as written. What must NOT be
+ * shown is the raw error for the codes where react-native-firebase puts a bare
+ * status string in `message`: an 'internal' error arrived as the single word
+ * "INTERNAL" and that is exactly what the wall displayed to Rohith on
+ * 2026-08-23. A member cannot do anything with "INTERNAL", and it reads like a
+ * crash rather than a problem on our side.
+ *
+ * 'internal' is always our fault, never the member's — the server hit something
+ * it did not expect (a rejected SendGrid key, an unverified sender) and the real
+ * reason is in the Cloud Functions log, deliberately not in the response.
  */
 function messageFor(error: unknown, fallback: string): string {
   const details = error as { code?: string; message?: string } | null;
-  const code = details?.code ?? '';
-  if (code.endsWith('unauthenticated')) {
-    return 'Please sign in again.';
+  const code = (details?.code ?? '').replace(/^functions\//, '');
+
+  switch (code) {
+    case 'unauthenticated':
+      return 'Please sign in again.';
+    case 'unavailable':
+    case 'deadline-exceeded':
+      return 'No connection. Check your network and try again.';
+    case 'internal':
+    case 'unknown':
+      return "Something went wrong on our side — we couldn't send the code. Please try again in a moment.";
+    default:
+      break;
   }
-  if (code.endsWith('unavailable') || code.endsWith('deadline-exceeded/network')) {
-    return 'No connection. Check your network and try again.';
-  }
-  return details?.message?.trim() || fallback;
+
+  // Only trust the server's own wording when it actually reads like a sentence.
+  // A bare status token ("INTERNAL", "NOT_FOUND") is the SDK echoing the code,
+  // not a message written for anyone to read.
+  const message = details?.message?.trim() ?? '';
+  const looksLikeAStatusCode = /^[A-Z_]+$/.test(message);
+  return message && !looksLikeAStatusCode ? message : fallback;
 }
 
 /** Asks the server to email a fresh code. */

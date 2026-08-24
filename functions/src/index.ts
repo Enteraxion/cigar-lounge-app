@@ -576,18 +576,25 @@ const SALES_INQUIRY_EMAIL = 'sean@joalcigar.com';
 /**
  * The address every outbound email is sent from.
  *
- * Must be a sender SendGrid has verified, or it rejects the send outright.
- * rohith.akepati@enteraxion.com was verified as a Single Sender on 2026-08-23 —
- * single-sender verification needs no DNS, which is what let this go live
- * without waiting on the enteraxion.com records.
+ * `enteraxion.com` was domain-authenticated in SendGrid on 2026-08-24 — five
+ * CNAMEs added in GoDaddy by Sarthad, covering DKIM (s1/s2) and link branding.
+ * SendGrid accepted the domain's EXISTING DMARC record rather than needing a new
+ * one, which is why we deliberately did not add the second `_dmarc` TXT it
+ * listed: two DMARC records break DMARC for the whole domain, including the
+ * Google Workspace mail this company runs on.
  *
- * That is also the trade-off: without the domain's DKIM/SPF records naming
- * SendGrid, Gmail has nothing vouching for these messages and may file them as
- * spam. Once Sarthad adds SendGrid's three CNAMEs to enteraxion.com in GoDaddy,
- * this should become no-reply@enteraxion.com — a role address rather than a
- * person's, so it does not break when someone leaves.
+ * A role address now, not a person's. It was briefly
+ * rohith.akepati@enteraxion.com, because Single Sender Verification needs no DNS
+ * and was the only way to send anything before the domain was authenticated.
+ * That worked but tied every outbound email to one employee's mailbox. With the
+ * domain authenticated, any address on it can send, so this is the one that does
+ * not break when somebody leaves.
+ *
+ * Before 2026-08-23 this was the string 'no-reply@REPLACE_WITH_REAL_DOMAIN.com',
+ * which means no email function in this project had ever been able to send —
+ * sendClaimInquiryEmail had been failing silently since 2026-08-10.
  */
-const FROM_EMAIL = 'rohith.akepati@enteraxion.com';
+const FROM_EMAIL = 'no-reply@enteraxion.com';
 
 /**
  * Emails the sales team a business's claim inquiry (see

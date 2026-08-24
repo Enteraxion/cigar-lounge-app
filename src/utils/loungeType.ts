@@ -1,8 +1,30 @@
 /**
- * What kind of venue a lounge is — cigar, hookah, cannabis, vape, tobacco.
+ * What kind of venue a lounge is — cigar, hookah, vape, tobacco.
  *
  * Asked for by Dr. Brinkley (2026-08-19): a search filter letting members choose
- * lounge type, cannabis included.
+ * lounge type. That request included cannabis; the type was removed on
+ * 2026-08-24, with his agreement that the call was ours to make. Two reasons,
+ * and the second is the one that decided it:
+ *
+ *  1. Apple guideline 1.4.3 does not permit apps facilitating the sale of
+ *     marijuana. This is a directory rather than a storefront, which is how
+ *     Leafly and Weedmaps stay listed, but it was the single largest rejection
+ *     risk in a submission that is otherwise straightforward.
+ *  2. **It was not a real category.** Measured across all 8,496 lounges, 34 were
+ *     classified cannabis — 0.4% — and NOT ONE came from a Yelp cannabis
+ *     category. Every one was a guess from the venue's name, and the guesses
+ *     were mostly wrong: "Kush Cigar House", "Smoke 4 less Cigar Vape & CBD",
+ *     "Two Leafs Smoke Shop — Cigarettes, Fine Cigars, Hookah". Cigar and hookah
+ *     shops, filed under cannabis because their name mentions CBD or Kush, and
+ *     therefore missing from the cigar filter that should have found them.
+ *
+ * Dropping the type reclassifies 26 of those 34 as what they actually are —
+ * 11 cigar, 10 hookah, 4 tobacco, 1 vape — leaving 8 as `unknown`. So this
+ * removes a rejection risk and fixes a classification bug in the same change.
+ *
+ * If a genuine dispensary listing is ever wanted, it needs a real category from
+ * the import rather than a name guess, and a fresh read of 1.4.3 — not this
+ * regex.
  *
  * Type is not a field either import ever captured, so it has to be derived, and
  * the two sources of truth are very different in quality:
@@ -20,7 +42,7 @@
  * a member filtering can still reach those venues instead of them vanishing.
  */
 
-export type LoungeType = 'cigar' | 'hookah' | 'cannabis' | 'vape' | 'tobacco' | 'unknown';
+export type LoungeType = 'cigar' | 'hookah' | 'vape' | 'tobacco' | 'unknown';
 
 /** Yelp aliases mapped to our types. Aliases are stable; titles are not. */
 const YELP_ALIAS_TO_TYPE: Record<string, LoungeType> = {
@@ -28,9 +50,6 @@ const YELP_ALIAS_TO_TYPE: Record<string, LoungeType> = {
   tobaccoshops: 'tobacco',
   hookah_bars: 'hookah',
   hookahbars: 'hookah',
-  cannabis_clinics: 'cannabis',
-  cannabisdispensaries: 'cannabis',
-  cannabis_dispensaries: 'cannabis',
   headshops: 'vape',
   vapeshops: 'vape',
 };
@@ -38,15 +57,14 @@ const YELP_ALIAS_TO_TYPE: Record<string, LoungeType> = {
 /**
  * Name patterns, most specific first — first match wins.
  *
- * Cannabis leads because its vocabulary is unambiguous and a mislabelled
- * cannabis venue is the costliest error here: it is the one category whose
- * legality varies by state.
+ * There is deliberately no cannabis rule — see the header. Names mentioning
+ * CBD, hemp or Kush now fall through to the rule that matches the rest of the
+ * name, which for these venues is cigar, hookah or tobacco.
  *
  * Word boundaries throughout. Without them "vape" matches inside unrelated
  * words and "smokes" would catch any name containing it.
  */
 const NAME_RULES: [LoungeType, RegExp][] = [
-  ['cannabis', /\b(dispensar\w*|cannabis|marijuana|weed|thc|cbd|budtender|kush|ganja|hemp|pre-?rolls?)\b/i],
   ['hookah', /\b(hookahs?|hookas?|shisha|shesha|sheesha|narghile|nargile|argila)\b/i],
   ['cigar', /\b(cigars?|tobacconist|humidors?|stogies?|puros?|habanos?|churchill)\b/i],
   ['vape', /\b(vapes?|vapor|vaper|e-?cigs?|ejuice|e-?liquid)\b/i],
@@ -109,7 +127,6 @@ export function loungeTypeOf(lounge: Classifiable): LoungeType {
 export const LOUNGE_TYPE_OPTIONS: { id: LoungeType; label: string }[] = [
   { id: 'cigar', label: 'Cigar' },
   { id: 'hookah', label: 'Hookah' },
-  { id: 'cannabis', label: 'THC / Cannabis' },
   { id: 'vape', label: 'Vape' },
   { id: 'tobacco', label: 'Tobacco' },
   { id: 'unknown', label: 'Other' },

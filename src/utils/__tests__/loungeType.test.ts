@@ -45,15 +45,27 @@ describe('classifyLounge — name fallback', () => {
   it('classifies each type from a realistic name', () => {
     expect(loungeTypeOf({ name: 'King Corona Cigars Bar And Cafe' })).toBe('cigar');
     expect(loungeTypeOf({ name: 'Sahara Sheesha Lounge' })).toBe('hookah');
-    expect(loungeTypeOf({ name: 'Green Leaf Dispensary' })).toBe('cannabis');
     expect(loungeTypeOf({ name: 'Cloud 9 Vape Shop' })).toBe('vape');
     expect(loungeTypeOf({ name: 'Boston Smoke & More' })).toBe('tobacco');
   });
 
-  it('puts cannabis first, since it is the costliest category to get wrong', () => {
-    // Legality is state-by-state, so a dispensary must not be filed as a cigar
-    // bar just because the name also says cigar.
-    expect(loungeTypeOf({ name: 'Cigar & Cannabis Dispensary' })).toBe('cannabis');
+  it('files a cigar shop that mentions CBD or Kush as a CIGAR shop', () => {
+    // The reason the cannabis type was dropped on 2026-08-24. All 34 lounges it
+    // ever matched came from the venue's NAME — none from a Yelp cannabis
+    // category — and the guesses were mostly wrong. These are real names from
+    // the directory that used to be filed under cannabis and are now findable
+    // by the filter that should always have found them.
+    expect(loungeTypeOf({ name: 'Kush Cigar House, Vapes Southlake' })).toBe('cigar');
+    expect(loungeTypeOf({ name: 'Smoke 4 less Cigar Vape & CBD' })).toBe('cigar');
+    expect(loungeTypeOf({ name: 'Dr Kush Smoke Shop' })).toBe('tobacco');
+  });
+
+  it('has no cannabis type at all', () => {
+    // Guideline 1.4.3 does not permit apps facilitating the sale of marijuana.
+    // Nothing should reintroduce this without a fresh read of that rule.
+    const ids = LOUNGE_TYPE_OPTIONS.map(option => String(option.id));
+    expect(ids).not.toContain('cannabis');
+    expect(JSON.stringify(LOUNGE_TYPE_OPTIONS).toLowerCase()).not.toContain('thc');
   });
 
   it('recovers venues the earlier name rules missed', () => {
@@ -99,14 +111,9 @@ describe('matchesLoungeType', () => {
 describe('LOUNGE_TYPE_OPTIONS', () => {
   it('offers every type the classifier can return', () => {
     const ids = LOUNGE_TYPE_OPTIONS.map(o => o.id);
-    for (const type of ['cigar', 'hookah', 'cannabis', 'vape', 'tobacco', 'unknown'] as const) {
+    for (const type of ['cigar', 'hookah', 'vape', 'tobacco', 'unknown'] as const) {
       expect(ids).toContain(type);
     }
-  });
-
-  it('labels cannabis in the terms Dr. Brinkley used', () => {
-    const cannabis = LOUNGE_TYPE_OPTIONS.find(o => o.id === 'cannabis');
-    expect(cannabis?.label).toContain('THC');
   });
 
   it('calls the unknown bucket "Other" — honest without sounding broken', () => {

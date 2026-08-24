@@ -34,6 +34,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
 import { CalendarClock, ChevronLeft, Clock, MapPin, Users } from 'lucide-react-native';
 import { theme } from '../theme';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { auth } from '../services/firebaseAuth';
 import {
   cancelReservation,
@@ -300,7 +301,9 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    // Clears MainNavigator\'s floating pill tab bar. One shared value, so
+    // no screen can be accidentally too tight — see tabBarLayout.ts.
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
   },
   sectionTitle: {
     ...theme.typography.medium,

@@ -675,3 +675,62 @@ describe('reservation collection-group rules', () => {
     await assertFails(deleteDoc(doc(member(), 'lounges/lounge-b/reservations/r2')));
   });
 });
+
+describe('issue report resolution rules', () => {
+  /**
+   * The admin portal's Reports page could READ these from 2026-08-21 but every
+   * "Mark resolved" failed: read was granted to isAdmin(), write was not. Rohith
+   * hit it on 2026-08-23.
+   *
+   * The grant is deliberately two fields. An admin has no business editing what a
+   * member reported — a triage tool that can rewrite the complaint is one nobody
+   * should trust — so the tests below pin the narrowness, not just the ability.
+   */
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'users/member-1/issueReports/rep1'), {
+        description: 'The map shows a lounge in Nebraska.',
+      });
+    });
+  });
+
+  it('lets an admin mark a report resolved', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(admin(), 'users/member-1/issueReports/rep1'),
+        { resolved: true, resolvedAt: new Date() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses an admin rewriting what the member actually reported', async () => {
+    await assertFails(
+      setDoc(
+        doc(admin(), 'users/member-1/issueReports/rep1'),
+        { description: 'nothing to see here' },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses an admin smuggling a description alongside the resolution', async () => {
+    await assertFails(
+      setDoc(
+        doc(admin(), 'users/member-1/issueReports/rep1'),
+        { resolved: true, description: 'reworded' },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses another member resolving someone else’s report', async () => {
+    await assertFails(
+      setDoc(
+        doc(member('member-2', 'other@example.com'), 'users/member-1/issueReports/rep1'),
+        { resolved: true },
+        { merge: true },
+      ),
+    );
+  });
+});

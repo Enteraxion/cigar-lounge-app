@@ -316,6 +316,14 @@ service cloud.firestore {
       match /issueReports/{reportId} {
         allow read: if isOwner(userId) || isAdmin();
         allow write: if isOwner(userId);
+        // An admin may mark a report handled — and nothing else. The portal's
+        // Reports page could read these from 2026-08-21 but every "Mark
+        // resolved" failed with "Could not update that report", because read was
+        // granted and write was not. Restricted to the two resolution fields on
+        // purpose: an admin has no business editing what a member reported, and
+        // a triage tool that can rewrite the complaint is a triage tool nobody
+        // should trust.
+        allow update: if isAdmin() && affectedKeys().hasOnly(['resolved', 'resolvedAt']);
       }
       // Saved AI Concierge conversations and the feedback a member leaves
       // on a recommendation. Both are private to the member — nobody else,

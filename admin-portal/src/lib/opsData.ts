@@ -192,13 +192,30 @@ export async function deleteMember(uid: string): Promise<{
 
 // ---------------------------------------------------------------- reports
 
+/**
+ * Mirrors IssueReportDocument in the APP's src/types/firestore.ts, which is the
+ * only writer: `{ description, createdAt }`.
+ *
+ * It previously declared `subject`, `message` and `loungeId` — none of which the
+ * app has ever written. So every report rendered as a bare "Issue reported"
+ * heading with no text, and the thing an admin opens this page to read was the
+ * one thing missing. Rohith hit it on 2026-08-23.
+ *
+ * That is the second time in this portal: adminRebuildCityStats wrote
+ * {city, count, image} against an app expecting {id, name, count, imageUri} and
+ * silently emptied the Search tab. Same root cause both times — the portal is a
+ * separate tsconfig project, so nothing type-checks its idea of a document
+ * against the app's. When adding a type here, copy it from src/types/firestore.ts
+ * rather than from what the field ought to be called.
+ */
 export type IssueReport = {
   id: string;
   path: string;
   userId: string;
-  subject?: string;
-  message?: string;
-  loungeId?: string;
+  /** The member's own words. The app calls this `description`. */
+  description?: string;
+  /** Filled in from the members list, so a report is attributable to a person. */
+  reporterEmail?: string;
   createdAt?: Timestamp;
   resolved?: boolean;
 };
@@ -206,13 +223,37 @@ export type IssueReport = {
 /** Issue reports across every member — the collection nothing had ever read. */
 export async function fetchReports(): Promise<IssueReport[]> {
   const snapshot = await getDocs(query(collectionGroup(db, 'issueReports'), limit(200)));
+
+  // A raw uid tells an admin nothing. There are 11 members, so one extra read of
+  // the whole collection is cheaper than caring — revisit alongside the pagination
+  // note on fetchMembers if that ever stops being true.
+  const emailByUid = new Map<string, string>();
+  try {
+    const members = await getDocs(collection(db, 'users'));
+    members.forEach(m => {
+      const email = (m.data() as { email?: string }).email;
+      if (email) {
+        emailByUid.set(m.id, email);
+      }
+    });
+  } catch {
+    // Not fatal — the report still shows, just attributed to a uid.
+  }
+
   return snapshot.docs
     .map(document => {
       const data = document.data() as Omit<IssueReport, 'id' | 'path' | 'userId'>;
       // The parent of the subcollection is the user document, so the uid comes
       // from the path — a collection-group query does not carry it otherwise.
       const userId = document.ref.parent.parent?.id ?? 'unknown';
-      return { ...data, id: document.id, path: document.ref.path, userId };
+      const reporterEmail = emailByUid.get(userId);
+      return {
+        ...data,
+        id: document.id,
+        path: document.ref.path,
+        userId,
+        ...(reporterEmail ? { reporterEmail } : {}),
+      };
     })
     .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
 }

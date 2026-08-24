@@ -11,7 +11,7 @@
  * lounge's own rating breakdown rather than a separate mock scoring set.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -28,7 +28,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import {
@@ -132,9 +132,26 @@ export default function LoungeDetailScreen() {
     }
   }, [loungeId, userId]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Refetch on FOCUS, not just on mount.
+  //
+  // Everything a member does from this screen changes what it should say —
+  // claiming the business, writing a review, reserving a table, favouriting —
+  // and every one of those is a round trip through another screen and back. On
+  // mount-only loading, all of them returned to a screen still describing the
+  // world as it was before.
+  //
+  // It became visible on 2026-08-23, when the BUG-002 fix changed the
+  // confirmation screens from navigate() to popTo(). navigate() had been pushing
+  // a SECOND LoungeDetail — a fresh mount with fresh data — which accidentally
+  // hid this. popTo correctly unwinds to the screen already on the stack, so it
+  // no longer remounts, and a member who had just submitted a claim came back to
+  // a "Claim this business" button. The stale read was always the bug; the
+  // duplicate screen was just covering it.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   const onGalleryScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);

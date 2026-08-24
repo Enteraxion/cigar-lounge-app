@@ -52,6 +52,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { Camera, Check, ChevronLeft, User } from 'lucide-react-native';
 import { updateProfile } from '@react-native-firebase/auth';
 import { theme, withAlpha } from '../theme';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { auth } from '../services/firebaseAuth';
 import { getUserProfile, updateUserProfile } from '../services/userActionsService';
 import { uploadImage } from '../services/storageService';
@@ -402,7 +403,9 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    // Clears MainNavigator\'s floating pill tab bar. One shared value, so
+    // no screen can be accidentally too tight — see tabBarLayout.ts.
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

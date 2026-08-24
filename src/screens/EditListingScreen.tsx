@@ -19,6 +19,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { getLoungeById } from '../services/loungeService';
 import { updateLoungeDetails } from '../services/ownerService';
 import { auth } from '../services/firebaseAuth';
@@ -257,9 +258,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    // Clears MainNavigator's floating pill tab bar (bottom: 24 + height: 64)
-    // plus breathing room, so the submit button never sits under it.
-    paddingBottom: theme.spacing.xxl + 64,
+    // Clears MainNavigator\'s floating pill tab bar. One shared value, so
+    // no screen can be accidentally too tight — see tabBarLayout.ts.
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
   field: {

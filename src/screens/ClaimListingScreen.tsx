@@ -20,6 +20,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import { ChevronLeft, MonitorSmartphone } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { submitLoungeClaim } from '../services/ownerService';
 import { auth } from '../services/firebaseAuth';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
@@ -248,9 +249,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    // Clears MainNavigator's floating pill tab bar (bottom: 24 + height: 64)
-    // plus breathing room, so the submit button never sits under it.
-    paddingBottom: theme.spacing.xxl + 64,
+    // Clears MainNavigator\'s floating pill tab bar. One shared value, so
+    // no screen can be accidentally too tight — see tabBarLayout.ts.
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
   intro: {

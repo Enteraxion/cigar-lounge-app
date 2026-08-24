@@ -36,6 +36,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { Camera, ChevronLeft, Lock, Plus } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { loungeInteriors } from '../data/mockImages';
 import { collectionCategories } from '../data/mockCollections';
 import { createCollection as createCollectionInFirestore } from '../services/userActionsService';
@@ -303,7 +304,9 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    // Clears MainNavigator\'s floating pill tab bar. One shared value, so
+    // no screen can be accidentally too tight — see tabBarLayout.ts.
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.xl,
   },
 

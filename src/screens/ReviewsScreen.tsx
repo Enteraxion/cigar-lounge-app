@@ -35,6 +35,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { useVerificationGate } from '../hooks/useVerificationGate';
 import StarRating from '../components/StarRating';
 import FilterReviewsSheet from '../components/FilterReviewsSheet';
@@ -458,7 +459,9 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 160,
+    // Clears MainNavigator\'s floating pill tab bar. One shared value, so
+    // no screen can be accidentally too tight — see tabBarLayout.ts.
+    paddingBottom: TAB_BAR_SCROLL_CLEARANCE,
     gap: theme.spacing.lg,
   },
 

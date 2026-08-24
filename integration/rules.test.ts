@@ -28,6 +28,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   deleteField,
   collection,
   getDoc,
@@ -618,5 +619,59 @@ describe('email verification code rules', () => {
     await assertFails(
       getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'emailVerificationCodes', uid)),
     );
+  });
+});
+
+describe('reservation collection-group rules', () => {
+  /**
+   * My Reservations (reservationService.getMyReservations) is a collectionGroup
+   * query, and Firestore treats those as a separate scope: the nested
+   * `lounges/{loungeId}/reservations` rule does NOT cover them. Without a
+   * `{path=**}` rule the screen loads nothing, which is exactly how it shipped
+   * on 2026-08-23 — verified only with the Admin SDK, which ignores rules.
+   *
+   * The second test is the one that matters more. `allow read: if true` would
+   * also have made the screen work, and would have let anyone enumerate every
+   * booking in the directory: guest names, phone numbers, and the times people
+   * will be somewhere.
+   */
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'lounges/lounge-a/reservations/r1'), {
+        userId: 'member-1',
+        guestName: 'Dee',
+        contactPhone: '555-0100',
+        partySize: 2,
+        timeSlot: '9:00 PM',
+      });
+      await setDoc(doc(db, 'lounges/lounge-b/reservations/r2'), {
+        userId: 'someone-else',
+        guestName: 'Not Dee',
+        contactPhone: '555-0199',
+        partySize: 4,
+        timeSlot: '7:30 PM',
+      });
+    });
+  });
+
+  it('lets a member read their own reservation across lounges', async () => {
+    await assertSucceeds(getDoc(doc(member(), 'lounges/lounge-a/reservations/r1')));
+  });
+
+  it('refuses a member reading someone else’s reservation', async () => {
+    // Guest name, phone number, and where they will be at 7:30.
+    await assertFails(getDoc(doc(member(), 'lounges/lounge-b/reservations/r2')));
+  });
+
+  it('refuses a signed-out visitor entirely', async () => {
+    await assertFails(
+      getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'lounges/lounge-a/reservations/r1')),
+    );
+  });
+
+  it('still lets the guest cancel their own booking, and only their own', async () => {
+    await assertSucceeds(deleteDoc(doc(member(), 'lounges/lounge-a/reservations/r1')));
+    await assertFails(deleteDoc(doc(member(), 'lounges/lounge-b/reservations/r2')));
   });
 });

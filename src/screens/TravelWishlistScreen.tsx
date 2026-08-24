@@ -24,7 +24,6 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   Pressable,
@@ -225,8 +224,10 @@ export default function TravelWishlistScreen() {
           <SectionHeader
             title="Destinations"
             subtitle="Your upcoming stops"
-            actionLabel="Edit Route"
-            onActionPress={() => Alert.alert('Coming Soon', 'Trip route editing is coming soon.')}
+            // No action. There is no route to edit: buildWishlist derives these
+            // destinations from the lounges the member has saved, so the way to
+            // change them is to save or unsave a lounge. An "Edit Route" button
+            // implies a stored itinerary that does not exist.
           />
           <FlatList
             data={destinations}
@@ -286,7 +287,9 @@ export default function TravelWishlistScreen() {
           <SectionHeader
             title="All Saved Lounges"
             actionLabel="View List"
-            onActionPress={() => Alert.alert('Coming Soon', 'A full saved-lounges list view is coming soon.')}
+            // The full list already exists — FavoritesScreen is exactly it. This
+            // was raising "coming soon" for a screen shipped months ago.
+            onActionPress={() => navigation.navigate('FavoritesHome')}
           />
           {error ? (
             <View style={styles.savedLoungesStateBox}>
@@ -351,7 +354,12 @@ export default function TravelWishlistScreen() {
       {/* ---------------- Floating Action Button ---------------- */}
       <Pressable
         style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]}
-        onPress={() => Alert.alert('Coming Soon', 'Adding new destinations is coming soon.')}
+        // A destination appears here when a lounge is saved, so "add" means
+        // "find a lounge to save" — which is the Search tab. Previously an
+        // apology.
+        onPress={() =>
+          (tabNavigation.navigate as (name: string, params?: object) => void)('Search')
+        }
       >
         <Plus size={22} color={theme.colors.primaryBlack} />
       </Pressable>

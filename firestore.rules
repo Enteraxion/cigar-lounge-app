@@ -230,6 +230,28 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // Collection-group read so a member can list their OWN reservations across
+    // every lounge (reservationService.getMyReservations, behind Profile ->
+    // My Reservations).
+    //
+    // This rule is why that screen works at all. A collectionGroup query is NOT
+    // covered by the nested `lounges/{loungeId}/reservations` match above —
+    // Firestore treats collection-group reads as a separate scope needing its own
+    // `{path=**}` rule — so the screen shipped on 2026-08-23 loading nothing but
+    // "Couldn't load your reservations". I had verified the query with the Admin
+    // SDK, which ignores rules entirely, so the test proved the index existed and
+    // said nothing about permission.
+    //
+    // Narrow on purpose: the guest only, matched on the document's own userId.
+    // `allow read: if true` (as reviews and events use) would let anyone
+    // enumerate every booking in the directory — names, phone numbers and the
+    // times people will be somewhere. The lounge OWNER still reads their
+    // bookings through the nested rule above, which is a per-lounge query and
+    // does not need this.
+    match /{path=**}/reservations/{reservationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
     // Collection-group read for HomeScreen's "Member Events" rail, which
     // shows upcoming events across every lounge rather than one at a time
     // (eventService.getUpcomingEventsAcrossLounges). Writes are NOT

@@ -14,7 +14,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Easing,
   Image,
@@ -35,7 +34,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ChevronLeft,
   ChevronRight,
-  EllipsisVertical,
   Heart,
   MapPin,
   Navigation,
@@ -473,13 +471,10 @@ export default function ConciergeConversationScreen() {
           <Text style={styles.headerCaption}>AI Concierge</Text>
           <Text style={styles.headerName}>{conciergeUser.name}</Text>
         </View>
-        <Pressable
-          style={styles.optionsButton}
-          onPress={() => Alert.alert('Coming Soon', 'Conversation options are coming soon.')}
-          hitSlop={8}
-        >
-          <EllipsisVertical size={18} color={theme.colors.secondarySilver} />
-        </Pressable>
+        {/* The overflow button is gone. It offered "Conversation options are
+            coming soon", and there are no options to offer: this screen has no
+            rename, no export, no delete — SavedConversations is still mock. When
+            any of those become real, this is where the button goes back. */}
       </View>
 
       {isLoading ? (

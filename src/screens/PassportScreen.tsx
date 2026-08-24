@@ -33,7 +33,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -45,7 +45,6 @@ import {
   Crown,
   Flame,
   MapPin,
-  SlidersHorizontal,
   Trophy,
   User,
 } from 'lucide-react-native';
@@ -316,18 +315,22 @@ export default function PassportScreen() {
 
         {/* ---------------- Journey Map ---------------- */}
         <View style={styles.field}>
+          {/* No filter button. There was one, and it opened an alert saying
+              "Journey map filters are coming soon" — Rohith flagged it on
+              2026-08-23.
+              
+              It is not a matter of building the filter: JourneyMap pins the
+              lounges this member has actually visited, and that is the only
+              dimension the data has. A filter needs something to filter BY, and
+              inventing one would mean inventing a distinction the app does not
+              record — which is the same reason the "Business Trip"/"Road Trip"
+              tags and the 14°C weather tile came out of this screen on
+              2026-08-16. A button that only apologises is worse than no button. */}
           <View style={styles.journeyHeaderRow}>
             <View>
               <Text style={styles.headerCaption}>Journey Map</Text>
               <Text style={styles.journeyTitle}>World Exploration</Text>
             </View>
-            <Pressable
-              style={styles.journeyFilterButton}
-              hitSlop={8}
-              onPress={() => Alert.alert('Coming Soon', 'Journey map filters are coming soon.')}
-            >
-              <SlidersHorizontal size={16} color={theme.colors.secondarySilver} />
-            </Pressable>
           </View>
 
           <JourneyMap />
@@ -636,14 +639,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: theme.colors.white,
     marginTop: 2,
-  },
-  journeyFilterButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   // ---- Journey highlights ----

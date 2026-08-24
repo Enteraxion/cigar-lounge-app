@@ -140,7 +140,32 @@ export default function MapScreen() {
 
   const radiusMiles = radiusForViewport(viewport.latitudeDelta);
 
+  /**
+   * Which query is the current one. Guards against an out-of-order response.
+   *
+   * This is the whole fix for a bug that kept coming back: the map animated to
+   * the member's city while the card underneath showed "NVY Bar & Cigar Lounge,
+   * Kearney NE" — a lounge next to defaultRegion, the geographic centre of the
+   * United States.
+   *
+   * Two effects fire on the render where the GPS fix lands. The one watching
+   * `locationSettled` is declared first, so it runs first — with `loadLounges`
+   * still memoised on the OLD viewport, i.e. Kansas at latitudeDelta 30. The one
+   * watching `location` then moves the viewport to the member's city and a
+   * second query goes out. Both are in flight at once, and the Kansas one covers
+   * a 30-degree span so it returns far more documents and often finishes LAST —
+   * overwriting the correct result.
+   *
+   * Previous attempts treated this as a viewport-tracking problem (setViewport
+   * alongside animateToRegion, rather than waiting for onRegionChangeComplete).
+   * That was a real fix for a real thing, and it is why the map itself ends up in
+   * the right place — but it could not help the card, because nothing stopped a
+   * stale response from landing after a fresh one.
+   */
+  const requestRef = useRef(0);
+
   const loadLounges = useCallback(async () => {
+    const token = ++requestRef.current;
     setError(null);
     try {
       // Scoped to the viewport. This screen used to load every lounge in the
@@ -154,11 +179,20 @@ export default function MapScreen() {
         radiusMiles,
         MAX_PINS,
       );
+      if (token !== requestRef.current) {
+        // A newer query went out while this one was in flight. Dropping it is the
+        // point: applying it would put pins and a card from somewhere the member
+        // is not on top of a map showing where they are.
+        return;
+      }
       setLounges(result);
       setSelectedLoungeId(previous =>
         previous && result.some(lounge => lounge.id === previous) ? previous : result[0]?.id ?? null,
       );
     } catch {
+      if (token !== requestRef.current) {
+        return;
+      }
       setError("Couldn't load lounges. Check your connection and try again.");
     }
   }, [viewport.lat, viewport.lng, radiusMiles]);

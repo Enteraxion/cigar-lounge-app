@@ -80,19 +80,22 @@ export default function BrandSplash() {
           the top, then black over it. Flat black gives the badge nothing to sit
           on — this is what reads as lit. */}
       <LinearGradient
-        colors={[theme.gold.glow, withAlpha(theme.colors.accentGold, 0.04), theme.colors.background]}
-        locations={[0, 0.35, 1]}
+        colors={[theme.gold.glow, withAlpha(theme.colors.accentGold, 0.03), LOGO_TILE_BLACK]}
+        // Reaches pure black by 40%, above the vertically-centred badge. The
+        // glow used to still be warm at the centre, which is what made the
+        // artwork's black square visible as a box against it.
+        locations={[0, 0.2, 0.4]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient
         colors={[
-          withAlpha(theme.colors.background, 0.2),
-          withAlpha(theme.colors.background, 0.75),
-          theme.colors.background,
+          withAlpha(LOGO_TILE_BLACK, 0.35),
+          LOGO_TILE_BLACK,
+          LOGO_TILE_BLACK,
         ]}
-        locations={[0, 0.55, 1]}
+        locations={[0, 0.4, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -127,8 +130,18 @@ export default function BrandSplash() {
   );
 }
 
+/**
+ * The logo artwork's own background — measured at the corners of the supplied
+ * PNG, which are pure black and fully opaque.
+ *
+ * Not a theme token on purpose: this exists to match one image. If the logo is
+ * ever redrawn this needs re-measuring, rather than silently inheriting a
+ * palette change that has nothing to do with it.
+ */
+const LOGO_TILE_BLACK = '#000000';
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.colors.primaryBlack },
+  screen: { flex: 1, backgroundColor: LOGO_TILE_BLACK },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md },
   logo: { width: 156, height: 156 },
   rule: { height: 1, alignItems: 'center' },

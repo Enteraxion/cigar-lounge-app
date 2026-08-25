@@ -126,6 +126,59 @@ export async function deferAgeVerification(userId: string): Promise<void> {
   );
 }
 
+/**
+ * Watches a member's 21+ record and reports every change, live.
+ *
+ * Added 2026-08-25. Julian approved his own ID in the admin portal during a
+ * walkthrough and the "under review" banner stayed on screen — the app had read
+ * the record once when it mounted and never looked again, so it only caught up
+ * on a full reload.
+ *
+ * A listener rather than a refetch-on-focus, because neither refresh point would
+ * have helped him: he was looking at the screen the whole time, so nothing was
+ * re-focused and the app was never backgrounded. Approval happens on somebody
+ * else's machine, which makes this genuinely a push, not a poll — the banner now
+ * disappears while the member is watching it.
+ *
+ * Returns its unsubscribe function.
+ *
+ * The cast is deliberate and narrow. This version of
+ * @react-native-firebase/firestore has no modular `onSnapshot` export — the
+ * method exists on the reference at runtime (see the package's
+ * FirestoreDocumentReference typings) but the modular DocumentReference type
+ * does not declare it. The alternative was reaching for the namespaced API for
+ * this one call, which would be the only place in the app that does. Narrowed to
+ * the exact shape used rather than `any`, so a signature change still fails the
+ * build here.
+ */
+type Listenable = {
+  onSnapshot: (
+    next: (snapshot: { exists: () => boolean; data: () => unknown } | null) => void,
+    error: (e: unknown) => void,
+  ) => () => void;
+};
+
+export function watchAgeVerification(
+  userId: string,
+  onChange: (verification: AgeVerification | null) => void,
+): () => void {
+  return (doc(db, 'users', userId) as unknown as Listenable).onSnapshot(
+    snapshot => {
+      if (!snapshot || !snapshot.exists()) {
+        onChange(null);
+        return;
+      }
+      onChange((snapshot.data() as UserDocument).ageVerification ?? null);
+    },
+    () => {
+      // A failed listen must not become a lockout — same reasoning as the
+      // one-shot read below. Treated as "no record", which grandfathers rather
+      // than blocks.
+      onChange(null);
+    },
+  );
+}
+
 export async function getAgeVerification(userId: string): Promise<AgeVerification | null> {
   const snapshot = await getDoc(doc(db, 'users', userId));
   if (!snapshot.exists()) {

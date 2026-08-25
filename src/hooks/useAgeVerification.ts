@@ -25,7 +25,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { auth } from '../services/firebaseAuth';
-import { getAgeVerification } from '../services/ageVerificationService';
+import { getAgeVerification, watchAgeVerification } from '../services/ageVerificationService';
 import type { AgeVerification } from '../types/firestore';
 import { isSubmissionComplete } from '../utils/idDocument';
 
@@ -92,24 +92,87 @@ export function deriveAgeGateState(verification: AgeVerification | null | undefi
   };
 }
 
+/**
+ * One live listener for the whole app, shared by every instance of the hook.
+ *
+ * Shared rather than per-instance for the same reason useEmailVerification is:
+ * AppNavigator, HomeScreen and useVerificationGate all read this, and they must
+ * agree. Separate listeners would mean separate copies of the truth, and one
+ * screen clearing its banner while another kept showing it.
+ */
+type Verification = AgeVerification | null | undefined;
+
+let shared: Verification;
+let sharedUserId: string | undefined;
+let unsubscribe: (() => void) | null = null;
+const subscribers = new Set<(value: Verification) => void>();
+
+function publish(value: Verification) {
+  shared = value;
+  subscribers.forEach(notify => notify(value));
+}
+
+/** Tests only — the app has one session per process. */
+export function __resetAgeVerificationCache() {
+  unsubscribe?.();
+  unsubscribe = null;
+  shared = undefined;
+  sharedUserId = undefined;
+  subscribers.clear();
+}
+
 export function useAgeVerification(): AgeVerificationState {
   const userId = auth.currentUser?.uid;
-  const [verification, setVerification] = useState<AgeVerification | null | undefined>(undefined);
+  const [verification, setVerification] = useState<Verification>(
+    userId && userId === sharedUserId ? shared : undefined,
+  );
 
+  /**
+   * A one-shot re-read. Kept because IdDocumentCapture calls it straight after
+   * uploading, and waiting on the listener there would leave the member looking
+   * at a stale screen for however long the round trip takes.
+   */
   const reload = useCallback(() => {
     if (!userId) {
-      setVerification(null);
+      publish(null);
       return;
     }
     getAgeVerification(userId)
-      .then(setVerification)
+      .then(publish)
       // A failed read must not become a lockout: treated as "no record", which
       // grandfathers rather than blocks. Failing closed here would mean a
       // dropped request locks a paying member out of the whole app.
-      .catch(() => setVerification(null));
+      .catch(() => publish(null));
   }, [userId]);
 
-  useEffect(reload, [reload]);
+  useEffect(() => {
+    subscribers.add(setVerification);
+    return () => {
+      subscribers.delete(setVerification);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      sharedUserId = undefined;
+      publish(null);
+      return;
+    }
+
+    // Already listening for this member — nothing to do. Signing in as somebody
+    // else tears the old listener down first, or the app would keep reporting
+    // the previous member's verification.
+    if (unsubscribe && sharedUserId === userId) {
+      return;
+    }
+    unsubscribe?.();
+    sharedUserId = userId;
+    unsubscribe = watchAgeVerification(userId, publish);
+  }, [userId]);
 
   return { verification, ...deriveAgeGateState(verification), reload };
 }

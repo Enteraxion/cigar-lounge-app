@@ -19,7 +19,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Alert,
   Pressable,
   ScrollView,
   StatusBar,
@@ -57,6 +56,9 @@ const FONT_SANS_BOLD = 'Inter-Bold';
 
 type SignUpNavigationProp = NativeStackNavigationProp<RootStackParamList & AuthStackParamList>;
 
+/** How long the "Account created" confirmation stays up before it moves on. */
+const CONFIRMATION_MS = 2200;
+
 export default function SignUpScreen() {
   const navigation = useNavigation<SignUpNavigationProp>();
   const insets = useSafeAreaInsets();
@@ -68,6 +70,7 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [created, setCreated] = useState(false);
   // Date of birth as three separate fields rather than one free-text date.
   // A single box invites "18/08/2005" vs "08/18/2005" ambiguity, and getting
   // that wrong on an age gate is not a cosmetic problem.
@@ -152,10 +155,18 @@ export default function SignUpScreen() {
       // record, which every read treats as unverified — safe, but it would put
       // the member behind a wall with nothing to show a reviewer.
       await signOut(auth);
-      Alert.alert(
-        'Account created',
-        'Sign in below, and we’ll email you a 6-digit code to confirm your address.',
-      );
+
+      // A confirmation that clears itself, rather than an Alert waiting to be
+      // dismissed. Julian, 2026-08-25: the modal did not go away on its own, so
+      // the flow stalled on a message that told the member nothing they had to
+      // act on.
+      //
+      // It is shown for CONFIRMATION_MS and then the navigator is released, which
+      // lands on the sign-in form — so the member reads it and arrives where they
+      // need to be without tapping anything. Long enough to read, short enough
+      // not to feel stuck.
+      setCreated(true);
+      await new Promise(resolve => setTimeout(resolve, CONFIRMATION_MS));
       // `endSignUpTransition` in the finally block releases the navigator. With
       // the sign-out above, `auth.currentUser` is null by then, so it lands on
       // the Auth stack — the sign-in form — rather than the app.
@@ -243,24 +254,24 @@ export default function SignUpScreen() {
               <View style={styles.dobRow}>
                 <View style={[styles.inputWrapper, styles.dobField]}>
                   <TextInput
-                    accessibilityLabel="Day of birth"
-                    style={styles.dobInput}
-                    placeholder="DD"
-                    placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
-                    value={birthDay}
-                    onChangeText={text => setBirthDay(text.replace(/\D/g, '').slice(0, 2))}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                  />
-                </View>
-                <View style={[styles.inputWrapper, styles.dobField]}>
-                  <TextInput
                     accessibilityLabel="Month of birth"
                     style={styles.dobInput}
                     placeholder="MM"
                     placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                     value={birthMonth}
                     onChangeText={text => setBirthMonth(text.replace(/\D/g, '').slice(0, 2))}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+                <View style={[styles.inputWrapper, styles.dobField]}>
+                  <TextInput
+                    accessibilityLabel="Day of birth"
+                    style={styles.dobInput}
+                    placeholder="DD"
+                    placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                    value={birthDay}
+                    onChangeText={text => setBirthDay(text.replace(/\D/g, '').slice(0, 2))}
                     keyboardType="number-pad"
                     maxLength={2}
                   />
@@ -426,11 +437,62 @@ export default function SignUpScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Account-created confirmation. Covers the form so the half-filled fields
+          are not visible behind it, and clears itself — see CONFIRMATION_MS. */}
+      {created && (
+        <View style={styles.createdOverlay}>
+          <View style={styles.createdBadge}>
+            <Icon name="checkmark" size={32} color={theme.colors.accentGold} />
+          </View>
+          <Text style={styles.createdTitle}>Account created</Text>
+          <Text style={styles.createdBody}>
+            Sign in below, and we&rsquo;ll email you a 6-digit code to confirm your address.
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  createdOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.primaryBlack,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.xl,
+    gap: theme.spacing.sm,
+  },
+  createdBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
+    marginBottom: theme.spacing.xs,
+  },
+  createdTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 20,
+    color: theme.colors.white,
+  },
+  createdBody: {
+    ...theme.typography.medium,
+    fontSize: 14,
+    color: theme.colors.secondarySilver,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
   screen: {
     flex: 1,
     backgroundColor: theme.colors.primaryBlack,

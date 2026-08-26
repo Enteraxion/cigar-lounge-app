@@ -19,6 +19,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StatusBar,
@@ -46,6 +47,7 @@ import { theme, withAlpha } from '../theme';
 import { ageCheckMessage, checkMinimumAge } from '../utils/ageCheck';
 import { submitAgeVerification } from '../services/ageVerificationService';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '../config/legal';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
 const FONT_SERIF_SEMIBOLD = 'PlayfairDisplay-SemiBold';
@@ -409,6 +411,31 @@ export default function SignUpScreen() {
                 <Text style={styles.primaryButtonText}>Create Account</Text>
               )}
             </Pressable>
+
+            {/* Consent, at the point consent is actually given. Under the button
+                rather than above it, because that is where it is read, and worded
+                as a statement of what the tap means rather than a checkbox — the
+                terms say a member must be 21, which is the same thing the date
+                field above already enforces. */}
+            <Text style={styles.consent}>
+              By creating an account you agree to our{' '}
+              <Text
+                style={styles.consentLink}
+                accessibilityRole="link"
+                onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+              >
+                Terms of Service
+              </Text>{' '}
+              and{' '}
+              <Text
+                style={styles.consentLink}
+                accessibilityRole="link"
+                onPress={() => Linking.openURL(PRIVACY_POLICY_URL).catch(() => {})}
+              >
+                Privacy Policy
+              </Text>
+              , and confirm you are 21 or over.
+            </Text>
           </View>
 
           {/* Apple and Google buttons removed 2026-08-19. They existed only to
@@ -456,6 +483,19 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
+  consent: {
+    ...theme.typography.medium,
+    fontSize: 11.5,
+    lineHeight: 17,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
+  },
+  consentLink: {
+    color: theme.colors.accentGold,
+    textDecorationLine: 'underline',
+  },
+
   createdOverlay: {
     position: 'absolute',
     top: 0,

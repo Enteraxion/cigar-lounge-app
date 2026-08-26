@@ -169,9 +169,19 @@ export default function SignUpScreen() {
       // not to feel stuck.
       setCreated(true);
       await new Promise(resolve => setTimeout(resolve, CONFIRMATION_MS));
-      // `endSignUpTransition` in the finally block releases the navigator. With
-      // the sign-out above, `auth.currentUser` is null by then, so it lands on
-      // the Auth stack — the sign-in form — rather than the app.
+
+      // Navigate EXPLICITLY. The first version of this relied on the root
+      // navigator switching back to the Auth stack once auth.currentUser was
+      // null and assumed that would land on the sign-in form. It does not: this
+      // screen already lives inside the Auth stack, pushed on top of Login, so
+      // the switch changes nothing and the member sat looking at the
+      // confirmation forever. Rohith hit it immediately.
+      //
+      // popTo rather than navigate, so Login is the screen already underneath
+      // rather than a second copy pushed on top — same reasoning as the
+      // confirmation screens fixed on 2026-08-23.
+      navigation.popTo('Login');
+      setCreated(false);
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
     } finally {

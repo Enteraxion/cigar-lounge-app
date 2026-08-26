@@ -25,6 +25,7 @@ import {
   Text,
   View,
   Image,
+  Linking,
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +48,7 @@ import { theme, withAlpha } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
 import { auth, signOut } from '../services/firebaseAuth';
 import { deleteMyAccount } from '../services/accountService';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '../config/legal';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { saveAiPreferences } from '../services/conciergeMemoryService';
 import { CIGAR_BRANDS } from '../data/cigarBrands';
@@ -416,6 +418,31 @@ export default function AISettingsScreen() {
           </View>
         </View>
 
+        {/* ---------------- Legal ---------------- */}
+        {/* Apple requires a reachable privacy policy, and ours has to be findable
+            from inside the app rather than only in the store listing — a member
+            who wants to know what happens to the photograph of their driving
+            licence should not have to leave the app to find out. */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <Pressable
+            style={styles.legalRow}
+            onPress={() => Linking.openURL(PRIVACY_POLICY_URL).catch(() => {})}
+            accessibilityRole="link"
+          >
+            <Text style={styles.legalRowText}>Privacy Policy</Text>
+            <ChevronRight size={17} color={theme.colors.mutedGray} />
+          </Pressable>
+          <Pressable
+            style={styles.legalRow}
+            onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+            accessibilityRole="link"
+          >
+            <Text style={styles.legalRowText}>Terms of Service</Text>
+            <ChevronRight size={17} color={theme.colors.mutedGray} />
+          </Pressable>
+        </View>
+
         {/* ---------------- Log Out ---------------- */}
         <View style={styles.section}>
           <Pressable style={styles.logOutButton} onPress={handleLogOut}>
@@ -757,6 +784,21 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   toggleLabel: {
+    ...theme.typography.medium,
+    fontSize: 14,
+    color: theme.colors.white,
+  },
+
+  // ---- Legal ----
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: withAlpha(theme.colors.secondarySilver, 0.15),
+  },
+  legalRowText: {
     ...theme.typography.medium,
     fontSize: 14,
     color: theme.colors.white,

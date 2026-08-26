@@ -15,12 +15,13 @@
   ],
   "hosting": [
     {
-      "public": "public",
       "ignore": [
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
-      ]
+      ],
+      "site": "the-reserve-app-c44ed",
+      "public": "public"
     },
     {
       "target": "owner-portal",

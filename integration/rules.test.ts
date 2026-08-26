@@ -734,3 +734,58 @@ describe('issue report resolution rules', () => {
     );
   });
 });
+
+describe('password reset code rules', () => {
+  /**
+   * These matter more than the verification codes they mirror.
+   *
+   * A verification code confirms an email address. A reset code changes a
+   * PASSWORD, and its endpoint needs no sign-in — so the only things keeping a
+   * six-digit secret safe are the attempt limit and the expiry, both of which
+   * live in the document a client must never touch. Reading it hands over a hash
+   * that a million-value space makes trivial to reverse; writing it resets
+   * `attempts` to zero and makes the limit meaningless.
+   */
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'passwordResetCodes/member-1'), {
+        codeHash: 'c'.repeat(64),
+        attempts: 4,
+      });
+      await setDoc(doc(context.firestore(), 'passwordResetThrottle/somehash'), { count: 19 });
+    });
+  });
+
+  it('refuses a member reading a reset code, even their own', async () => {
+    await assertFails(getDoc(doc(member(), 'passwordResetCodes/member-1')));
+  });
+
+  it('refuses resetting the attempt counter — the limit is the whole defence', async () => {
+    await assertFails(
+      setDoc(doc(member(), 'passwordResetCodes/member-1'), { attempts: 0 }, { merge: true }),
+    );
+  });
+
+  it('refuses planting a known code hash', async () => {
+    await assertFails(
+      setDoc(doc(member(), 'passwordResetCodes/member-1'), { codeHash: 'd'.repeat(64) }),
+    );
+  });
+
+  it('refuses a signed-out caller — who is exactly who uses this flow', async () => {
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(anon, 'passwordResetCodes/member-1')));
+    await assertFails(setDoc(doc(anon, 'passwordResetCodes/member-1'), { attempts: 0 }));
+  });
+
+  it('refuses an admin too — nobody has a reason to read a live reset code', async () => {
+    await assertFails(getDoc(doc(admin(), 'passwordResetCodes/member-1')));
+  });
+
+  it('refuses clearing the per-IP send throttle', async () => {
+    await assertFails(setDoc(doc(member(), 'passwordResetThrottle/somehash'), { count: 0 }));
+    await assertFails(
+      getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'passwordResetThrottle/somehash')),
+    );
+  });
+});

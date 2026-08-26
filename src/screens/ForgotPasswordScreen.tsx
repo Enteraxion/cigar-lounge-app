@@ -31,11 +31,10 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { sendPasswordResetEmail } from '@react-native-firebase/auth';
-import { auth, getAuthErrorMessage } from '../services/firebaseAuth';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 import { theme, withAlpha } from '../theme';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
+import { requestPasswordResetCode, submitPasswordReset } from '../services/emailCodeService';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
 const FONT_SERIF_SEMIBOLD = 'PlayfairDisplay-SemiBold';
@@ -50,27 +49,53 @@ export default function ForgotPasswordScreen() {
   const navigation = useNavigation<ForgotPasswordNavigationProp>();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  /** 'email' -> 'code' -> 'done'. */
+  const [step, setStep] = useState<'email' | 'code' | 'done'>('email');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSendResetLink = async () => {
+  const handleSendCode = async () => {
     setErrorMessage(null);
-
     if (!email.trim()) {
       setErrorMessage('Please enter your email address.');
       return;
     }
-
     setSubmitting(true);
-    try {
-      await sendPasswordResetEmail(auth, email.trim());
-      setSent(true);
-    } catch (error) {
-      setErrorMessage(getAuthErrorMessage(error));
-    } finally {
-      setSubmitting(false);
+    const result = await requestPasswordResetCode(email);
+    setSubmitting(false);
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
     }
+    // Always advances, whether or not that address has an account. The server
+    // answers the same either way — see sendPasswordResetCode. Stopping here for
+    // an unknown address would tell anyone who asked which addresses are
+    // registered.
+    setStep('code');
+  };
+
+  const handleResetPassword = async () => {
+    setErrorMessage(null);
+    if (code.trim().length !== 6) {
+      setErrorMessage('Enter all six digits.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setErrorMessage('Choose a password of at least 8 characters.');
+      return;
+    }
+    setSubmitting(true);
+    const result = await submitPasswordReset(email, code, newPassword);
+    setSubmitting(false);
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      setCode('');
+      return;
+    }
+    setStep('done');
   };
 
   return (
@@ -133,16 +158,15 @@ export default function ForgotPasswordScreen() {
             pointerEvents="none"
           />
 
-          {sent ? (
+          {step === 'done' ? (
             <View style={styles.successBlock}>
               <View style={styles.successIconBadge}>
-                <Icon name="checkmark-circle-outline" size={32} color={theme.colors.secondarySilver} />
+                <Icon name="checkmark-circle-outline" size={32} color={theme.colors.accentGold} />
               </View>
-              <Text style={styles.heading2}>Check Your Email</Text>
+              <Text style={styles.heading2}>Password Changed</Text>
               <Text style={styles.description}>
-                We've sent a password reset link to{' '}
-                <Text style={styles.descriptionEmphasis}>{email}</Text>. Follow the
-                instructions in that email to choose a new password.
+                You can sign in with your new password now. Any other device that was
+                signed in has been signed out.
               </Text>
 
               <Pressable
@@ -152,14 +176,98 @@ export default function ForgotPasswordScreen() {
                 ]}
                 onPress={() => navigation.navigate('Login')}
               >
-                <Text style={styles.primaryButtonText}>Back to Sign In</Text>
+                <Text style={styles.primaryButtonText}>Sign In</Text>
               </Pressable>
             </View>
+          ) : step === 'code' ? (
+            <>
+              <Text style={styles.heading2}>Enter Your Code</Text>
+              {/* Carefully worded. The server answers identically whether or not
+                  that address has an account, so this screen must not imply one
+                  exists — "if that address has an account" is the whole promise
+                  we are willing to make. */}
+              <Text style={styles.description}>
+                If <Text style={styles.descriptionEmphasis}>{email}</Text> has an
+                account, we&rsquo;ve sent it a 6-digit code. Enter it below and choose
+                a new password.
+              </Text>
+
+              <View style={styles.form}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>6-Digit Code</Text>
+                  <TextInput
+                    accessibilityLabel="Six digit reset code"
+                    style={styles.codeInput}
+                    value={code}
+                    onChangeText={text => {
+                      setCode(text.replace(/\D/g, '').slice(0, 6));
+                      setErrorMessage(null);
+                    }}
+                    keyboardType="number-pad"
+                    textContentType="oneTimeCode"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    autoFocus
+                    placeholder="000000"
+                    placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>New Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIconSlot}>
+                      <Icon name="lock-closed-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
+                    </View>
+                    <TextInput
+                      accessibilityLabel="Choose a new password"
+                      style={styles.input}
+                      placeholder="At least 8 characters"
+                      placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                    />
+                    <Pressable onPress={() => setShowPassword(v => !v)} hitSlop={10}>
+                      <Icon
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={18}
+                        color={withAlpha(theme.colors.secondarySilver, 0.6)}
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+
+                {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    pressed && styles.primaryButtonPressed,
+                    submitting && styles.primaryButtonDisabled,
+                  ]}
+                  onPress={handleResetPassword}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator color={theme.colors.primaryBlack} />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Change Password</Text>
+                  )}
+                </Pressable>
+
+                <Pressable onPress={() => setStep('email')} hitSlop={8}>
+                  <Text style={styles.stepBackText}>Use a different email address</Text>
+                </Pressable>
+              </View>
+            </>
           ) : (
             <>
               <Text style={styles.heading2}>Reset Password</Text>
               <Text style={styles.description}>
-                Enter your email and we'll send you a link to reset your password.
+                Enter your email and we&rsquo;ll send you a 6-digit code to reset your
+                password.
               </Text>
 
               {/* ---- Form ---- */}
@@ -191,13 +299,13 @@ export default function ForgotPasswordScreen() {
                     pressed && styles.primaryButtonPressed,
                     submitting && styles.primaryButtonDisabled,
                   ]}
-                  onPress={handleSendResetLink}
+                  onPress={handleSendCode}
                   disabled={submitting}
                 >
                   {submitting ? (
                     <ActivityIndicator color={theme.colors.primaryBlack} />
                   ) : (
-                    <Text style={styles.primaryButtonText}>Send Reset Link</Text>
+                    <Text style={styles.primaryButtonText}>Send Code</Text>
                   )}
                 </Pressable>
               </View>
@@ -206,7 +314,7 @@ export default function ForgotPasswordScreen() {
         </View>
 
         {/* ---------------- Footer ---------------- */}
-        {!sent ? (
+        {step !== 'done' ? (
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               Remember your password?{' '}
@@ -222,6 +330,28 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
+  codeInput: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 26,
+    letterSpacing: 10,
+    textAlign: 'center',
+    color: theme.colors.white,
+    height: 58,
+    borderRadius: theme.radius.medium,
+    backgroundColor: withAlpha(theme.colors.white, 0.04),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
+  },
+  stepBackText: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    marginTop: theme.spacing.xs,
+  },
+
   screen: {
     flex: 1,
     backgroundColor: theme.colors.primaryBlack,

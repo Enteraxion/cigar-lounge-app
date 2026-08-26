@@ -49,7 +49,7 @@ import { optionalString, requireEmail, requireString } from './validation';
 import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { generateCode, hashCode } from './emailCode';
 import { getStorage } from 'firebase-admin/storage';
 import { logger } from 'firebase-functions';
@@ -1631,5 +1631,227 @@ export const confirmEmailVerificationCode = onCall(async request => {
 
     logger.info('confirmEmailVerificationCode', { uid, verified: true });
     return { verified: true };
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Password reset by 6-digit code
+// ---------------------------------------------------------------------------
+
+/**
+ * Rohith, 2026-08-26: do the reset the same way as sign-up verification.
+ *
+ * The reason is not only consistency. `sendPasswordResetEmail` is Firebase's own
+ * email — it never passes through SendGrid, so it still goes out from
+ * noreply@<project>.firebaseapp.com carrying a link to that same shared domain.
+ * Both of the things that were putting our verification email in spam are still
+ * true of the reset email, and domain-authenticating enteraxion.com did nothing
+ * for it.
+ *
+ * **This flow is materially riskier than the verification one and is built
+ * differently because of it.** Verification runs against a signed-in member, so
+ * it keys everything on request.auth.uid. A password reset by definition cannot:
+ * the caller is locked out. That makes these endpoints unauthenticated, which
+ * introduces two problems the verification code never had.
+ *
+ *  1. **Email enumeration.** If asking to reset an unknown address answered
+ *     differently from a known one, this endpoint would be a free membership
+ *     oracle — send a list, learn who has an account. So it always reports
+ *     success, whether or not the address exists, and only actually sends when
+ *     it does.
+ *
+ *  2. **Abuse with no account to rate-limit against.** Verification limits per
+ *     uid. Here an attacker supplies the email, so limits are held per address
+ *     AND per caller IP — otherwise a script walks a list of addresses and mails
+ *     all of them.
+ *
+ * A 6-digit code is a smaller secret than the long random token in Firebase's
+ * link, and that is acceptable only because of the limits around it: five wrong
+ * guesses destroys the code, and it expires in ten minutes. One million
+ * combinations with five attempts is not brute-forceable; one million with
+ * unlimited attempts would be trivial.
+ */
+
+const RESET_CODES = 'passwordResetCodes';
+const RESET_THROTTLE = 'passwordResetThrottle';
+const RESET_TTL_MS = 10 * 60 * 1000;
+const RESET_MAX_ATTEMPTS = 5;
+const RESET_COOLDOWN_MS = 60 * 1000;
+const RESET_MAX_PER_HOUR = 5;
+/** Per-IP ceiling. Deliberately higher than the per-address one — a household or
+ *  office shares an address, and locking them all out would be its own problem. */
+const RESET_MAX_PER_IP_PER_HOUR = 20;
+const MIN_PASSWORD_LENGTH = 8;
+
+/** Emails are the key here, so they are hashed rather than stored in the clear. */
+function emailKey(email: string): string {
+  return createHash('sha256').update(email.trim().toLowerCase()).digest('hex').slice(0, 40);
+}
+
+/**
+ * Counts one attempt from this caller and reports whether they are over the
+ * limit. Best-effort: if the throttle read fails we allow the request rather
+ * than lock out a member who genuinely cannot get in.
+ */
+async function overIpLimit(ip: string | undefined): Promise<boolean> {
+  if (!ip) {
+    return false;
+  }
+  const ref = db.collection(RESET_THROTTLE).doc(createHash('sha256').update(ip).digest('hex').slice(0, 40));
+  try {
+    const now = Date.now();
+    const snap = await ref.get();
+    const data = snap.data() as { count?: number; windowStartedAt?: Timestamp } | undefined;
+    const started = data?.windowStartedAt?.toMillis() ?? 0;
+    const inWindow = now - started < 60 * 60 * 1000;
+    const count = inWindow ? (data?.count ?? 0) : 0;
+    if (count >= RESET_MAX_PER_IP_PER_HOUR) {
+      return true;
+    }
+    await ref.set({
+      count: count + 1,
+      windowStartedAt: Timestamp.fromMillis(inWindow ? started : now),
+    });
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export const sendPasswordResetCode = onCall({ secrets: [sendgridApiKey] }, async request => {
+  const email = requireEmail(request.data?.email, 'email').trim().toLowerCase();
+
+  // Every path below returns this. The caller learns nothing about whether the
+  // address is registered — see the header.
+  const opaque = { sent: true as const };
+
+  return guarded('sendPasswordResetCode', async () => {
+    if (await overIpLimit(request.rawRequest?.ip)) {
+      return opaque;
+    }
+
+    const user = await getAuth().getUserByEmail(email).catch(() => null);
+    if (!user) {
+      // No account. Nothing sent, nothing stored, same answer as success.
+      logger.info('sendPasswordResetCode: no account', { emailKey: emailKey(email) });
+      return opaque;
+    }
+
+    const ref = db.collection(RESET_CODES).doc(user.uid);
+    const existing = (await ref.get()).data() as
+      | { sentAt?: Timestamp; sendCount?: number; windowStartedAt?: Timestamp }
+      | undefined;
+
+    const now = Date.now();
+    // Silent on the cooldown, unlike the verification resend. There the member is
+    // signed in and looking at a button, so telling them to wait is helpful.
+    // Here, "wait 40 seconds" would confirm the address exists.
+    if (now - (existing?.sentAt?.toMillis() ?? 0) < RESET_COOLDOWN_MS) {
+      return opaque;
+    }
+    const windowStartedAt = existing?.windowStartedAt?.toMillis() ?? 0;
+    const inWindow = now - windowStartedAt < 60 * 60 * 1000;
+    const sendCount = inWindow ? (existing?.sendCount ?? 0) : 0;
+    if (sendCount >= RESET_MAX_PER_HOUR) {
+      return opaque;
+    }
+
+    const code = generateCode();
+
+    sgMail.setApiKey(sendgridApiKey.value());
+    await sgMail.send({
+      to: email,
+      from: FROM_EMAIL,
+      subject: `${code} is your Lounge Locator password reset code`,
+      // No link, for the same reason the verification email has none.
+      text: [
+        `Your Lounge Locator password reset code is ${code}`,
+        '',
+        'Enter it in the app to choose a new password.',
+        'It expires in 10 minutes.',
+        '',
+        'If you did not ask to reset your password, you can ignore this email —',
+        'your password has not been changed.',
+      ].join('\n'),
+    });
+
+    await ref.set({
+      codeHash: hashCode(user.uid, code),
+      expiresAt: Timestamp.fromMillis(now + RESET_TTL_MS),
+      attempts: 0,
+      sentAt: Timestamp.fromMillis(now),
+      sendCount: sendCount + 1,
+      windowStartedAt: Timestamp.fromMillis(inWindow ? windowStartedAt : now),
+    });
+
+    logger.info('sendPasswordResetCode: sent', { uid: user.uid });
+    return opaque;
+  });
+});
+
+export const confirmPasswordReset = onCall(async request => {
+  const email = requireEmail(request.data?.email, 'email').trim().toLowerCase();
+  const submitted = requireString(request.data?.code, 'code', 6).trim();
+  const newPassword = requireString(request.data?.newPassword, 'newPassword', 128);
+
+  if (!/^\d{6}$/.test(submitted)) {
+    throw new HttpsError('invalid-argument', 'Enter the 6-digit code from your email.');
+  }
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new HttpsError(
+      'invalid-argument',
+      `Choose a password of at least ${MIN_PASSWORD_LENGTH} characters.`,
+    );
+  }
+
+  return guarded('confirmPasswordReset', async () => {
+    // Deliberately the same message for "no such account" and "wrong code". A
+    // distinct "no account with that email" here would undo the enumeration
+    // protection on the send endpoint.
+    const wrong = new HttpsError(
+      'invalid-argument',
+      'That code is not right, or it has expired. Ask for a new one.',
+    );
+
+    const user = await getAuth().getUserByEmail(email).catch(() => null);
+    if (!user) {
+      throw wrong;
+    }
+
+    const ref = db.collection(RESET_CODES).doc(user.uid);
+    const stored = (await ref.get()).data() as
+      | { codeHash?: string; expiresAt?: Timestamp; attempts?: number }
+      | undefined;
+
+    if (!stored?.codeHash || !stored.expiresAt) {
+      throw wrong;
+    }
+    if (stored.expiresAt.toMillis() < Date.now()) {
+      await ref.delete();
+      throw wrong;
+    }
+    const attempts = stored.attempts ?? 0;
+    if (attempts >= RESET_MAX_ATTEMPTS) {
+      await ref.delete();
+      throw wrong;
+    }
+
+    const expected = Buffer.from(stored.codeHash, 'utf8');
+    const actual = Buffer.from(hashCode(user.uid, submitted), 'utf8');
+    if (!timingSafeEqual(expected, actual)) {
+      await ref.update({ attempts: attempts + 1 });
+      throw wrong;
+    }
+
+    await getAuth().updateUser(user.uid, { password: newPassword });
+
+    // Sign every other session out. Whoever prompted this reset may have had the
+    // old password, and leaving their session alive would make the reset
+    // cosmetic.
+    await getAuth().revokeRefreshTokens(user.uid);
+
+    await ref.delete();
+    logger.info('confirmPasswordReset: password changed', { uid: user.uid });
+    return { reset: true };
   });
 });

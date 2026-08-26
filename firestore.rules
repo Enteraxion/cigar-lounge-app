@@ -89,6 +89,29 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------
+    // passwordResetCodes/{userId} and passwordResetThrottle/{ipHash}
+    // ---------------------------------------------------------------
+    // The 6-digit password reset codes and the per-IP send counter
+    // (functions/src/index.ts's sendPasswordResetCode / confirmPasswordReset).
+    //
+    // Denied to every client, for the same reasons as the verification codes and
+    // one more that matters more here. A read hands over the hash of a code that
+    // changes a PASSWORD, and a 6-digit space is brute-forced instantly once the
+    // hash is known. A write resets `attempts` to zero, which is the only thing
+    // making a six-digit secret safe on an endpoint that needs no sign-in.
+    //
+    // The throttle documents are keyed by a hash of the caller's IP, and a client
+    // able to write them could clear its own rate limit.
+    //
+    // The Admin SDK ignores rules, so the functions are unaffected.
+    match /passwordResetCodes/{userId} {
+      allow read, write: if false;
+    }
+    match /passwordResetThrottle/{ipHash} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------------
     // lounges/{loungeId}
     // ---------------------------------------------------------------
     match /lounges/{loungeId} {

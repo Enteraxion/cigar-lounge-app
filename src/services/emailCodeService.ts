@@ -109,3 +109,43 @@ export async function submitEmailCode(code: string): Promise<ConfirmCodeResult> 
     };
   }
 }
+
+/**
+ * Asks for a password reset code.
+ *
+ * Always reports success, because the server always reports success — an
+ * endpoint that answered differently for an unknown address would tell anyone
+ * who asked which addresses have accounts. The screen therefore says "if that
+ * address has an account, a code is on its way", which is both true and all we
+ * are willing to say.
+ */
+export async function requestPasswordResetCode(email: string): Promise<ConfirmCodeResult> {
+  try {
+    const call = httpsCallable<{ email: string }, { sent: boolean }>(
+      functions,
+      'sendPasswordResetCode',
+    );
+    await call({ email: email.trim() });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: messageFor(error, "Couldn't send a code. Try again.") };
+  }
+}
+
+/** Submits the code and the new password together. */
+export async function submitPasswordReset(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<ConfirmCodeResult> {
+  try {
+    const call = httpsCallable<
+      { email: string; code: string; newPassword: string },
+      { reset: boolean }
+    >(functions, 'confirmPasswordReset');
+    await call({ email: email.trim(), code: code.trim(), newPassword });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: messageFor(error, "Couldn't reset your password. Try again.") };
+  }
+}

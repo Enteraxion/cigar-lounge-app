@@ -36,7 +36,7 @@
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
-import Anthropic from '@anthropic-ai/sdk';
+import { AzureOpenAI } from 'openai';
 import {
   amenitiesFromGoogle,
   isRelevantGooglePlace,
@@ -738,17 +738,42 @@ export const sendReservationEmail = onCall(
 // lounge actually in the database.
 //
 // It lives in a Cloud Function rather than the app for one non-negotiable
-// reason: an Anthropic API key shipped in a React Native bundle is a
-// published API key. The key never leaves the server.
+// reason: an API key shipped in a React Native bundle is a published API key.
+// The key never leaves the server.
 //
 // Grounding, not free association: the function retrieves real candidate
-// lounges from Firestore first and asks Claude to recommend *from that list
+// lounges from Firestore first and asks the model to recommend *from that list
 // only*, returning the ids it picked. So a recommendation is always a real
 // lounge the member can tap through to, and the model cannot invent a venue.
 // That is also why this uses a structured output rather than parsing prose.
 // ---------------------------------------------------------------------------
 
-const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+/**
+ * Azure OpenAI, not Anthropic.
+ *
+ * The concierge was built against Claude and sat switched off from 2026-08-18
+ * to 2026-08-31 waiting on an Anthropic key that needed a new vendor and a
+ * budget approval. Abhilash then pointed out the company already runs
+ * Azure OpenAI on a funded, approved account — so this uses what exists rather
+ * than waiting on what does not.
+ *
+ * Only the API call changed. Everything that makes the concierge trustworthy —
+ * pulling real candidate lounges out of Firestore, constraining the model to
+ * recommend from that list, and filtering the ids it returns against what we
+ * actually offered — is provider-agnostic and untouched.
+ *
+ * Endpoint and deployment are plain config rather than secrets: neither is
+ * sensitive, and having them visible in the source makes it obvious which
+ * resource this points at. The key is the secret.
+ */
+const azureOpenAiKey = defineSecret('AZURE_OPENAI_API_KEY');
+
+/** From the Azure OpenAI resource's "Keys and Endpoint" page. */
+const AZURE_OPENAI_ENDPOINT = 'https://REPLACE_WITH_AZURE_ENDPOINT.openai.azure.com/';
+/** The name given to the model deployment in Azure AI Foundry. */
+const AZURE_OPENAI_DEPLOYMENT = 'gpt-4o-mini';
+/** Pinned. Azure requires an explicit api-version and silently changes behaviour across them. */
+const AZURE_OPENAI_API_VERSION = '2024-10-21';
 
 /**
  * Runs a handler and converts anything unexpected into a generic `internal`
@@ -884,7 +909,7 @@ function buildCandidateCatalog(
 }
 
 export const askConcierge = onCall(
-  { secrets: [anthropicApiKey], timeoutSeconds: 120 },
+  { secrets: [azureOpenAiKey], timeoutSeconds: 120 },
   async request => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Sign in to use the concierge.');
@@ -933,53 +958,74 @@ export const askConcierge = onCall(
       preferenceBrief(preferences) +
       `\n\nMEMBER:\n${last.content}`;
 
-    // The secret must exist for this function to deploy at all, so during
-    // the "built but not switched on" phase it holds a placeholder. Saying
-    // so plainly beats a generic failure: a tester who sees "something went
-    // wrong" files a bug, and a tester who sees this does not.
-    const apiKey = anthropicApiKey.value();
-    if (!apiKey || apiKey.startsWith('placeholder')) {
-      logger.info('Concierge called with no API key configured');
+    // The secret must exist for this function to deploy at all, so during the
+    // "built but not switched on" phase it holds a placeholder. Saying so
+    // plainly beats a generic failure: a tester who sees "something went wrong"
+    // files a bug, and a tester who sees this does not.
+    const apiKey = azureOpenAiKey.value();
+    if (
+      !apiKey ||
+      apiKey.startsWith('placeholder') ||
+      AZURE_OPENAI_ENDPOINT.includes('REPLACE_WITH')
+    ) {
+      logger.info('Concierge called before Azure OpenAI was configured');
       return {
         reply:
-          "The concierge isn't switched on yet — it's built and waiting on an API key. " +
+          "The concierge isn't switched on yet — it's built and waiting on its API key. " +
           'Everything else in the app works; try Search or the Map to find a lounge.',
         loungeIds: [],
       };
     }
 
-    const anthropic = new Anthropic({ apiKey });
+    const client = new AzureOpenAI({
+      apiKey,
+      endpoint: AZURE_OPENAI_ENDPOINT,
+      apiVersion: AZURE_OPENAI_API_VERSION,
+      deployment: AZURE_OPENAI_DEPLOYMENT,
+    });
 
-    let message;
+    let completion;
     try {
-      message = await anthropic.messages.create({
-        model: 'claude-opus-5',
+      completion = await client.chat.completions.create({
+        model: AZURE_OPENAI_DEPLOYMENT,
         max_tokens: CONCIERGE_MAX_TOKENS,
-        // Low effort: this is a latency-sensitive chat, not a reasoning
-        // task, and Opus 5 is strong at low effort. Thinking stays on
-        // (the default) — disabling it can leak <thinking> tags into the
-        // visible reply, which is the one thing a chat UI can't tolerate.
-        output_config: { effort: 'low', format: { type: 'json_schema', schema: CONCIERGE_SCHEMA } },
-        system: [{ type: 'text', text: CONCIERGE_SYSTEM, cache_control: { type: 'ephemeral' } }],
-        messages: history,
+        // The system prompt becomes a system message. Anthropic took it as a
+        // separate field; OpenAI takes it as the first message.
+        messages: [{ role: 'system', content: CONCIERGE_SYSTEM }, ...history],
+        // strict: true is the whole reason this port is safe. It constrains the
+        // model to the schema at decode time rather than asking nicely, which is
+        // what keeps `loungeIds` a list of ids rather than prose the app then
+        // has to parse.
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: 'concierge_reply', strict: true, schema: CONCIERGE_SCHEMA },
+        },
       });
     } catch (error) {
       logger.error('Concierge request failed', { error: String(error) });
       throw new HttpsError('internal', "The concierge couldn't answer just now.");
     }
 
-    if (message.stop_reason === 'refusal') {
-      return { reply: "I can't help with that one. Ask me about lounges, cigars or pairings.", loungeIds: [] };
+    const choice = completion.choices[0];
+
+    // Azure's content filter refuses separately from the model, and a refusal
+    // arrives as a finish_reason rather than an error. Handled as its own case
+    // so it reads as a decline rather than a fault.
+    if (choice?.finish_reason === 'content_filter' || choice?.message?.refusal) {
+      return {
+        reply: "I can't help with that one. Ask me about lounges, cigars or pairings.",
+        loungeIds: [],
+      };
     }
 
-    const text = message.content.find(block => block.type === 'text');
-    if (!text || text.type !== 'text') {
+    const content = choice?.message?.content;
+    if (!content) {
       throw new HttpsError('internal', "The concierge couldn't answer just now.");
     }
 
     let parsed: { reply?: string; loungeIds?: string[] };
     try {
-      parsed = JSON.parse(text.text);
+      parsed = JSON.parse(content);
     } catch {
       logger.error('Concierge returned unparseable output');
       throw new HttpsError('internal', "The concierge couldn't answer just now.");

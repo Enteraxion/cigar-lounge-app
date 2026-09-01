@@ -425,3 +425,34 @@ a travel "passport" feature, and an AI concierge.
     phone absent on all 8,496, 5,080 placeholder hours, 4,163 no photo), social
     sign-in OAuth, and the four mock Concierge screens (Inspiration, Results,
     Saved Conversations, Trip Planner) which nothing routes to.
+- 2026-08-31 (night): Tab bar polish, and the AI ID review's first live run.
+  * **The floating tab bar is translucent now** (`floatingTabBarStyle` in
+    `MainNavigator.tsx`), after Rohith compared it to Instagram's. Alpha, not a
+    blur — a real blur means a native lib, a pod install and a rebuild, and on a
+    background this dark the gain is small. 0.82 deliberately: much lower and the
+    icons compete with what scrolls under them. A hairline border came with it,
+    or the pill's edge dissolves over dark content. **Shrink-on-scroll — the bit
+    he actually noticed — is NOT done**: custom tab bar + Reanimated + scroll
+    position out of all five tabs, and it can wait until after submission.
+  * **"Awaiting review" on his phone was not a bug in the review.** The function
+    works — three real decisions the same night (approve, refer, reject). Two
+    other things were true. First, **the installed Debug build was running JS
+    baked on 24 August** and was not reaching Metro, so `reviewIdDocument`
+    (shipped that day) was not in the bundle at all: `grep -ac` gave 0 against 2
+    for `attachIdDocument`, and the function log had no call at the submission's
+    timestamp. Rebuilt and reinstalled; the fresh bundle greps 1. **Grep the
+    installed `main.jsbundle` for the symbol before believing a device report** —
+    a Debug build carries a fallback bundle and runs stale JS silently.
+  * Second, and still open: **a mistyped date of birth cannot be corrected by
+    anyone.** His account declares `2001-09-08`, his licence prints `08/27/2001`;
+    `reviewDocument` refers a mismatch rather than rejecting it (usually a typo,
+    and auto-rejecting an honest member is worse), so the screen stays on
+    "Awaiting review" — correct behaviour that reads exactly like a hang.
+    `dateOfBirth` is written once at sign-up and only ever displayed
+    (`AgeVerificationScreen.tsx:138`); no app screen and no admin-portal field
+    edits it. So a typo means a permanent referral, every resubmission. Invisible
+    before this, because everything went to a human anyway. Needs either a
+    member-facing correction at resubmit or an admin edit — not yet decided.
+  * 5 pending submissions, 3 stale (`test@`, `qa@`, Julian's, 24-26 Aug) with no
+    `documentType` — they predate the two-sided flow, so the automated review
+    cannot act on them and they need clearing by hand.

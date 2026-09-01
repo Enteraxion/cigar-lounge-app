@@ -143,19 +143,6 @@ export function reviewDocument(
     };
   }
 
-  // Nothing wrong with their document — the date on their account is missing or
-  // malformed. Sending them back to the camera would be the wrong instruction,
-  // which is exactly why the action is named separately from the message.
-  if (!declaredDob) {
-    return {
-      decision: 'reject',
-      reason: 'no usable declared date of birth on file',
-      memberMessage:
-        "We don't have a valid date of birth on your account, so there's nothing to check your document against. Enter it below and send your ID again.",
-      action: 'fix_date_of_birth',
-    };
-  }
-
   // Expiry is checked before age. An expired licence may still show a valid date
   // of birth, but accepting one means accepting a document its issuer has
   // withdrawn.
@@ -167,6 +154,49 @@ export function reviewDocument(
       memberMessage:
         'That document has expired. Please send one that is still in date.',
       action: 'retake',
+    };
+  }
+
+  // Age is settled from the DOCUMENT, and settled here — before anything that
+  // compares it against what the member typed.
+  //
+  // The order matters, and getting it wrong was a real fault: with the mismatch
+  // checked first, an under-21 document whose date disagreed with the account
+  // was answered with "correct your date of birth". That invites someone we are
+  // about to refuse to adjust their answer. They would still have been rejected
+  // on the next pass — the age has always come from the document — but we should
+  // never have asked.
+  //
+  // Checking it here is also what makes the correction field safe to offer at
+  // all: by the time a mismatch is reported, the document has already proved
+  // its holder is 21 or over, so editing the declared date cannot gain anybody
+  // anything. It reconciles an account with a document we have already accepted.
+  const age = ageOn(documentDob, now);
+  if (age < MINIMUM_AGE) {
+    return {
+      decision: 'reject',
+      reason: `under age: ${age}`,
+      memberMessage: `Lounge Locator is for adults aged ${MINIMUM_AGE} and over.`,
+      // Nothing they can send will change this. Offering a camera would invite
+      // them to try a different document, which is not what we want to suggest.
+      action: 'none',
+    };
+  }
+
+  // From here on we are reconciling the account against a document that has
+  // already passed on its own terms — readable, in date, and 21 or over. Only
+  // now is it safe to send anybody to a date field.
+
+  // Nothing wrong with their document; the date on their account is missing or
+  // malformed. Sending them back to the camera would be the wrong instruction,
+  // which is exactly why the remedy is named separately from the message.
+  if (!declaredDob) {
+    return {
+      decision: 'reject',
+      reason: 'no usable declared date of birth on file',
+      memberMessage:
+        "We don't have a valid date of birth on your account, so there's nothing to check your document against. Enter it below and we'll check your ID again.",
+      action: 'fix_date_of_birth',
     };
   }
 
@@ -188,18 +218,6 @@ export function reviewDocument(
       memberMessage:
         "The date of birth on your document doesn't match the one on your account. Check the date below, correct it if it's wrong, and send your ID again.",
       action: 'fix_date_of_birth',
-    };
-  }
-
-  const age = ageOn(documentDob, now);
-  if (age < MINIMUM_AGE) {
-    return {
-      decision: 'reject',
-      reason: `under age: ${age}`,
-      memberMessage: `Lounge Locator is for adults aged ${MINIMUM_AGE} and over.`,
-      // Nothing they can send will change this. Offering a camera would invite
-      // them to try a different document, which is not what we want to suggest.
-      action: 'none',
     };
   }
 

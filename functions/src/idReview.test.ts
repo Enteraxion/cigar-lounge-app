@@ -138,6 +138,44 @@ describe('reviewDocument — telling the member what to do', () => {
     }
   });
 
+  it('never offers a date field to someone the document says is under age', () => {
+    // The fault Rohith spotted on 2026-08-31: with the mismatch checked before
+    // the age, an under-21 document whose date disagreed with the account was
+    // answered with "correct your date of birth" — inviting somebody we are
+    // about to refuse to adjust their answer. Age comes from the document and
+    // is settled first.
+    const out = reviewDocument({ dateOfBirth: '2010-03-04' }, ADULT, NOW);
+    expect(out.decision).toBe('reject');
+    expect(out).toMatchObject({ action: 'none' });
+    expect(out.reason).toContain('under age');
+  });
+
+  it('never offers a date field for a document that is expired', () => {
+    // Same ordering rule: an expired document is refused on its own terms
+    // rather than turned into a question about the account.
+    const out = reviewDocument(
+      { dateOfBirth: ADULT, expiryDate: '2020-01-01' },
+      '1975-06-06',
+      NOW,
+    );
+    expect(out.decision).toBe('reject');
+    expect(out).toMatchObject({ action: 'retake' });
+  });
+
+  it('never offers a date field for a document it could not read', () => {
+    const out = reviewDocument({ dateOfBirth: null }, '', NOW);
+    expect(out).toMatchObject({ action: 'retake' });
+  });
+
+  it('only offers the date field once the document has passed on its own', () => {
+    // The invariant that makes the correction safe to expose at all: by the
+    // time a member is sent to a date field, the document has already proved
+    // readable, in date and 21+, so editing what they typed cannot gain them
+    // anything it would not have granted anyway.
+    const out = reviewDocument({ dateOfBirth: ADULT, expiryDate: '2030-01-01' }, '1975-06-06', NOW);
+    expect(out).toMatchObject({ action: 'fix_date_of_birth' });
+  });
+
   it('does not refer merely because the model guessed a different document type', () => {
     // It confuses a state ID with a driving licence often enough that enforcing
     // agreement would refer honest submissions for nothing.

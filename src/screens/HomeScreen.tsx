@@ -38,6 +38,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import {
+  ArrowRight,
   Bell,
   ChevronRight,
   Compass,
@@ -45,6 +46,7 @@ import {
   Leaf,
   MapPin,
   Plus,
+  Sparkles,
   Star,
   User,
   Zap,
@@ -299,6 +301,59 @@ export default function HomeScreen() {
             <NotificationBadge count={unreadNotificationCount} />
           </Pressable>
         </View>
+
+        {/* ---------------- AI Concierge ---------------- */}
+        {/* Directly under the greeting, above everything else on the first
+            screen — Julian, 2026-08-31: make it its own section rather than a
+            card inside the Map, and make it stand out.
+            
+            Home rather than a sixth tab: the tab bar is a floating pill with
+            10pt uppercase labels, and a sixth item truncates to "CONCIER…".
+            Home is also where the decision actually gets made — someone opening
+            the app has not chosen Search or Map yet, they have chosen "what
+            shall I do tonight", which is the question this answers.
+            
+            It reads as an input rather than a button on purpose. A button says
+            "there is a feature here"; a prompt says "type what you want", which
+            is the only instruction the concierge needs. */}
+        <Pressable
+          style={styles.conciergeCard}
+          // Straight into the conversation, NOT the concierge landing screen.
+          // ConciergeHome is still mock — suggestion chips and saved chats that
+          // do nothing — while ConciergeConversation is the real thing: it calls
+          // the deployed askConcierge and recommends from real lounges. Landing
+          // a member on scaffolding to reach a working feature is the wrong way
+          // round, so this skips it. Its params are all optional.
+          onPress={() =>
+            (tabNavigation.navigate as (name: string, params?: object) => void)('AIConcierge', {
+              screen: 'ConciergeConversation',
+            })
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Ask the AI Concierge for a recommendation"
+        >
+          <View style={styles.conciergeGlow} pointerEvents="none" />
+          <View style={styles.conciergeHeaderRow}>
+            <View style={styles.conciergeBadge}>
+              <Sparkles size={15} color={theme.colors.accentGold} />
+            </View>
+            <View style={styles.conciergeHeadingGroup}>
+              <Text style={styles.conciergeTitle}>Concierge</Text>
+              <Text style={styles.conciergeSubtitle}>
+                Tell it what you&rsquo;re after and it will find the lounge
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.conciergePrompt}>
+            <Text style={styles.conciergePromptText} numberOfLines={1}>
+              Somewhere quiet for a first date&hellip;
+            </Text>
+            <View style={styles.conciergeSend}>
+              <ArrowRight size={15} color={theme.colors.primaryBlack} />
+            </View>
+          </View>
+        </Pressable>
 
         {lounges === null && !error ? (
           <View style={styles.stateBox}>
@@ -912,6 +967,89 @@ const styles = StyleSheet.create({
   },
 
   // ---- FAB ----
+  // ---- AI Concierge ----
+  conciergeCard: {
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    // A gold edge rather than a gold fill. The accent is the app's loudest
+    // colour and the primary buttons already use it — filling this would put
+    // two shouting elements on the same screen.
+    borderColor: withAlpha(theme.colors.accentGold, 0.4),
+    overflow: 'hidden',
+    gap: theme.spacing.md,
+    ...theme.shadows.soft,
+  },
+  conciergeGlow: {
+    position: 'absolute',
+    top: -70,
+    right: -50,
+    width: 180,
+    height: 180,
+    borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.09),
+  },
+  conciergeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  conciergeBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.14),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
+  },
+  conciergeHeadingGroup: { flex: 1 },
+  conciergeTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 16,
+    color: theme.colors.white,
+  },
+  conciergeSubtitle: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    color: theme.colors.mutedGray,
+    marginTop: 1,
+  },
+  // Looks like the text field it opens, so the affordance is obvious without a
+  // label telling anyone what to do.
+  conciergePrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    height: 44,
+    paddingLeft: theme.spacing.md,
+    paddingRight: 5,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.background,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.18),
+  },
+  conciergePromptText: {
+    ...theme.typography.medium,
+    flex: 1,
+    fontSize: 13.5,
+    fontStyle: 'italic',
+    color: theme.colors.mutedGray,
+  },
+  conciergeSend: {
+    width: 34,
+    height: 34,
+    borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accentGold,
+  },
+
   fab: {
     position: 'absolute',
     right: theme.spacing.lg,

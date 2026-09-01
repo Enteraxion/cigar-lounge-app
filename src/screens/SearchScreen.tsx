@@ -46,7 +46,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowRight, History, Mic, Search as SearchIcon } from 'lucide-react-native';
+import {
+  ArrowRight,
+  ChevronRight,
+  History,
+  Mic,
+  Search as SearchIcon,
+  Sparkles,
+} from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import SectionHeader from '../components/SectionHeader';
 import FilterChip from '../components/FilterChip';
@@ -179,6 +186,44 @@ export default function SearchScreen() {
           <Pressable onPress={openVoiceSearch} hitSlop={8}>
             <Mic size={18} color={theme.colors.mutedGray} />
           </Pressable>
+        </Pressable>
+
+        {/* ---------------- Concierge ---------------- */}
+        {/* Directly under the search bar, as the alternative to it.
+            
+            This lived on the Map first (Julian: too hidden), then at the top of
+            Home, then at the bottom of Home — and it looked wrong in all three
+            because the problem was never the position. Home is a BROWSING
+            surface: cards of things to look at. A text input in the middle of
+            that has nothing to do with what surrounds it, and at the bottom it
+            collided with the floating action button.
+            
+            Search is where someone has already decided they are looking for
+            something, which is the only moment this is useful. It is the same
+            job as the search bar above, done by description instead of keywords
+            — so it belongs directly beneath it, as the thing you reach for when
+            you cannot find the words. That is also exactly when people give up
+            today. */}
+        <Pressable
+          style={styles.conciergeCard}
+          onPress={() =>
+            (navigation.navigate as (name: string, params?: object) => void)('AIConcierge', {
+              screen: 'ConciergeConversation',
+            })
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Ask the Concierge to find a lounge for you"
+        >
+          <View style={styles.conciergeBadge}>
+            <Sparkles size={15} color={theme.colors.accentGold} />
+          </View>
+          <View style={styles.conciergeTextGroup}>
+            <Text style={styles.conciergeTitle}>Ask the Concierge</Text>
+            <Text style={styles.conciergeSubtitle} numberOfLines={1}>
+              &ldquo;Somewhere quiet for a first date&rdquo;
+            </Text>
+          </View>
+          <ChevronRight size={18} color={theme.colors.accentGold} />
         </Pressable>
 
         {/* ---------------- Filter Chips ---------------- */}
@@ -350,6 +395,46 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ---- Concierge ----
+  // A row rather than a big card. It sits between the search bar and the filter
+  // chips, and anything taller pushes the chips off the first screen — which
+  // would cost a working feature to promote a new one.
+  conciergeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accentGold, 0.35),
+  },
+  conciergeBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.14),
+  },
+  conciergeTextGroup: { flex: 1 },
+  conciergeTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 14.5,
+    color: theme.colors.white,
+  },
+  conciergeSubtitle: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: theme.colors.mutedGray,
+    marginTop: 1,
+  },
+
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,

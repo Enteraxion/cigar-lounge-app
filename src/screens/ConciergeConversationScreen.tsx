@@ -52,7 +52,6 @@ import {
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import {
-  conciergeUser,
   loadingStatusMessages,
   noResultsSuggestions,
   type CompactSuggestion,
@@ -473,10 +472,18 @@ export default function ConciergeConversationScreen() {
           accessibilityLabel="Go back" hitSlop={12}>
           <ChevronLeft size={24} color={theme.colors.white} />
         </Pressable>
-        <Image source={{ uri: conciergeUser.avatarUri }} style={styles.avatar} />
+        {/* A mark, not a face. This header used to show a stock photograph of a
+            man and the name "Julian Rossi" — an invented person. It is software,
+            and dressing it as a named human is misleading in a way that gets
+            worse the better the answers get: a member who believes a person is
+            reading this will tell it things they would not type into a machine.
+            Rohith flagged the photo on 2026-08-31. */}
+        <View style={styles.brandBadge}>
+          <Sparkles size={17} color={theme.colors.accentGold} />
+        </View>
         <View style={styles.headerTextGroup}>
-          <Text style={styles.headerCaption}>AI Concierge</Text>
-          <Text style={styles.headerName}>{conciergeUser.name}</Text>
+          <Text style={styles.headerCaption}>Lounge Locator</Text>
+          <Text style={styles.headerName}>Concierge</Text>
         </View>
         {/* The overflow button is gone. It offered "Conversation options are
             coming soon", and there are no options to offer: this screen has no
@@ -575,10 +582,15 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.md,
   },
-  avatar: {
+  brandBadge: {
     width: 36,
     height: 36,
     borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.14),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accentGold, 0.3),
   },
   headerTextGroup: {
     flex: 1,

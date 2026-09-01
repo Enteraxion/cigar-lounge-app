@@ -15,8 +15,23 @@
 
 import { loungeInteriors, rooftopBars, memberPortrait } from './mockImages';
 
+/**
+ * The concierge's identity in the UI.
+ *
+ * It was `name: 'Julian Rossi'` with a stock portrait of a man — an invented
+ * person, and coincidentally close to the name of the actual company head. It is
+ * software. Dressing it as a named human is misleading in a way that gets worse
+ * the better the answers get: a member who believes a person is reading this
+ * will tell it things they would not type into a machine.
+ *
+ * ConciergeConversationScreen — the only one of these screens that is reachable,
+ * and the only one wired to the real function — now renders a gold Sparkles mark
+ * instead of `avatarUri` and ignores it entirely. The field stays because four
+ * unreachable mock screens still read it, and removing it would break their
+ * builds for no benefit. Whoever makes those real should do the same there.
+ */
 export const conciergeUser = {
-  name: 'Julian Rossi',
+  name: 'Concierge',
   avatarUri: memberPortrait,
 };
 

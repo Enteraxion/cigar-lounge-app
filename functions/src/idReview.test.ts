@@ -69,26 +69,73 @@ describe('reviewDocument — refusing', () => {
   });
 });
 
-describe('reviewDocument — referring to a human', () => {
+describe('reviewDocument — telling the member what to do', () => {
   it('NEVER approves when the date of birth could not be read', () => {
-    // The single most important case. An absent date is not a pass.
+    // The single most important case. An absent date is not a pass — whatever
+    // else changes about the wording, this assertion must not weaken to
+    // "anything but approve" being acceptable only sometimes.
     for (const dob of [null, undefined, '', 'unknown', '12/05/1990', '1990-13-45']) {
       const out = reviewDocument({ dateOfBirth: dob as string | null }, ADULT, NOW);
-      expect(out.decision).toBe('refer');
+      expect(out.decision).not.toBe('approve');
+      // And it says so, rather than leaving them on a silent queue: a clearer
+      // photograph is the one thing that resolves this, and until 2026-08-31
+      // nobody was told to take one.
+      expect(out).toMatchObject({ action: 'retake' });
     }
   });
 
-  it('refers rather than rejects when the dates disagree', () => {
-    // Usually a typo at sign-up, not a lie. Calling an honest member a liar
-    // automatically is the worse error.
+  it('sends a date mismatch to the member, not to a human', () => {
+    // This referred silently until 2026-08-31. A mismatch is usually a typo at
+    // sign-up rather than a lie — and the member could not see it, could not
+    // correct it (nothing in the app or the portal edited the date) and so
+    // waited on an administrator for a mistake only they could have fixed.
     const out = reviewDocument({ dateOfBirth: '1990-05-21' }, ADULT, NOW);
-    expect(out.decision).toBe('refer');
+    expect(out.decision).toBe('reject');
+    expect(out).toMatchObject({ action: 'fix_date_of_birth' });
+    // The reason carries both dates for our logs...
     expect(out.reason).toContain('1990-05-21');
   });
 
-  it('refers when the account has no usable declared date of birth', () => {
+  it('never quotes the date it read back to the member', () => {
+    // The member can read their own document. Echoing what our reading
+    // extracted tells anyone submitting a borrowed or altered ID exactly what
+    // we saw, which is free calibration for the next attempt.
+    const out = reviewDocument({ dateOfBirth: '1990-05-21' }, ADULT, NOW);
+    expect(out).toMatchObject({ memberMessage: expect.any(String) });
+    expect('memberMessage' in out && out.memberMessage).not.toContain('1990');
+    expect('memberMessage' in out && out.memberMessage).not.toContain('05-21');
+  });
+
+  it('points at the account, not the camera, when the declared date is missing', () => {
+    // Nothing is wrong with their document. Sending them back to photograph it
+    // again would be the wrong instruction, which is why the remedy is named
+    // separately from the message.
     const out = reviewDocument({ dateOfBirth: ADULT }, '', NOW);
-    expect(out.decision).toBe('refer');
+    expect(out.decision).toBe('reject');
+    expect(out).toMatchObject({ action: 'fix_date_of_birth' });
+  });
+
+  it('offers no remedy to someone genuinely under age', () => {
+    // Offering the camera here would invite them to try a different document.
+    const out = reviewDocument({ dateOfBirth: '2010-01-01' }, '2010-01-01', NOW);
+    expect(out.decision).toBe('reject');
+    expect(out).toMatchObject({ action: 'none' });
+  });
+
+  it('gives every rejection something the member can read', () => {
+    // The whole point of the 2026-08-31 change: no outcome leaves them staring
+    // at an unexplained screen.
+    const cases = [
+      reviewDocument({ notAnIdReason: 'a bank card' }, ADULT, NOW),
+      reviewDocument({ legible: false }, ADULT, NOW),
+      reviewDocument({ dateOfBirth: null }, ADULT, NOW),
+      reviewDocument({ dateOfBirth: ADULT }, '', NOW),
+      reviewDocument({ dateOfBirth: '1990-05-21' }, ADULT, NOW),
+    ];
+    for (const out of cases) {
+      expect(out.decision).toBe('reject');
+      expect('memberMessage' in out && out.memberMessage.length).toBeGreaterThan(20);
+    }
   });
 
   it('does not refer merely because the model guessed a different document type', () => {

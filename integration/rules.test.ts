@@ -511,6 +511,50 @@ describe('age verification rules', () => {
     );
   });
 
+  it('lets a rejected member correct their date of birth and requeue', async () => {
+    // updateDeclaredDateOfBirth, added 2026-08-31. A member told their document
+    // and their account disagree fixes the date, which clears the decision and
+    // puts them back to 'pending' for another automated read. Moving your own
+    // record TO 'pending' is not deciding it, so this must pass — and until it
+    // did, a mistyped digit was unfixable by anyone.
+    await seedUser({
+      ageVerification: {
+        dateOfBirth: '1990-01-01',
+        status: 'rejected',
+        rejectionReason: "doesn't match",
+        resolution: 'fix_date_of_birth',
+      },
+    });
+    await assertSucceeds(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        {
+          ageVerification: {
+            dateOfBirth: '1990-05-21',
+            status: 'pending',
+            rejectionReason: deleteField(),
+            resolution: deleteField(),
+          },
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('refuses a rejected member who corrects the date AND passes themselves', async () => {
+    // The abuse the requeue path could have opened: send the correction and the
+    // verdict together. The rule keys on the incoming status, not on how
+    // innocent the rest of the write looks.
+    await seedUser({ ageVerification: { dateOfBirth: '1990-01-01', status: 'rejected' } });
+    await assertFails(
+      setDoc(
+        doc(member(ME), 'users', ME),
+        { ageVerification: { dateOfBirth: '1990-05-21', status: 'verified' } },
+        { merge: true },
+      ),
+    );
+  });
+
   it('refuses a member who tries to skip straight to verified', async () => {
     // The obvious abuse of a skip button: send the deferral and the outcome
     // together and never photograph anything.

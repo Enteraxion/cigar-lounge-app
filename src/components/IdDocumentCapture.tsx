@@ -60,7 +60,10 @@ import {
 import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { uploadImage } from '../services/storageService';
-import { attachIdDocument } from '../services/ageVerificationService';
+import {
+  attachIdDocument,
+  type AutomatedReviewOutcome,
+} from '../services/ageVerificationService';
 import type { AgeVerification, IdDocumentType } from '../types/firestore';
 import {
   ID_DOCUMENT_OPTIONS,
@@ -90,8 +93,13 @@ const CARD_ASPECT = 85.6 / 54;
 const PASSPORT_ASPECT = 125 / 88;
 
 type Props = {
-  /** Called once the record is written — the caller re-reads it. */
-  onSubmitted: () => void;
+  /**
+   * Called once the record is written, with what the automated review decided —
+   * `null` when it could not be reached, which means the submission is queued
+   * for a person rather than that anything went wrong. The caller re-reads the
+   * record and tells the member.
+   */
+  onSubmitted: (outcome: AutomatedReviewOutcome | null) => void;
   /**
    * The member's existing record, when there is one. Used to pre-select the
    * document they chose last time, so someone re-sending after a rejection is
@@ -212,8 +220,15 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
       if (!urls.front) {
         throw new Error('missing front image');
       }
-      await attachIdDocument(userId, documentType, { front: urls.front, back: urls.back });
-      onSubmitted();
+      const outcome = await attachIdDocument(userId, documentType, {
+        front: urls.front,
+        back: urls.back,
+      });
+      // Handed up rather than announced here. What to say depends on the
+      // outcome, and only the screen knows which surface the member is on — the
+      // sign-up wall lets them straight into the app on approval, the voluntary
+      // route simply updates in place.
+      onSubmitted(outcome);
     } catch {
       // Retryable, not a dead end: the usual cause is a dropped connection, and
       // a member at the sign-up wall cannot reach the app until this succeeds, so

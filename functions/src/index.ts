@@ -2085,9 +2085,16 @@ export const reviewIdDocument = onCall(
             status: outcome.decision === 'approve' ? 'verified' : 'rejected',
             reviewedAt: Timestamp.now(),
             reviewedBy: 'automated-review',
+            // `resolution` is what the member should DO, stored beside the
+            // sentence telling them what went wrong. The two are separate
+            // because they do not always agree: "we have no date of birth for
+            // you" is a problem with the account, not the photograph, and
+            // sending that member back to the camera would be the wrong
+            // instruction. Cleared on approval so a later screen cannot render
+            // a stale one.
             ...(outcome.decision === 'reject'
-              ? { rejectionReason: outcome.memberMessage }
-              : { rejectionReason: FieldValue.delete() }),
+              ? { rejectionReason: outcome.memberMessage, resolution: outcome.action }
+              : { rejectionReason: FieldValue.delete(), resolution: FieldValue.delete() }),
           },
         },
         { merge: true },
@@ -2096,7 +2103,9 @@ export const reviewIdDocument = onCall(
       return {
         decision: outcome.decision,
         reason: outcome.reason,
-        ...(outcome.decision === 'reject' ? { memberMessage: outcome.memberMessage } : {}),
+        ...(outcome.decision === 'reject'
+          ? { memberMessage: outcome.memberMessage, action: outcome.action }
+          : {}),
       };
     });
   },

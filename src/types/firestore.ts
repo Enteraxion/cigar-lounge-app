@@ -388,7 +388,23 @@ export type AgeVerification = {
   reviewedBy?: string;
   /** Set on rejection so the member is told why rather than just refused. */
   rejectionReason?: string;
+  /**
+   * What the member should do about a rejection — the app renders a camera for
+   * `retake`, a date field for `fix_date_of_birth`, and neither for `none`.
+   *
+   * Separate from `rejectionReason` because the sentence and the remedy are not
+   * always the same thing: "we have no date of birth on your account" is a
+   * problem with the account rather than the photograph, and offering that
+   * member the camera would send them to fix the wrong thing.
+   *
+   * Absent on records decided before 2026-08-31 and on every human decision, so
+   * readers must treat it as unknown and fall back to the camera.
+   */
+  resolution?: IdReviewAction;
 };
+
+/** @see AgeVerification.resolution — mirrors functions/src/idReview.ts. */
+export type IdReviewAction = 'retake' | 'fix_date_of_birth' | 'none';
 
 export type UserDocument = {
   /** Absent for members who have never opened AI Settings. */

@@ -33,16 +33,35 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CheckCircle2, ChevronLeft, Clock, Lock, XCircle } from 'lucide-react-native';
 import { theme } from '../theme';
 import { auth } from '../services/firebaseAuth';
-import { getAgeVerification } from '../services/ageVerificationService';
+import {
+  getAgeVerification,
+  updateDeclaredDateOfBirth,
+  type AutomatedReviewOutcome,
+} from '../services/ageVerificationService';
+import DateOfBirthFields, { type DateOfBirthParts } from '../components/DateOfBirthFields';
 import IdDocumentCapture from '../components/IdDocumentCapture';
 import type { AgeVerification } from '../types/firestore';
-import { MINIMUM_AGE } from '../utils/ageCheck';
+import { MINIMUM_AGE, ageCheckMessage, checkMinimumAge, fromIsoDate } from '../utils/ageCheck';
 import { documentLabel, imageForSide, requiredSides, sideLabel } from '../utils/idDocument';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList>;
+
+/** Pre-fills the correction field with what is on file, so one wrong digit is a
+ *  one-digit edit rather than a re-type. */
+function initialDob(verification: AgeVerification | null | undefined): DateOfBirthParts {
+  const parsed = verification?.dateOfBirth ? fromIsoDate(verification.dateOfBirth) : null;
+  if (!parsed) {
+    return { month: '', day: '', year: '' };
+  }
+  return {
+    month: String(parsed.month).padStart(2, '0'),
+    day: String(parsed.day).padStart(2, '0'),
+    year: String(parsed.year),
+  };
+}
 
 /** What the member is told, per status. */
 const STATUS_COPY = {
@@ -66,6 +85,12 @@ export default function AgeVerificationScreen() {
 
   const [verification, setVerification] = useState<AgeVerification | null | undefined>(undefined);
 
+  // Only used on the one path that asks for it — a rejection whose remedy is the
+  // date rather than the photograph. `null` until the member opens the field, so
+  // an untouched screen never shows a half-filled form.
+  const [dob, setDob] = useState<DateOfBirthParts | null>(null);
+  const [savingDob, setSavingDob] = useState(false);
+
   const load = useCallback(() => {
     if (!userId) {
       setVerification(null);
@@ -80,16 +105,87 @@ export default function AgeVerificationScreen() {
   // without a restart — the same reason My Shops does it.
   useFocusEffect(load);
 
-  const onSubmitted = () => {
+  /**
+   * Tells the member what actually happened.
+   *
+   * This used to say "our team will review it" unconditionally, which stopped
+   * being true on 2026-08-31 — most submissions are now decided in about four
+   * seconds and never reach a person. Saying a human has it when one does not is
+   * the same silence that made a broken deployment look like a queue.
+   */
+  const onSubmitted = (outcome: AutomatedReviewOutcome | null) => {
     load();
+    if (outcome?.decision === 'approve') {
+      Alert.alert(
+        'You’re verified',
+        `Your age is confirmed — you can book tables and claim a lounge now.`,
+      );
+      return;
+    }
+    if (outcome?.decision === 'reject' && outcome.memberMessage) {
+      Alert.alert('We couldn’t verify this', outcome.memberMessage);
+      return;
+    }
+    // Referred, or the review could not be reached. Both genuinely mean a person
+    // will look, so this is the one case where the old wording is still honest.
     Alert.alert(
       'ID received',
       'Thanks — our team will review it and you’ll get a notification here.',
     );
   };
 
+  /**
+   * Saves a corrected date of birth and immediately re-runs the review against
+   * the photographs already on file — the member does not retake anything,
+   * because nothing about their document was wrong.
+   */
+  const saveDob = async () => {
+    if (!userId || !dob) {
+      return;
+    }
+    const parts = {
+      year: dob.year.trim() ? Number(dob.year.trim()) : undefined,
+      month: dob.month.trim() ? Number(dob.month.trim()) : undefined,
+      day: dob.day.trim() ? Number(dob.day.trim()) : undefined,
+    };
+    // The same check sign-up applies. A corrected date is still a date of birth
+    // on a 21+ product, and an impossible one must not reach the comparison.
+    const problem = ageCheckMessage(checkMinimumAge(parts));
+    if (problem) {
+      Alert.alert('Check that date', problem);
+      return;
+    }
+    setSavingDob(true);
+    try {
+      const outcome = await updateDeclaredDateOfBirth(userId, {
+        year: parts.year as number,
+        month: parts.month as number,
+        day: parts.day as number,
+      });
+      setDob(null);
+      load();
+      if (outcome?.decision === 'approve') {
+        Alert.alert(
+          'You’re verified',
+          'That matched your document — you can book tables and claim a lounge now.',
+        );
+      } else if (outcome?.decision === 'reject' && outcome.memberMessage) {
+        Alert.alert('Still doesn’t match', outcome.memberMessage);
+      } else {
+        Alert.alert('Date updated', 'We’ve sent your ID for another look.');
+      }
+    } catch {
+      Alert.alert('Couldn’t save that', 'Check your connection and try again.');
+    } finally {
+      setSavingDob(false);
+    }
+  };
+
   const status = verification?.status;
   const copy = status ? STATUS_COPY[status] : null;
+  // Absent on human decisions and on anything decided before 2026-08-31, so an
+  // unknown resolution falls back to the camera rather than to nothing.
+  const needsDateFix = status === 'rejected' && verification?.resolution === 'fix_date_of_birth';
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -194,6 +290,35 @@ export default function AgeVerificationScreen() {
                   </Text>
                 </View>
               ) : null}
+              {needsDateFix ? (
+                <View style={styles.fixBlock}>
+                  <Text style={styles.fixTitle}>Correct your date of birth</Text>
+                  <Text style={styles.fixBody}>
+                    Enter the date exactly as it appears on your document. We’ll check your ID
+                    again straight away — you don’t need to photograph it a second time.
+                  </Text>
+                  <DateOfBirthFields
+                    value={dob ?? initialDob(verification)}
+                    onChange={setDob}
+                    editable={!savingDob}
+                  />
+                  <Pressable
+                    style={[styles.fixButton, savingDob && styles.fixButtonDisabled]}
+                    onPress={saveDob}
+                    disabled={savingDob}
+                    accessibilityRole="button"
+                  >
+                    {savingDob ? (
+                      <ActivityIndicator color={theme.colors.background} />
+                    ) : (
+                      <Text style={styles.fixButtonText}>Save and check again</Text>
+                    )}
+                  </Pressable>
+                  <Text style={styles.fixOr}>
+                    Or send a different document below if you photographed the wrong one.
+                  </Text>
+                </View>
+              ) : null}
               <IdDocumentCapture onSubmitted={onSubmitted} existing={verification} />
             </>
           )}
@@ -228,6 +353,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.gold.line,
   },
+  fixBlock: {
+    gap: theme.spacing.md,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.gold.line,
+  },
+  fixTitle: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    color: theme.colors.white,
+  },
+  fixBody: { ...theme.typography.body, fontSize: 13, lineHeight: 19, color: theme.colors.mutedGray },
+  fixButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.accentGold,
+  },
+  fixButtonDisabled: { opacity: 0.5 },
+  fixButtonText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    color: theme.colors.background,
+  },
+  fixOr: { ...theme.typography.body, fontSize: 12, color: theme.colors.mutedGray },
   statusIcon: { paddingTop: 2 },
   statusText: { flex: 1, gap: 4 },
   statusTitle: {

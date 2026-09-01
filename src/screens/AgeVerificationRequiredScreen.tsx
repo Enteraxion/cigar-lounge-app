@@ -30,7 +30,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Lock, ShieldCheck } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import { auth, signOut } from '../services/firebaseAuth';
-import { deferAgeVerification } from '../services/ageVerificationService';
+import {
+  deferAgeVerification,
+  type AutomatedReviewOutcome,
+} from '../services/ageVerificationService';
 import IdDocumentCapture from '../components/IdDocumentCapture';
 import { MINIMUM_AGE } from '../utils/ageCheck';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
@@ -41,6 +44,27 @@ export default function AgeVerificationRequiredScreen({
   /** Re-reads the verification record, which drops this wall once the ID is complete. */
   onSubmitted: () => void;
 }) {
+  /**
+   * The wall drops either way — a submitted ID is enough to get in, verified or
+   * not — so this only decides what the member is told on the way through.
+   * Worth telling them: since 2026-08-31 most people are fully verified before
+   * they reach the first screen, and "we'll get back to you" would undersell
+   * that and confuse the ones who then find booking already unlocked.
+   */
+  const handleSubmitted = (outcome: AutomatedReviewOutcome | null) => {
+    if (outcome?.decision === 'approve') {
+      Alert.alert('You’re verified', 'Your age is confirmed — everything is unlocked.');
+    } else if (outcome?.decision === 'reject' && outcome.memberMessage) {
+      // Not a dead end: they are inside the app, and the Profile route lets them
+      // correct it. Saying so matters, or a rejection at the door reads as a
+      // door that never opens.
+      Alert.alert(
+        'We couldn’t verify this',
+        `${outcome.memberMessage}\n\nYou can browse in the meantime — finish this from Profile whenever you're ready.`,
+      );
+    }
+    onSubmitted();
+  };
   const [skipping, setSkipping] = useState(false);
 
   // Rohith, 2026-08-19: asking somebody to photograph their licence for an app
@@ -76,11 +100,11 @@ export default function AgeVerificationRequiredScreen({
           <Text style={styles.title}>Verify your age</Text>
           <Text style={styles.body}>
             Lounge Locator is for members {MINIMUM_AGE} and over. One document and you're in —
-            you can browse straight away while our team checks it.
+            most are checked in a few seconds.
           </Text>
         </View>
 
-        <IdDocumentCapture onSubmitted={onSubmitted} />
+        <IdDocumentCapture onSubmitted={handleSubmitted} />
 
         {/* Said plainly, because a request for a photograph of a passport is one
             people are right to hesitate over. Vagueness here makes the ask
@@ -88,8 +112,8 @@ export default function AgeVerificationRequiredScreen({
         <View style={styles.privacy}>
           <Lock size={14} color={theme.colors.mutedGray} />
           <Text style={styles.privacyText}>
-            Reviewed by a person on our team, used only to confirm your date of birth, and never
-            shown to other members or to lounges.
+            Checked automatically to confirm your date of birth, and by a person on our team if
+            anything is unclear. Never shown to other members or to lounges.
           </Text>
         </View>
 

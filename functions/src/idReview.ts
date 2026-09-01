@@ -22,6 +22,19 @@
  * Everything it cannot settle goes to the queue a human already works from, so
  * the failure mode is "an administrator looks at it", never "it is approved
  * because nothing objected".
+ *
+ * **Every outcome now says something to the member.** Rohith, 2026-08-31: "if
+ * there is any error, it should clearly tell the user what went wrong so they
+ * can correct it and re-upload". Before that, a referral wrote nothing at all —
+ * the member saw the same "Awaiting review" card whether we had read their
+ * document and wanted a second opinion, whether Azure was down, or whether the
+ * code was not deployed. Three different situations, one indistinguishable
+ * screen, and no way for the member to act on any of them.
+ *
+ * So each outcome carries a `memberMessage` and an `action` naming the one thing
+ * that will actually resolve it. `refer` survives for the cases where that thing
+ * is genuinely "wait" — an outage, or a reading we do not trust — and it is the
+ * only outcome that leaves the member with nothing to do.
  */
 
 /** What the model is asked to extract. Every field may be absent. */
@@ -38,10 +51,19 @@ export type ReadDocument = {
   notAnIdReason?: string | null;
 };
 
+/**
+ * What will actually fix this, from the member's side.
+ *
+ * The app renders a different control for each: a camera for `retake`, a date
+ * field for `fix_date_of_birth`, and neither for `none`, where nothing the
+ * member does will change the answer.
+ */
+export type ReviewAction = 'retake' | 'fix_date_of_birth' | 'none';
+
 export type ReviewOutcome =
   | { decision: 'approve'; reason: string }
-  | { decision: 'reject'; reason: string; memberMessage: string }
-  | { decision: 'refer'; reason: string };
+  | { decision: 'reject'; reason: string; memberMessage: string; action: ReviewAction }
+  | { decision: 'refer'; reason: string; memberMessage: string };
 
 /** Parses yyyy-mm-dd strictly. Anything else is "we do not know". */
 export function parseIsoDate(value: string | null | undefined): Date | null {
@@ -90,6 +112,7 @@ export function reviewDocument(
       reason: `not an identity document: ${read.notAnIdReason}`,
       memberMessage:
         "That doesn't look like an identity document. Please photograph your driving licence, state ID, passport or military ID.",
+      action: 'retake',
     };
   }
 
@@ -99,20 +122,38 @@ export function reviewDocument(
       reason: 'illegible image',
       memberMessage:
         "We couldn't read that clearly. Try again in better light, with the whole document flat in the frame.",
+      action: 'retake',
     };
   }
 
   const documentDob = parseIsoDate(read.dateOfBirth);
   const declaredDob = parseIsoDate(declaredDateOfBirth);
 
-  // Anything unreadable goes to a person rather than being guessed at. This is
-  // the branch that keeps the whole feature honest — an absent date of birth is
-  // not a pass.
+  // An absent date of birth is never a pass — that is the branch that keeps the
+  // whole feature honest. It used to refer, which was safe but silent: the
+  // member was left on "Awaiting review" when a clearer photograph was the one
+  // thing that would have resolved it in seconds. It tells them now.
   if (!documentDob) {
-    return { decision: 'refer', reason: 'could not read a date of birth' };
+    return {
+      decision: 'reject',
+      reason: 'could not read a date of birth',
+      memberMessage:
+        "We couldn't read the date of birth on your document. Photograph it again with the whole document flat in the frame and the date clearly in view.",
+      action: 'retake',
+    };
   }
+
+  // Nothing wrong with their document — the date on their account is missing or
+  // malformed. Sending them back to the camera would be the wrong instruction,
+  // which is exactly why the action is named separately from the message.
   if (!declaredDob) {
-    return { decision: 'refer', reason: 'no usable declared date of birth on file' };
+    return {
+      decision: 'reject',
+      reason: 'no usable declared date of birth on file',
+      memberMessage:
+        "We don't have a valid date of birth on your account, so there's nothing to check your document against. Enter it below and send your ID again.",
+      action: 'fix_date_of_birth',
+    };
   }
 
   // Expiry is checked before age. An expired licence may still show a valid date
@@ -124,17 +165,29 @@ export function reviewDocument(
       decision: 'reject',
       reason: `document expired ${read.expiryDate}`,
       memberMessage:
-        'That document has expired. Please use one that is still in date.',
+        'That document has expired. Please send one that is still in date.',
+      action: 'retake',
     };
   }
 
   if (documentDob.getTime() !== declaredDob.getTime()) {
-    // Referred, not rejected. A mismatch is usually a typo at sign-up rather
-    // than a lie, and calling an honest member a liar automatically is a worse
-    // error than asking someone to look.
+    // This used to refer, on the reasoning that a mismatch is usually a typo at
+    // sign-up and calling an honest member a liar automatically is the worse
+    // error. That reasoning still holds — and referring silently served it
+    // badly. The member was never told, could not have corrected the date if
+    // they had been (nothing in the app or the admin portal edits it), and so
+    // waited on a human for a typo only they could see. Saying what disagreed
+    // and offering the field is the fix; it is not an accusation.
+    //
+    // The date we read is deliberately NOT quoted back. The member can read
+    // their own document, and echoing what our reading extracted tells anyone
+    // submitting a borrowed or altered ID exactly what we saw.
     return {
-      decision: 'refer',
+      decision: 'reject',
       reason: `document says ${read.dateOfBirth}, member declared ${declaredDateOfBirth}`,
+      memberMessage:
+        "The date of birth on your document doesn't match the one on your account. Check the date below, correct it if it's wrong, and send your ID again.",
+      action: 'fix_date_of_birth',
     };
   }
 
@@ -144,6 +197,9 @@ export function reviewDocument(
       decision: 'reject',
       reason: `under age: ${age}`,
       memberMessage: `Lounge Locator is for adults aged ${MINIMUM_AGE} and over.`,
+      // Nothing they can send will change this. Offering a camera would invite
+      // them to try a different document, which is not what we want to suggest.
+      action: 'none',
     };
   }
 

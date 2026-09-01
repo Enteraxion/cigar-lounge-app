@@ -34,6 +34,7 @@ import type {
   AgeVerification,
   AgeVerificationStatus,
   IdDocumentType,
+  IdReviewAction,
   UserDocument,
 } from '../types/firestore';
 import { getApp } from '@react-native-firebase/app';
@@ -93,15 +94,37 @@ export async function submitAgeVerification(
  * this existed. A member must never be blocked because our automation had a bad
  * day.
  */
-export async function requestAutomatedReview(): Promise<void> {
+/**
+ * What the automated review decided, as far as the member is concerned.
+ *
+ * `null` means we never got an answer — the call failed, or the feature is not
+ * configured. That is deliberately NOT an error the member sees: their document
+ * is saved and queued, and a person will review it. It is, however, something we
+ * need to see, which is why the catch below logs instead of swallowing.
+ */
+export type AutomatedReviewOutcome = {
+  decision: 'approve' | 'reject' | 'refer';
+  memberMessage?: string;
+  action?: IdReviewAction;
+};
+
+export async function requestAutomatedReview(): Promise<AutomatedReviewOutcome | null> {
   try {
-    const call = httpsCallable<Record<string, never>, { decision: string }>(
+    const call = httpsCallable<Record<string, never>, AutomatedReviewOutcome>(
       getFunctions(getApp()),
       'reviewIdDocument',
     );
-    await call({});
-  } catch {
-    // Silent on purpose — see above. The record is already saved and queued.
+    const { data } = await call({});
+    return data ?? null;
+  } catch (error) {
+    // Quiet to the member, loud to us. This catch used to be empty, and that
+    // was the single reason a stale app bundle went unnoticed on 2026-08-31:
+    // "the review referred you to a human", "Azure rejected our key" and "this
+    // code is not deployed" all produced the identical silent screen. The
+    // member still sees a queued submission rather than an error they can do
+    // nothing about — but the failure is now on the record.
+    console.warn('[ageVerification] automated review unavailable', error);
+    return null;
   }
 }
 
@@ -109,7 +132,7 @@ export async function attachIdDocument(
   userId: string,
   documentType: IdDocumentType,
   images: { front: string; back?: string },
-): Promise<void> {
+): Promise<AutomatedReviewOutcome | null> {
   await setDoc(
     doc(db, 'users', userId),
     {
@@ -130,7 +153,62 @@ export async function attachIdDocument(
   // Ask for the automated read now that a complete submission exists. Awaited so
   // the caller's own refresh sees the outcome rather than a stale "pending" —
   // the whole point is that most members never wait for a person.
-  await requestAutomatedReview();
+  //
+  // The outcome is returned rather than dropped: the screen that called this
+  // needs to tell the member what happened, and re-reading the record would
+  // race the write that has only just landed.
+  return requestAutomatedReview();
+}
+
+/**
+ * Corrects the date of birth held on the account.
+ *
+ * Exists because the automated review can now tell a member their document and
+ * their account disagree — and until 2026-08-31 there was nothing anybody could
+ * do about that. `dateOfBirth` was written once at sign-up and only ever
+ * displayed; no screen edited it and neither did the admin portal. A single
+ * mistyped digit meant a permanent referral to a human on every resubmission,
+ * which nobody noticed while every submission went to a human anyway.
+ *
+ * Safe to expose. The 21+ decision is taken from the date printed on the
+ * DOCUMENT, never from this one (see functions/src/idReview.ts — `ageOn` is
+ * called with `documentDob`); this value is a cross-check that catches typos,
+ * not a credential. firestore.rules already permitted the write — it locks
+ * `status`, which is the field that would matter.
+ */
+export async function updateDeclaredDateOfBirth(
+  userId: string,
+  dateOfBirth: BirthDate,
+  { review = true }: { review?: boolean } = {},
+): Promise<AutomatedReviewOutcome | null> {
+  await setDoc(
+    doc(db, 'users', userId),
+    {
+      ageVerification: {
+        dateOfBirth: toIsoDate(dateOfBirth),
+        // Back into the queue, and the previous decision cleared. The member has
+        // changed the thing the decision was made on, so keeping the old verdict
+        // on screen would be wrong — and `reviewIdDocument` refuses to look at a
+        // record that is not `pending`, so without this the re-read below would
+        // do nothing at all.
+        //
+        // Permitted by firestore.rules: a member may move their own record TO
+        // 'pending' but never to 'verified'. See decidesOwnAgeVerification().
+        status: 'pending',
+        rejectionReason: deleteField(),
+        resolution: deleteField(),
+        reviewedAt: deleteField(),
+        reviewedBy: deleteField(),
+      },
+    },
+    { merge: true },
+  );
+
+  // Re-read the photographs already on file rather than making the member
+  // retake them. Nothing about their document changed — only the date we were
+  // comparing it against — so asking for fresh photographs would be busywork
+  // that costs us the member who is already annoyed.
+  return review ? requestAutomatedReview() : null;
 }
 
 /**

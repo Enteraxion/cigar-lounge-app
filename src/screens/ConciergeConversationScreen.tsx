@@ -7,9 +7,16 @@
  * distance, rating, amenity tags, quick actions) rather than chat
  * bubbles — that's the deliberate differentiator from a generic chatbot
  * look. Sending a message shows a brief "Crafting Your Experience"
- * loading state, then either a recommendation or a "No Lounges Found"
- * card. Mock data + keyword matching only (see src/data/mockConcierge.ts)
- * — no real AI wired up yet.
+ * loading state, then either a recommendation or a "No Lounges Found" card.
+ *
+ * This IS wired to real AI — askConcierge, a deployed Cloud Function running
+ * gpt-4.1-mini on the company's Azure OpenAI account since 2026-08-31. It is
+ * grounded: the function pulls real candidate lounges out of Firestore and
+ * constrains the model to recommend from that list, then filters the ids it
+ * returns against what was offered. So every recommendation opens a real lounge.
+ *
+ * What still comes from src/data/mockConcierge.ts is presentational — card
+ * types and layout helpers, not answers.
  */
 
 import React, { useEffect, useRef, useState } from 'react';

@@ -36,6 +36,8 @@ import type {
   IdDocumentType,
   UserDocument,
 } from '../types/firestore';
+import { getApp } from '@react-native-firebase/app';
+import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import { createNotification } from './userActionsService';
 import { toIsoDate, type BirthDate } from '../utils/ageCheck';
 
@@ -82,6 +84,27 @@ export async function submitAgeVerification(
  * what makes a rejection recoverable: re-uploading puts the member back in the
  * queue instead of leaving them looking at the old rejection reason forever.
  */
+/**
+ * The automated first pass, run straight after the images are uploaded.
+ *
+ * Deliberately best-effort and never allowed to throw into the caller. If the
+ * review fails, times out, or is not configured, the submission simply stays
+ * `pending` and an administrator sees it — which is exactly what happened before
+ * this existed. A member must never be blocked because our automation had a bad
+ * day.
+ */
+export async function requestAutomatedReview(): Promise<void> {
+  try {
+    const call = httpsCallable<Record<string, never>, { decision: string }>(
+      getFunctions(getApp()),
+      'reviewIdDocument',
+    );
+    await call({});
+  } catch {
+    // Silent on purpose — see above. The record is already saved and queued.
+  }
+}
+
 export async function attachIdDocument(
   userId: string,
   documentType: IdDocumentType,
@@ -103,6 +126,11 @@ export async function attachIdDocument(
     },
     { merge: true },
   );
+
+  // Ask for the automated read now that a complete submission exists. Awaited so
+  // the caller's own refresh sees the outcome rather than a stale "pending" —
+  // the whole point is that most members never wait for a person.
+  await requestAutomatedReview();
 }
 
 /**

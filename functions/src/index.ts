@@ -769,9 +769,18 @@ export const sendReservationEmail = onCall(
 const azureOpenAiKey = defineSecret('AZURE_OPENAI_API_KEY');
 
 /** From the Azure OpenAI resource's "Keys and Endpoint" page. */
-const AZURE_OPENAI_ENDPOINT = 'https://REPLACE_WITH_AZURE_ENDPOINT.openai.azure.com/';
-/** The name given to the model deployment in Azure AI Foundry. */
-const AZURE_OPENAI_DEPLOYMENT = 'gpt-4o-mini';
+const AZURE_OPENAI_ENDPOINT = 'https://lounge-locator-ai.openai.azure.com/';
+/**
+ * The name given to the model deployment in Azure AI Foundry — NOT the model id.
+ * Azure routes on the deployment name, so this is what must match the portal.
+ *
+ * gpt-4.1-mini rather than gpt-4o-mini: Azure refused to create a new
+ * gpt-4o-mini deployment on 2026-08-31 with ServiceModelDeprecating — that
+ * model's 2024-07-18 version has aged out of new deployments. 4.1-mini is the
+ * current equivalent and supports the strict json_schema structured output this
+ * function depends on, which is the only capability that actually matters here.
+ */
+const AZURE_OPENAI_DEPLOYMENT = 'gpt-4.1-mini';
 /** Pinned. Azure requires an explicit api-version and silently changes behaviour across them. */
 const AZURE_OPENAI_API_VERSION = '2024-10-21';
 

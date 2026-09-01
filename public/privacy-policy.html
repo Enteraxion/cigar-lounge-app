@@ -45,7 +45,7 @@
 <body>
 
 <h1>Privacy Policy</h1>
-<p class="updated">Last updated: 26 August 2026</p>
+<p class="updated">Last updated: 31 August 2026</p>
 
 <p>
   This policy explains what Lounge Locator (&ldquo;the app&rdquo;, &ldquo;we&rdquo;,
@@ -91,9 +91,18 @@
 <h3>Who sees it, and for how long</h3>
 <ul>
   <li>
-    <strong>A person reviews it.</strong> Verification is not automated. An
-    administrator at Enteraxion opens your photographs and compares the date of birth
-    against what you entered. No third party sees them.
+    <strong>An automated check reads it first, and a person reviews anything it
+    cannot settle.</strong> Your photographs are sent to Microsoft Azure OpenAI,
+    which reads the printed date of birth and compares it against what you
+    entered. If everything agrees and the document is in date, you are verified
+    without a person seeing it. If anything does not add up &mdash; the photo is
+    unclear, the dates disagree, the document has expired &mdash; an
+    administrator at Enteraxion opens the photographs and decides.
+  </li>
+  <li>
+    <strong>Microsoft does not keep them.</strong> The images are sent for that
+    single check and are not used to train any model. We do not send your name,
+    email address or account details with them.
   </li>
   <li>
     <strong>They are stored privately</strong> in Firebase Storage, under access rules
@@ -110,7 +119,7 @@
 <h3>What we do not do with it</h3>
 <ul>
   <li>We do not sell it, share it, or use it for advertising.</li>
-  <li>We do not run facial recognition on it.</li>
+  <li>We do not run facial recognition on it, and neither does the automated check — it reads the printed text, it does not identify your face.</li>
   <li>We do not use it for anything other than confirming you are 21 or over.</li>
 </ul>
 
@@ -179,6 +188,7 @@
   <li><strong>Yelp and Google Places</strong> — used server-side to source public business information about lounges: names, addresses, opening hours and photographs. This is public data about businesses, not personal data about you.</li>
   <li><strong>SendGrid (Twilio)</strong> — sends the emails the app needs to send, such as your verification code and reservation notifications.</li>
   <li><strong>National Weather Service</strong> — we send an approximate map location to retrieve current conditions. No account details are sent with it.</li>
+  <li><strong>Microsoft Azure OpenAI</strong> — two things. It powers the in-app Concierge, which receives your question and a list of lounges we have selected in order to recommend from it. And it performs the automated first check on your identity document, described above.</li>
 </ul>
 
 <h2>Deleting your account</h2>

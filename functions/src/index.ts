@@ -51,6 +51,7 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { generateCode, hashCode } from './emailCode';
+import { reviewDocument, type ReadDocument } from './idReview';
 import { getStorage } from 'firebase-admin/storage';
 import { logger } from 'firebase-functions';
 import sgMail from '@sendgrid/mail';
@@ -1910,3 +1911,193 @@ export const confirmPasswordReset = onCall(async request => {
     return { reset: true };
   });
 });
+
+// ---------------------------------------------------------------------------
+// reviewIdDocument — the automated first pass on a 21+ submission
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads a member's identity document and decides, so a person no longer has to
+ * look at every submission. Julian asked for this on 2026-08-25.
+ *
+ * **What it establishes, and what it does not.** It reads the printed date of
+ * birth and expiry and compares them against what the member typed at sign-up.
+ * It cannot tell a genuine document from a good forgery — holograms, microprint
+ * and UV features do not survive a phone photograph — so nothing here treats the
+ * model's confidence as evidence of authenticity. Anything it cannot settle is
+ * referred to the queue an administrator already works from, which means the
+ * failure mode is "a human looks at it", never "approved because nothing
+ * objected". See idReview.ts for every branch.
+ *
+ * Called by the app straight after the images are uploaded. Runs as the member,
+ * on their own record only — there is no userId argument, deliberately.
+ *
+ * The images are read from Storage server-side and sent to the model as data
+ * URLs rather than links, because the objects are private and a URL the model
+ * could fetch would be a URL anyone could fetch.
+ */
+const ID_REVIEW_SCHEMA = {
+  type: 'object',
+  properties: {
+    dateOfBirth: {
+      type: ['string', 'null'],
+      description: 'Date of birth exactly as printed, as yyyy-mm-dd. Null if not readable.',
+    },
+    expiryDate: {
+      type: ['string', 'null'],
+      description: 'Expiry date as yyyy-mm-dd. Null if absent or unreadable.',
+    },
+    documentKind: {
+      type: ['string', 'null'],
+      enum: ['drivers_license', 'state_id', 'passport', 'military_id', 'other', null],
+      description: 'What the document appears to be.',
+    },
+    legible: {
+      type: 'boolean',
+      description: 'False if the image is too blurred, dark or cropped to read reliably.',
+    },
+    notAnIdReason: {
+      type: ['string', 'null'],
+      description:
+        'Set only when the image is plainly not an identity document — e.g. "a bank card", "a screenshot". Null otherwise.',
+    },
+  },
+  required: ['dateOfBirth', 'expiryDate', 'documentKind', 'legible', 'notAnIdReason'],
+  additionalProperties: false,
+} as const;
+
+const ID_REVIEW_SYSTEM = [
+  'You read identity documents and report only what is printed on them.',
+  '',
+  'Rules:',
+  '- Report dates exactly as printed, converted to yyyy-mm-dd. Never infer or estimate a date.',
+  '- If a field is not clearly readable, return null for it. A guess is worse than a null,',
+  '  because a null sends the document to a human and a guess does not.',
+  '- Set legible=false if the image is blurred, cropped, glared or too dark to read with confidence.',
+  '- Set notAnIdReason only when the image is plainly not an identity document.',
+  '- Do not judge whether the document is genuine. You cannot, and you are not being asked to.',
+  '- Do not describe the person, and do not report anything about their appearance.',
+].join('\n');
+
+/** Fetches an object from Storage and returns it as a data URL for the model. */
+async function storageObjectAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const bucket = getStorage().bucket();
+    // Accepts both a gs:// path and a download URL — the app has written both
+    // shapes over the life of this feature.
+    const match = /\/o\/([^?]+)/.exec(url) ?? /gs:\/\/[^/]+\/(.+)/.exec(url);
+    const objectPath = match ? decodeURIComponent(match[1]) : url;
+    const [buffer] = await bucket.file(objectPath).download();
+    return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+  } catch (error) {
+    logger.warn('reviewIdDocument: could not read image', { error: String(error) });
+    return null;
+  }
+}
+
+export const reviewIdDocument = onCall(
+  { secrets: [azureOpenAiKey], timeoutSeconds: 120 },
+  async request => {
+    const userId = request.auth?.uid;
+    if (!userId) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    return guarded('reviewIdDocument', async () => {
+      const snapshot = await db.doc(`users/${userId}`).get();
+      const verification = (snapshot.data()?.ageVerification ?? {}) as {
+        status?: string;
+        dateOfBirth?: string;
+        idImageUrl?: string;
+        idBackImageUrl?: string;
+      };
+
+      if (verification.status !== 'pending' || !verification.idImageUrl) {
+        return { decision: 'refer' as const, reason: 'nothing pending to review' };
+      }
+
+      const apiKey = azureOpenAiKey.value();
+      if (!apiKey || AZURE_OPENAI_ENDPOINT.includes('REPLACE_WITH')) {
+        // No key configured: leave it for the human queue rather than failing.
+        // A member must never be blocked because our automation is switched off.
+        return { decision: 'refer' as const, reason: 'automated review not configured' };
+      }
+
+      const front = await storageObjectAsDataUrl(verification.idImageUrl);
+      if (!front) {
+        return { decision: 'refer' as const, reason: 'could not read the uploaded image' };
+      }
+
+      const client = new AzureOpenAI({
+        apiKey,
+        endpoint: AZURE_OPENAI_ENDPOINT,
+        apiVersion: AZURE_OPENAI_API_VERSION,
+        deployment: AZURE_OPENAI_DEPLOYMENT,
+      });
+
+      let read: ReadDocument;
+      try {
+        const completion = await client.chat.completions.create({
+          model: AZURE_OPENAI_DEPLOYMENT,
+          max_tokens: 400,
+          messages: [
+            { role: 'system', content: ID_REVIEW_SYSTEM },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'Read this identity document.' },
+                { type: 'image_url', image_url: { url: front } },
+              ],
+            },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: { name: 'id_document', strict: true, schema: ID_REVIEW_SCHEMA },
+          },
+        });
+        const content = completion.choices[0]?.message?.content;
+        if (!content) {
+          return { decision: 'refer' as const, reason: 'no reading returned' };
+        }
+        read = JSON.parse(content) as ReadDocument;
+      } catch (error) {
+        // Every failure refers. An outage must not become a queue of members
+        // who cannot use the app.
+        logger.error('reviewIdDocument: read failed', { error: String(error) });
+        return { decision: 'refer' as const, reason: 'automated read failed' };
+      }
+
+      const outcome = reviewDocument(read, verification.dateOfBirth ?? '');
+
+      // Nothing is logged about what the document said beyond the decision —
+      // this is somebody's date of birth, and Cloud Logging is not where it
+      // belongs.
+      logger.info('reviewIdDocument', { userId, decision: outcome.decision });
+
+      if (outcome.decision === 'refer') {
+        // Left pending. The admin portal's queue is unchanged and picks it up.
+        return { decision: 'refer' as const, reason: outcome.reason };
+      }
+
+      await db.doc(`users/${userId}`).set(
+        {
+          ageVerification: {
+            status: outcome.decision === 'approve' ? 'verified' : 'rejected',
+            reviewedAt: Timestamp.now(),
+            reviewedBy: 'automated-review',
+            ...(outcome.decision === 'reject'
+              ? { rejectionReason: outcome.memberMessage }
+              : { rejectionReason: FieldValue.delete() }),
+          },
+        },
+        { merge: true },
+      );
+
+      return {
+        decision: outcome.decision,
+        reason: outcome.reason,
+        ...(outcome.decision === 'reject' ? { memberMessage: outcome.memberMessage } : {}),
+      };
+    });
+  },
+);

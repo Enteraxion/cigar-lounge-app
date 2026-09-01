@@ -560,8 +560,6 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
-
         {/* ---------------- AI Concierge ---------------- */}
         {/* Directly under the greeting, above everything else on the first
             screen — Julian, 2026-08-31: make it its own section rather than a
@@ -614,6 +612,8 @@ export default function HomeScreen() {
             </View>
           </View>
         </Pressable>
+
+      </ScrollView>
 
       {/* ---------------- Floating Action Button ---------------- */}
       {/* Was an Alert.alert('Coming Soon'). Every destination below is a

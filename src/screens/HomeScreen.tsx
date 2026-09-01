@@ -302,59 +302,6 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* ---------------- AI Concierge ---------------- */}
-        {/* Directly under the greeting, above everything else on the first
-            screen — Julian, 2026-08-31: make it its own section rather than a
-            card inside the Map, and make it stand out.
-            
-            Home rather than a sixth tab: the tab bar is a floating pill with
-            10pt uppercase labels, and a sixth item truncates to "CONCIER…".
-            Home is also where the decision actually gets made — someone opening
-            the app has not chosen Search or Map yet, they have chosen "what
-            shall I do tonight", which is the question this answers.
-            
-            It reads as an input rather than a button on purpose. A button says
-            "there is a feature here"; a prompt says "type what you want", which
-            is the only instruction the concierge needs. */}
-        <Pressable
-          style={styles.conciergeCard}
-          // Straight into the conversation, NOT the concierge landing screen.
-          // ConciergeHome is still mock — suggestion chips and saved chats that
-          // do nothing — while ConciergeConversation is the real thing: it calls
-          // the deployed askConcierge and recommends from real lounges. Landing
-          // a member on scaffolding to reach a working feature is the wrong way
-          // round, so this skips it. Its params are all optional.
-          onPress={() =>
-            (tabNavigation.navigate as (name: string, params?: object) => void)('AIConcierge', {
-              screen: 'ConciergeConversation',
-            })
-          }
-          accessibilityRole="button"
-          accessibilityLabel="Ask the AI Concierge for a recommendation"
-        >
-          <View style={styles.conciergeGlow} pointerEvents="none" />
-          <View style={styles.conciergeHeaderRow}>
-            <View style={styles.conciergeBadge}>
-              <Sparkles size={15} color={theme.colors.accentGold} />
-            </View>
-            <View style={styles.conciergeHeadingGroup}>
-              <Text style={styles.conciergeTitle}>Concierge</Text>
-              <Text style={styles.conciergeSubtitle}>
-                Tell it what you&rsquo;re after and it will find the lounge
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.conciergePrompt}>
-            <Text style={styles.conciergePromptText} numberOfLines={1}>
-              Somewhere quiet for a first date&hellip;
-            </Text>
-            <View style={styles.conciergeSend}>
-              <ArrowRight size={15} color={theme.colors.primaryBlack} />
-            </View>
-          </View>
-        </Pressable>
-
         {lounges === null && !error ? (
           <View style={styles.stateBox}>
             <ActivityIndicator color={theme.colors.secondarySilver} />
@@ -614,6 +561,59 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+        {/* ---------------- AI Concierge ---------------- */}
+        {/* Directly under the greeting, above everything else on the first
+            screen — Julian, 2026-08-31: make it its own section rather than a
+            card inside the Map, and make it stand out.
+            
+            Home rather than a sixth tab: the tab bar is a floating pill with
+            10pt uppercase labels, and a sixth item truncates to "CONCIER…".
+            Home is also where the decision actually gets made — someone opening
+            the app has not chosen Search or Map yet, they have chosen "what
+            shall I do tonight", which is the question this answers.
+            
+            It reads as an input rather than a button on purpose. A button says
+            "there is a feature here"; a prompt says "type what you want", which
+            is the only instruction the concierge needs. */}
+        <Pressable
+          style={styles.conciergeCard}
+          // Straight into the conversation, NOT the concierge landing screen.
+          // ConciergeHome is still mock — suggestion chips and saved chats that
+          // do nothing — while ConciergeConversation is the real thing: it calls
+          // the deployed askConcierge and recommends from real lounges. Landing
+          // a member on scaffolding to reach a working feature is the wrong way
+          // round, so this skips it. Its params are all optional.
+          onPress={() =>
+            (tabNavigation.navigate as (name: string, params?: object) => void)('AIConcierge', {
+              screen: 'ConciergeConversation',
+            })
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Ask the AI Concierge for a recommendation"
+        >
+          <View style={styles.conciergeGlow} pointerEvents="none" />
+          <View style={styles.conciergeHeaderRow}>
+            <View style={styles.conciergeBadge}>
+              <Sparkles size={15} color={theme.colors.accentGold} />
+            </View>
+            <View style={styles.conciergeHeadingGroup}>
+              <Text style={styles.conciergeTitle}>Concierge</Text>
+              <Text style={styles.conciergeSubtitle}>
+                Tell it what you&rsquo;re after and it will find the lounge
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.conciergePrompt}>
+            <Text style={styles.conciergePromptText} numberOfLines={1}>
+              Somewhere quiet for a first date&hellip;
+            </Text>
+            <View style={styles.conciergeSend}>
+              <ArrowRight size={15} color={theme.colors.primaryBlack} />
+            </View>
+          </View>
+        </Pressable>
 
       {/* ---------------- Floating Action Button ---------------- */}
       {/* Was an Alert.alert('Coming Soon'). Every destination below is a

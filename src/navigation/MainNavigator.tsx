@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute, type RouteProp } from '@react-navigation/native';
@@ -15,7 +16,7 @@ import SearchNavigator, { type SearchStackParamList } from './SearchNavigator';
 import MapScreen from '../screens/MapScreen';
 import SavedNavigator from './SavedNavigator';
 import ProfileNavigator from './ProfileNavigator';
-import { theme } from '../theme';
+import { theme, withAlpha } from '../theme';
 import { TAB_BAR_HEIGHT } from '../utils/tabBarLayout';
 
 /**
@@ -58,7 +59,22 @@ function floatingTabBarStyle(bottomInset: number) {
     bottom: bottomInset > 0 ? bottomInset : theme.spacing.lg,
     height: TAB_BAR_HEIGHT,
     borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surface,
+    // Translucent rather than solid #18181c. The bar already floats clear of the
+    // edges; letting a little of the content show through is what separates a
+    // panel stuck to the bottom from something sitting above the page — the
+    // difference Rohith noticed against Instagram's on 2026-08-31.
+    //
+    // Alpha alone, not a blur. A real blur needs a native library, a pod install
+    // and a rebuild, and on a background this dark the gain over plain
+    // translucency is small. 0.82 is deliberately high: much lower and the icons
+    // start competing with whatever scrolls underneath them, which is worse than
+    // opaque.
+    backgroundColor: withAlpha(theme.colors.surface, 0.82),
+    // A hairline edge. Against a translucent fill it reads as the boundary of a
+    // floating object; without it the pill's edge dissolves wherever the content
+    // behind happens to be dark.
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: withAlpha(theme.colors.secondarySilver, 0.12),
     borderTopWidth: 0,
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,

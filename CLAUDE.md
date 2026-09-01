@@ -332,3 +332,96 @@ a travel "passport" feature, and an AI concierge.
     placeholder secret so Operations cannot run it from the portal yet. Reviews
     cannot be deleted from the portal — the rules only permit a review's author,
     and widening that is a deliberate decision not yet taken.
+- 2026-08-23/31: QA's eight bugs, verification by code, the App Store pass,
+  and the move to Azure OpenAI. The through-line of the week: several features
+  had been **written but never read** — the code ran, nothing consumed it.
+  * **Deepak's eight QA bugs, all cleared.** The worst two were both "the read
+    was never built": reservations were written to `lounges/{id}/reservations`
+    and shown in the Owner Portal, but the member who booked could not see their
+    own booking anywhere (new `MyReservationsScreen` + `getMyReservations`), and
+    collections could be created but never renamed, deleted, or emptied — the
+    rules had always permitted all three, there was simply no caller. The
+    blocker: **every Search filter chip navigates with no query**, which meant
+    `getAllLounges()` — 8,496 docs — then a card AND a native map marker per
+    result. Now a bounded radius, 30 at a time, markers capped at 150 (MapScreen
+    was capped in August for this exact reason; this screen has its own MapView
+    and was missed).
+  * **Found while investigating, worse than what QA reported:** the admin
+    portal's `adminRebuildCityStats` wrote `{city, count, image}` against an app
+    reading `{id, name, count, imageUri}`. It type-checked, linted and deployed
+    clean — and every one of the 2,017 cities on the Search tab rendered as the
+    literal word **"undefined"** for a day. Reader now accepts both shapes and
+    DROPS an entry it cannot name; `normalizeCityStats` is extracted and tested
+    (4 of 6 tests fail against the old reader). **The portal is a separate
+    tsconfig project, so nothing type-checks its idea of a document against the
+    app's** — this bit twice in a week (see issueReports below). Copy types from
+    `src/types/firestore.ts`; do not write down what a field ought to be called.
+  * **Email verification is a 6-digit code now, not a link** — and so is password
+    reset. Firebase has no email-OTP, so both are Cloud Functions that email a
+    code and then set Firebase's own `emailVerified` (or password), which is why
+    the 46 app files, 16 rules checks and both portals needed no changes. The
+    reset endpoints are **unauthenticated by nature**, so they answer identically
+    for a known and unknown address (enumeration), and rate-limit per address AND
+    per IP. Codes are hashed, uid-salted, 5 attempts, 10 minutes, and
+    `firestore.rules` denies both code collections to everyone including admins —
+    a leaked hash of a 6-digit secret is instantly brute-forced, so the attempt
+    limit IS the defence. 55 rules tests.
+  * **`FROM_EMAIL` had been the string `no-reply@REPLACE_WITH_REAL_DOMAIN.com`
+    since 2026-08-10**, so no email function in this project had ever sent.
+    `sendClaimInquiryEmail` had been failing silently for three weeks; claims were
+    saved, sales were never told. Sarthad added five SendGrid CNAMEs to GoDaddy;
+    `enteraxion.com` is domain-authenticated and everything sends from
+    `no-reply@enteraxion.com`. **Do not add the `_dmarc` TXT SendGrid also
+    lists** — one already exists and a second breaks DMARC for the whole company.
+  * **App Store pass.** Built in-app account deletion (Apple 5.1.1(v), a certain
+    rejection without it) — which exposed that `adminDeleteMember` was itself
+    incomplete, leaving members' names, review text and phone numbers across the
+    directory; both now share `purgeMember`. iPad support withdrawn
+    (`TARGETED_DEVICE_FAMILY` was "1,2" with no screen designed for it). **The
+    cannabis type was deleted after measuring it**: 34 of 8,496, not one from a
+    real category — all name-guesses, and mostly wrong ("Kush Cigar House" is a
+    cigar shop). Removing it fixed 26 misclassifications AND cleared guideline
+    1.4.3. Every "Coming Soon" dialog is gone. Privacy policy rewritten — it
+    predated the ID feature and described no identity documents at all — and
+    terms of service written from scratch; both linked from Settings and at
+    sign-up. Build 6 archived.
+  * **The AI Concierge is live, on Azure OpenAI.** It sat switched off from
+    2026-08-18 waiting on an Anthropic key that needed a new vendor and a budget
+    approval; Abhilash pointed out the company already runs Azure OpenAI on a
+    funded account. Endpoint `https://lounge-locator-ai.openai.azure.com/`,
+    deployment **`gpt-4.1-mini`** (Azure refuses new `gpt-4o-mini` deployments —
+    ServiceModelDeprecating), key in `AZURE_OPENAI_API_KEY`. Only the API call
+    changed: the grounding — real candidates from Firestore, model constrained to
+    that list, returned ids filtered against what was offered — is
+    provider-agnostic. Verified live: a Houston question returned two real
+    Houston lounges. **Azure access lives in Dr. Brinkley's tenant
+    (`julianlbrinkleyyahoo.onmicrosoft.com`); Sarthak can grant it.** Note that
+    Azure directory membership and role assignment are separate — a role
+    assigned to someone not yet invited into the directory does nothing, and the
+    portal does not warn you.
+  * **Where the Concierge lives:** the Search tab, under the search bar. It was
+    on the Map (too hidden), then the top of Home, then the bottom of Home, and
+    looked wrong in all three — Home is a browsing surface and a text input has
+    nothing to do with what surrounds it. Search is where someone has already
+    decided they are looking. It also stopped presenting itself as **a person
+    called "Julian Rossi" with a stock portrait**; it is software, and that gets
+    more misleading the better the answers get.
+  * **`users/{uid}/issueReports` were unreadable in the portal** for the same
+    invented-shape reason (`message`/`subject` vs the app's `description`), and
+    "Mark resolved" had never worked — read was granted to admins, write was not.
+  * Fixed too: the Map showed a Nebraska lounge while centred on Texas (two
+    queries in flight, the slower one from the default US-centre viewport landing
+    last — now a request token); LoungeDetail never refetched, so a submitted
+    claim still offered "Claim this business"; seven form screens had their
+    bottom hidden by the floating tab bar; the splash logo sat as a visible box
+    (the supplied PNG has **no alpha** and its black corners baked in — do not
+    try to flood-fill it, it eats the badge; match the screen instead).
+  * **Still open:** AI-based ID verification (Julian asked 2026-08-25, reversing
+    the 2026-08-19 "stays manual" decision) — `src/utils/idBarcode.ts` is built
+    and tested but unwired, and the plan is barcode + vision cross-check with
+    auto-approve only on full agreement, everything else to the existing manual
+    queue. **The privacy policy says "no third party sees them" and must be
+    updated before that ships.** Also open: the Google Places backfill (~$192,
+    phone absent on all 8,496, 5,080 placeholder hours, 4,163 no photo), social
+    sign-in OAuth, and the four mock Concierge screens (Inspiration, Results,
+    Saved Conversations, Trip Planner) which nothing routes to.

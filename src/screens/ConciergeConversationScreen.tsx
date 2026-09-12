@@ -24,7 +24,7 @@ import {
   Animated,
   Easing,
   Image,
-  KeyboardAvoidingView,
+  Keyboard,
   Linking,
   Platform,
   Pressable,
@@ -35,8 +35,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import {
+  useNavigation,
+  useRoute,
+  type RouteProp,
+} from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ChevronLeft,
@@ -112,8 +119,12 @@ function toCompactSuggestion(lounge: Lounge): CompactSuggestion {
   };
 }
 
-type ConciergeNavigationProp = NativeStackNavigationProp<ConciergeStackParamList>;
-type ConciergeConversationRouteProp = RouteProp<ConciergeStackParamList, 'ConciergeConversation'>;
+type ConciergeNavigationProp =
+  NativeStackNavigationProp<ConciergeStackParamList>;
+type ConciergeConversationRouteProp = RouteProp<
+  ConciergeStackParamList,
+  'ConciergeConversation'
+>;
 
 function LoadingOverlay() {
   const spin = useRef(new Animated.Value(0)).current;
@@ -138,7 +149,10 @@ function LoadingOverlay() {
     };
   }, [spin]);
 
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={styles.loadingScreen}>
@@ -148,7 +162,9 @@ function LoadingOverlay() {
         </Animated.View>
       </View>
       <Text style={styles.loadingTitle}>Crafting Your Experience</Text>
-      <Text style={styles.loadingStatus}>{loadingStatusMessages[statusIndex]}</Text>
+      <Text style={styles.loadingStatus}>
+        {loadingStatusMessages[statusIndex]}
+      </Text>
     </View>
   );
 }
@@ -184,7 +200,11 @@ function RecommendationCardView({
       <View style={styles.recImageWrap}>
         <Image source={{ uri: card.image }} style={styles.recImage} />
         <View style={styles.recRatingBadge}>
-          <Star size={11} color={theme.colors.accentGold} fill={theme.colors.accentGold} />
+          <Star
+            size={11}
+            color={theme.colors.accentGold}
+            fill={theme.colors.accentGold}
+          />
           <Text style={styles.recRatingText}>{card.rating}</Text>
         </View>
       </View>
@@ -194,7 +214,9 @@ function RecommendationCardView({
           <Text style={styles.recName} numberOfLines={1}>
             {card.name}
           </Text>
-          {card.distance ? <Text style={styles.recDistance}>{card.distance}</Text> : null}
+          {card.distance ? (
+            <Text style={styles.recDistance}>{card.distance}</Text>
+          ) : null}
         </View>
         <View style={styles.recLocationRow}>
           <MapPin size={12} color={theme.colors.mutedGray} />
@@ -220,15 +242,25 @@ function RecommendationCardView({
         </View>
 
         <View style={styles.recSecondaryRow}>
-          <Pressable style={styles.secondaryAction} onPress={onToggleFavorite} hitSlop={8}>
+          <Pressable
+            style={styles.secondaryAction}
+            onPress={onToggleFavorite}
+            hitSlop={8}
+          >
             <Heart
               size={14}
-              color={favorited ? theme.colors.accentGold : theme.colors.mutedGray}
+              color={
+                favorited ? theme.colors.accentGold : theme.colors.mutedGray
+              }
               fill={favorited ? theme.colors.accentGold : 'transparent'}
             />
             <Text style={styles.secondaryActionText}>Save</Text>
           </Pressable>
-          <Pressable style={styles.secondaryAction} onPress={onShare} hitSlop={8}>
+          <Pressable
+            style={styles.secondaryAction}
+            onPress={onShare}
+            hitSlop={8}
+          >
             <Share2 size={14} color={theme.colors.mutedGray} />
             <Text style={styles.secondaryActionText}>Share</Text>
           </Pressable>
@@ -238,7 +270,11 @@ function RecommendationCardView({
   );
 }
 
-function CompactSuggestionRow({ suggestion }: { suggestion: CompactSuggestion }) {
+function CompactSuggestionRow({
+  suggestion,
+}: {
+  suggestion: CompactSuggestion;
+}) {
   return (
     <View style={styles.compactRow}>
       <Image source={{ uri: suggestion.image }} style={styles.compactThumb} />
@@ -283,7 +319,9 @@ function NoResultsCard({
       </View>
       <View style={styles.noResultsActionRow}>
         <Pressable style={styles.noResultsPrimaryButton} onPress={onExplore}>
-          <Text style={styles.noResultsPrimaryText}>Explore Nearby Lounges</Text>
+          <Text style={styles.noResultsPrimaryText}>
+            Explore Nearby Lounges
+          </Text>
         </Pressable>
         <Pressable style={styles.noResultsSecondaryButton} onPress={onOpenMap}>
           <Text style={styles.noResultsSecondaryText}>Open Map</Text>
@@ -299,13 +337,56 @@ export default function ConciergeConversationScreen() {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  /**
+   * Keyboard height, tracked by hand.
+   *
+   * KeyboardAvoidingView is the obvious tool and it does not work on this
+   * screen. It measures its own frame relative to its PARENT and compares that
+   * against keyboard coordinates given in absolute screen space; this screen is
+   * presented as a modal (see AppNavigator), so the two are in different
+   * coordinate spaces and the computed inset comes out as zero. The keyboard
+   * then sits straight over the input bar, which is exactly what Rohith
+   * reported — and what wrapping the bar, and later the whole screen, both
+   * failed to fix.
+   *
+   * Listening to the keyboard directly sidesteps the measurement entirely: the
+   * height it reports is absolute and needs no frame of reference.
+   */
+  const insets = useSafeAreaInsets();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    // `will` events on iOS so the bar travels with the keyboard rather than
+    // snapping into place after it has finished animating.
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, event => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  // The reported height includes the home-indicator strip, which SafeAreaView
+  // has already reserved as padding — subtracting it stops the bar floating a
+  // finger's width above the keyboard.
+  const keyboardInset =
+    keyboardHeight > 0 ? Math.max(keyboardHeight - insets.bottom, 0) : 0;
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
   const handledInitialQuery = useRef(false);
   const { profile } = useUserProfile();
   const userId = auth.currentUser?.uid;
   // Kept in a ref so every save after the first updates the same document
   // instead of scattering one-turn fragments through the member's list.
-  const conversationId = useRef<string | undefined>(route.params?.conversationId);
+  const conversationId = useRef<string | undefined>(
+    route.params?.conversationId,
+  );
 
   const sendMessage = (text: string) => {
     const trimmed = text.trim();
@@ -326,13 +407,21 @@ export default function ConciergeConversationScreen() {
     // stateless server-side, so this is what gives it memory of what the
     // member already said.
     const turns: ConciergeTurn[] = [...messages, userMessage]
-      .filter((m): m is Extract<ConversationMessage, { role: 'user' | 'ai' }> =>
-        m.role === 'user' || m.role === 'ai',
+      .filter(
+        (m): m is Extract<ConversationMessage, { role: 'user' | 'ai' }> =>
+          m.role === 'user' || m.role === 'ai',
       )
-      .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }));
+      .map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        text: m.text,
+      }));
 
     const key = `ai-${messages.length}-${trimmed.slice(0, 8)}`;
-    askConcierge(turns, profile?.homeCity, profile?.aiPreferences ?? DEFAULT_AI_PREFERENCES)
+    askConcierge(
+      turns,
+      profile?.homeCity,
+      profile?.aiPreferences ?? DEFAULT_AI_PREFERENCES,
+    )
       .then(({ reply, lounges }) => {
         // Persist the exchange. Best-effort and deliberately not awaited by
         // the UI: a failed save must not swallow an answer the member is
@@ -340,7 +429,11 @@ export default function ConciergeConversationScreen() {
         if (userId) {
           const persisted = [
             ...turns,
-            { role: 'assistant' as const, text: reply, loungeIds: lounges.map(l => l.id) },
+            {
+              role: 'assistant' as const,
+              text: reply,
+              loungeIds: lounges.map(l => l.id),
+            },
           ];
           saveConversation(userId, persisted, conversationId.current)
             .then(id => {
@@ -356,13 +449,18 @@ export default function ConciergeConversationScreen() {
                 role: 'ai',
                 text: reply,
                 recommendation: toRecommendationCard(lounges[0]),
-                moreSuggestion: lounges[1] ? toCompactSuggestion(lounges[1]) : undefined,
+                moreSuggestion: lounges[1]
+                  ? toCompactSuggestion(lounges[1])
+                  : undefined,
               }
             : { id: key, role: 'ai', text: reply, recommendation: null },
         ]);
       })
       .catch(() => {
-        setMessages(prev => [...prev, { id: key, role: 'ai-no-results', query: trimmed }]);
+        setMessages(prev => [
+          ...prev,
+          { id: key, role: 'ai-no-results', query: trimmed },
+        ]);
       })
       .finally(() => setIsLoading(false));
   };
@@ -391,13 +489,19 @@ export default function ConciergeConversationScreen() {
               timestamp: '',
             });
           } else {
-            const lounges = turn.loungeIds?.length ? await getLoungesByIds(turn.loungeIds) : [];
+            const lounges = turn.loungeIds?.length
+              ? await getLoungesByIds(turn.loungeIds)
+              : [];
             rehydrated.push({
               id: `saved-a-${index}`,
               role: 'ai',
               text: turn.text,
-              recommendation: lounges[0] ? toRecommendationCard(lounges[0]) : null,
-              moreSuggestion: lounges[1] ? toCompactSuggestion(lounges[1]) : undefined,
+              recommendation: lounges[0]
+                ? toRecommendationCard(lounges[0])
+                : null,
+              moreSuggestion: lounges[1]
+                ? toCompactSuggestion(lounges[1])
+                : undefined,
             });
           }
         }
@@ -444,11 +548,15 @@ export default function ConciergeConversationScreen() {
   };
 
   const exploreNearbyLounges = () => {
-    (navigation.navigate as (name: string, params?: object) => void)('Main', { screen: 'Search' });
+    (navigation.navigate as (name: string, params?: object) => void)('Main', {
+      screen: 'Search',
+    });
   };
 
   const openMap = () => {
-    (navigation.navigate as (name: string, params?: object) => void)('Main', { screen: 'Map' });
+    (navigation.navigate as (name: string, params?: object) => void)('Main', {
+      screen: 'Map',
+    });
   };
 
   const toggleFavorite = (id: string) => {
@@ -465,90 +573,117 @@ export default function ConciergeConversationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      {/* ---------------- Header ---------------- */}
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back" hitSlop={12}>
-          <ChevronLeft size={24} color={theme.colors.white} />
-        </Pressable>
-        {/* A mark, not a face. This header used to show a stock photograph of a
+      {/* Padding the column rather than the bar. The ScrollView below has
+          `flex: 1`, so this space is taken from the transcript and the input bar
+          rides up on top of the keyboard — no measurement, no coordinate spaces
+          to reconcile. See the keyboardHeight listener above for why
+          KeyboardAvoidingView could not do this here. */}
+      <View style={[styles.flex, { paddingBottom: keyboardInset }]}>
+        {/* ---------------- Header ---------------- */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={12}
+          >
+            <ChevronLeft size={24} color={theme.colors.white} />
+          </Pressable>
+          {/* A mark, not a face. This header used to show a stock photograph of a
             man and the name "Julian Rossi" — an invented person. It is software,
             and dressing it as a named human is misleading in a way that gets
             worse the better the answers get: a member who believes a person is
             reading this will tell it things they would not type into a machine.
             Rohith flagged the photo on 2026-08-31. */}
-        <View style={styles.brandBadge}>
-          <Sparkles size={17} color={theme.colors.accentGold} />
-        </View>
-        <View style={styles.headerTextGroup}>
-          <Text style={styles.headerCaption}>Lounge Locator</Text>
-          <Text style={styles.headerName}>Concierge</Text>
-        </View>
-        {/* The overflow button is gone. It offered "Conversation options are
+          <View style={styles.brandBadge}>
+            <Sparkles size={17} color={theme.colors.accentGold} />
+          </View>
+          <View style={styles.headerTextGroup}>
+            <Text style={styles.headerCaption}>Lounge Locator</Text>
+            <Text style={styles.headerName}>Concierge</Text>
+          </View>
+          {/* The overflow button is gone. It offered "Conversation options are
             coming soon", and there are no options to offer: this screen has no
             rename, no export, no delete — SavedConversations is still mock. When
             any of those become real, this is where the button goes back. */}
-      </View>
+        </View>
 
-      {isLoading ? (
-        <LoadingOverlay />
-      ) : (
-        <ScrollView {...keyboardAwareScrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {messages.map(message => {
-            if (message.role === 'user') {
-              return (
-                <View key={message.id} style={styles.userBlock}>
-                  <View style={styles.userBubble}>
-                    <Text style={styles.userBubbleText}>{message.text}</Text>
+        {isLoading ? (
+          <LoadingOverlay />
+        ) : (
+          <ScrollView
+            {...keyboardAwareScrollProps}
+            // `flex: 1` is load-bearing, not cosmetic. Without a style the
+            // ScrollView sizes to its CONTENT inside this flex column: an empty
+            // conversation left the input bar jammed under the header, and a long
+            // one pushed it off the bottom of the screen entirely — which reads as
+            // "the keyboard won't open", because there is nothing left to tap.
+            style={styles.scroll}
+            // Overrides the shared props deliberately. Those set
+            // automaticallyAdjustKeyboardInsets for screens whose input scrolls
+            // WITH the content; here the input bar sits outside the ScrollView
+            // and the keyboardInset padding above already moves it. Leaving both
+            // on compensates for the keyboard twice — the same mistake made on
+            // the review and reserve forms.
+            automaticallyAdjustKeyboardInsets={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {messages.map(message => {
+              if (message.role === 'user') {
+                return (
+                  <View key={message.id} style={styles.userBlock}>
+                    <View style={styles.userBubble}>
+                      <Text style={styles.userBubbleText}>{message.text}</Text>
+                    </View>
+                    <Text style={styles.userTimestamp}>
+                      {message.timestamp}
+                    </Text>
                   </View>
-                  <Text style={styles.userTimestamp}>{message.timestamp}</Text>
-                </View>
-              );
-            }
+                );
+              }
 
-            if (message.role === 'ai-no-results') {
+              if (message.role === 'ai-no-results') {
+                return (
+                  <View key={message.id} style={styles.aiBlock}>
+                    <NoResultsCard
+                      query={message.query}
+                      onExplore={exploreNearbyLounges}
+                      onOpenMap={openMap}
+                    />
+                  </View>
+                );
+              }
+
+              // A reply with no lounge attached is normal, not a failure —
+              // "how do I cut a torpedo?" has an answer and no venue.
+              const card = message.recommendation;
               return (
                 <View key={message.id} style={styles.aiBlock}>
-                  <NoResultsCard
-                    query={message.query}
-                    onExplore={exploreNearbyLounges}
-                    onOpenMap={openMap}
-                  />
+                  <View style={styles.aiTextCard}>
+                    <Text style={styles.aiText}>{message.text}</Text>
+                  </View>
+                  {card ? (
+                    <RecommendationCardView
+                      card={card}
+                      favorited={favoritedIds.has(card.id)}
+                      onToggleFavorite={() => toggleFavorite(card.id)}
+                      onViewDetails={() => openLoungeDetails(card)}
+                    />
+                  ) : null}
+                  {message.moreSuggestion ? (
+                    <CompactSuggestionRow suggestion={message.moreSuggestion} />
+                  ) : null}
                 </View>
               );
-            }
+            })}
+          </ScrollView>
+        )}
 
-            // A reply with no lounge attached is normal, not a failure —
-            // "how do I cut a torpedo?" has an answer and no venue.
-            const card = message.recommendation;
-            return (
-              <View key={message.id} style={styles.aiBlock}>
-                <View style={styles.aiTextCard}>
-                  <Text style={styles.aiText}>{message.text}</Text>
-                </View>
-                {card ? (
-                  <RecommendationCardView
-                    card={card}
-                    favorited={favoritedIds.has(card.id)}
-                    onToggleFavorite={() => toggleFavorite(card.id)}
-                    onViewDetails={() => openLoungeDetails(card)}
-                  />
-                ) : null}
-                {message.moreSuggestion ? (
-                  <CompactSuggestionRow suggestion={message.moreSuggestion} />
-                ) : null}
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* ---------------- Input bar ---------------- */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* ---------------- Input bar ---------------- */}
         <View style={styles.inputBar}>
           <TextInput
-        accessibilityLabel="Ask anything..."
+            accessibilityLabel="Ask anything..."
             style={styles.input}
             placeholder="Ask anything..."
             placeholderTextColor={theme.colors.mutedGray}
@@ -558,11 +693,15 @@ export default function ConciergeConversationScreen() {
             editable={!isLoading}
             returnKeyType="send"
           />
-          <Pressable style={styles.sendButton} onPress={() => sendMessage(inputText)} hitSlop={8}>
+          <Pressable
+            style={styles.sendButton}
+            onPress={() => sendMessage(inputText)}
+            hitSlop={8}
+          >
             <Send size={16} color={theme.colors.primaryBlack} />
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -616,6 +755,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  flex: { flex: 1 },
+  scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,

@@ -456,3 +456,67 @@ a travel "passport" feature, and an AI concierge.
   * 5 pending submissions, 3 stale (`test@`, `qa@`, Julian's, 24-26 Aug) with no
     `documentType` — they predate the two-sided flow, so the automated review
     cannot act on them and they need clearing by hand.
+- 2026-09-01: The ID review learned to explain itself, and to check in the
+  right order. Two commits after the first live run.
+  * **Every failure now names itself and says what will fix it.** A referral
+    used to write nothing at all, so "we read your document and want a second
+    opinion", "Azure rejected our key" and "this code is not deployed" all
+    produced the identical "Awaiting review" card — which is exactly why the
+    stale bundle went unnoticed. Each outcome now carries a member-facing
+    sentence AND a named remedy, stored separately in
+    `ageVerification.resolution` because they disagree more often than you would
+    expect: "we have no date of birth on your account" is a problem with the
+    account, not the photograph, and offering that member the camera points them
+    at the wrong thing. Values are `retake`, `fix_date_of_birth`, `none`.
+  * **A mistyped date of birth is fixable now** — `updateDeclaredDateOfBirth`
+    writes the corrected date, requeues to `pending` and re-runs the review
+    against the photographs already on file, so nothing is retaken. The rules
+    always permitted a member to move their own record TO pending (never to
+    `verified`); two new rules tests pin that, including the abuse of sending
+    the correction and the verdict together. 57 rules tests.
+  * **Order of checks matters and was wrong.** Rohith spotted it: the mismatch
+    was compared before the age, so an under-21 document whose date disagreed
+    with the account was answered with "correct your date of birth" — inviting
+    someone we were about to refuse to adjust their answer. Everything that
+    disqualifies the document now runs first (readable, in date, 21+), and only
+    then is the account reconciled. That ordering is what makes the date field
+    safe to expose at all.
+  * The date we read is **never quoted back** — the member can read their own
+    document, and echoing our OCR is free calibration for a borrowed ID.
+  * Also corrected two statements that had stopped being true: the sign-up wall
+    said "Reviewed by a person on our team" and promised a browse "while our
+    team checks it".
+  * `DateOfBirthFields` extracted to `src/components/`. **SignUpScreen still has
+    its own copy on purpose** — highest-risk screen in the app, days before
+    submission; whoever is next in there with time should adopt the shared one.
+- 2026-09-12: The Concierge keyboard, and teaching it what it is for.
+  * **"The keyboard is not opening" was two bugs, and the first was layout.**
+    `ConciergeConversationScreen`'s ScrollView had no `style` prop, only
+    `contentContainerStyle`, so it sized to its CONTENT inside a flex column:
+    an empty conversation left the input bar jammed under the header, and a long
+    one pushed it off the bottom of the screen. Tapping where the input should be
+    hit nothing. **`flex: 1` on a ScrollView in a flex column is load-bearing.**
+  * **KeyboardAvoidingView cannot fix this screen** — established over two failed
+    attempts. It measures its own frame RELATIVE TO ITS PARENT and compares that
+    against keyboard coordinates in ABSOLUTE SCREEN SPACE; the Concierge is
+    presented as a modal, so those are different coordinate systems and the
+    computed inset is zero. Wrapping the bar failed; wrapping the whole screen
+    failed identically. It now listens to `keyboardWillShow`/`WillHide` and pads
+    the flex column by the reported height minus `insets.bottom` — absolute, no
+    frame of reference to reconcile. `will` not `did`, so the bar travels with
+    the keyboard. Dropped `automaticallyAdjustKeyboardInsets` here or the
+    keyboard is compensated for twice.
+  * **The Concierge answered everything, and the app not at all.** Its prompt
+    gave it two jobs — recommend from the candidate list, or answer cigar
+    knowledge — so "how do I claim my business?" matched neither and it
+    recommended lounges instead. It now carries the app's real facts (claiming,
+    reserving, verification, reviews, collections, Passport) and, separately, a
+    hard scope: lounges, cigars, and this app. The line doing the work is
+    **"that includes questions you could easily answer"** — without it a model
+    reads a description of its expertise as a description of its *limits* and
+    still explains Java, because it can. Pricing is deliberately NOT in the
+    prompt: an AI quoting $399/month is a commitment that outlives the price.
+  * Also written this week: a full technical handover for Abhilash
+    (`~/Desktop/Lounge-Locator-Handover.docx`, ~10k words) and a short personal
+    overview. **43 commits were still unpushed when they were written** — that
+    remains the single biggest risk to this project.

@@ -4,6 +4,8 @@
 node_modules/
 owner-portal/dist/
 owner-portal/node_modules/
+admin-portal/dist/
+admin-portal/node_modules/
 functions/lib/
 functions/node_modules/
 ios/

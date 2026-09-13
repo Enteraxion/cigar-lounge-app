@@ -35,8 +35,20 @@
  */
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import {
+  onDocumentCreated,
+  onDocumentDeleted,
+} from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { AzureOpenAI } from 'openai';
+import {
+  ownerToNotify,
+  reservationCreatedNotification,
+  reservationCancelledNotification,
+  reviewPostedNotification,
+  type LoungeOwnership,
+  type OwnerNotification,
+} from './ownerNotifications';
 import {
   amenitiesFromGoogle,
   isRelevantGooglePlace,
@@ -53,6 +65,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { generateCode, hashCode } from './emailCode';
 import { reviewDocument, type ReadDocument } from './idReview';
 import { getStorage } from 'firebase-admin/storage';
+import { getMessaging } from 'firebase-admin/messaging';
 import { logger } from 'firebase-functions';
 import sgMail from '@sendgrid/mail';
 
@@ -2171,5 +2184,183 @@ export const reviewIdDocument = onCall(
           : {}),
       };
     });
+  },
+);
+
+
+// ---------------------------------------------------------------------------
+// Owner notifications
+// ---------------------------------------------------------------------------
+
+/**
+ * Tells a lounge's owner when a guest acts on their listing.
+ *
+ * Triggers rather than client writes, and the reasoning is in
+ * functions/src/ownerNotifications.ts — the short version is that a member able
+ * to write "a guest booked a table" into somebody's notifications could forge
+ * the cancellation too, and cancelling is a plain deleteDoc with nowhere for a
+ * client hook to live.
+ *
+ * Every one of these ends in silence for most of the directory: 8,496 lounges
+ * and a handful claimed, so `ownerToNotify` returning null is the common path,
+ * not an error.
+ */
+async function notifyOwner(
+  loungeId: string,
+  actorId: string | undefined,
+  build: (lounge: LoungeOwnership | undefined) => OwnerNotification,
+): Promise<void> {
+  const snapshot = await db.doc(`lounges/${loungeId}`).get();
+  const lounge = snapshot.data() as LoungeOwnership | undefined;
+  const ownerId = ownerToNotify(lounge, actorId);
+  if (!ownerId) {
+    return;
+  }
+  const notification = build(lounge);
+  await db.collection(`users/${ownerId}/notifications`).add({
+    ...notification,
+    read: false,
+    createdAt: Timestamp.now(),
+  });
+  logger.info('notifyOwner', { loungeId, ownerId, type: notification.type });
+  await pushToMember(ownerId, notification);
+}
+
+/**
+ * Sends the same notification to the member's devices.
+ *
+ * Best effort, and deliberately after the Firestore write rather than instead of
+ * it. The in-app list is the record — it survives a declined permission, a
+ * device that has never registered, and an APNs outage. Push is the delivery,
+ * and delivery failing must not lose the notification.
+ *
+ * Dead tokens are pruned as they are found. A token goes stale when the app is
+ * uninstalled or restored onto a new device, and FCM says so explicitly; left
+ * alone they accumulate for the life of the account and every send retries them.
+ */
+async function pushToMember(userId: string, notification: OwnerNotification): Promise<void> {
+  try {
+    const tokensSnapshot = await db.collection(`users/${userId}/fcmTokens`).get();
+    const tokens = tokensSnapshot.docs.map(d => d.id);
+    if (tokens.length === 0) {
+      return;
+    }
+
+    const response = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: { title: notification.title, body: notification.body },
+      // Read by the app when a notification is tapped, to open the right lounge.
+      // Every value must be a string — FCM rejects anything else.
+      data: { loungeId: notification.data.loungeId, type: notification.type },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            // So iOS shows the count on the app icon rather than only a banner
+            // the member may miss while the phone is in a pocket.
+            badge: 1,
+          },
+        },
+      },
+    });
+
+    const dead = response.responses
+      .map((r, i) => (!r.success && isDeadToken(r.error?.code) ? tokens[i] : null))
+      .filter((t): t is string => t !== null);
+    await Promise.all(
+      dead.map(token => db.doc(`users/${userId}/fcmTokens/${token}`).delete().catch(() => {})),
+    );
+
+    logger.info('pushToMember', {
+      userId,
+      sent: response.successCount,
+      failed: response.failureCount,
+      pruned: dead.length,
+    });
+  } catch (error) {
+    // The notification is already written. Push failing is our problem to see in
+    // the logs, not a reason to fail the trigger and have it retried.
+    logger.error('pushToMember failed', { userId, error: String(error) });
+  }
+}
+
+/** FCM's way of saying this device will never be reachable on this token again. */
+function isDeadToken(code: string | undefined): boolean {
+  return (
+    code === 'messaging/registration-token-not-registered' ||
+    code === 'messaging/invalid-registration-token' ||
+    code === 'messaging/invalid-argument'
+  );
+}
+
+/** Formats a reservation's date the way the owner's own portal shows it. */
+function reservationDateLabel(date: unknown): string | undefined {
+  const seconds = (date as { _seconds?: number; seconds?: number } | undefined);
+  const value = seconds?._seconds ?? seconds?.seconds;
+  if (typeof value !== 'number') {
+    return undefined;
+  }
+  return new Date(value * 1000).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+export const onReservationCreated = onDocumentCreated(
+  'lounges/{loungeId}/reservations/{reservationId}',
+  async event => {
+    const reservation = event.data?.data();
+    if (!reservation) {
+      return;
+    }
+    const loungeId = event.params.loungeId;
+    await notifyOwner(loungeId, reservation.userId as string | undefined, lounge =>
+      reservationCreatedNotification(loungeId, lounge, {
+        guestName: reservation.guestName as string | undefined,
+        partySize: reservation.partySize as number | undefined,
+        timeSlot: reservation.timeSlot as string | undefined,
+        dateLabel: reservationDateLabel(reservation.date),
+      }),
+    );
+  },
+);
+
+export const onReservationCancelled = onDocumentDeleted(
+  'lounges/{loungeId}/reservations/{reservationId}',
+  async event => {
+    // The deleted document is still readable here, which is the only reason a
+    // cancellation can say who cancelled and for when.
+    const reservation = event.data?.data();
+    if (!reservation) {
+      return;
+    }
+    const loungeId = event.params.loungeId;
+    await notifyOwner(loungeId, reservation.userId as string | undefined, lounge =>
+      reservationCancelledNotification(loungeId, lounge, {
+        guestName: reservation.guestName as string | undefined,
+        partySize: reservation.partySize as number | undefined,
+        timeSlot: reservation.timeSlot as string | undefined,
+        dateLabel: reservationDateLabel(reservation.date),
+      }),
+    );
+  },
+);
+
+export const onLoungeReviewCreated = onDocumentCreated(
+  'lounges/{loungeId}/reviews/{reviewId}',
+  async event => {
+    const review = event.data?.data();
+    if (!review) {
+      return;
+    }
+    const loungeId = event.params.loungeId;
+    await notifyOwner(loungeId, review.userId as string | undefined, lounge =>
+      reviewPostedNotification(loungeId, lounge, {
+        userName: review.userName as string | undefined,
+        rating: review.rating as number | undefined,
+      }),
+    );
   },
 );

@@ -84,6 +84,52 @@ const notification = (type: string) => ({
 describe('notification create rules', () => {
   const target = 'victim-1';
 
+  it('keeps a member\'s push tokens to themselves — including from admins', async () => {
+    // A token is a capability, not a record: anyone holding one can send that
+    // device a notification that looks like it came from us. The functions that
+    // send push read these through the Admin SDK and bypass rules entirely, so
+    // nothing needs read access here — not another member, and not an admin.
+    await assertSucceeds(
+      setDoc(doc(member(), 'users', 'member-1', 'fcmTokens', 'tok-1'), { platform: 'ios' }),
+    );
+    await assertFails(
+      setDoc(doc(member(), 'users', target, 'fcmTokens', 'tok-2'), { platform: 'ios' }),
+    );
+    await assertFails(getDoc(doc(admin(), 'users', 'member-1', 'fcmTokens', 'tok-1')));
+  });
+
+  it('refuses a member forging an owner notification', async () => {
+    // reservation_created, reservation_cancelled and new_review_on_owned_lounge
+    // are written ONLY by the Firestore triggers in functions/src/index.ts,
+    // which run as the Admin SDK and bypass these rules entirely. They are
+    // therefore deliberately absent from the client-write allowlist — a member
+    // who could forge "a guest booked a table" could forge forty of them, or
+    // the cancellation, and an owner who stops trusting these stops reading
+    // them. Not being in the list is the whole defence, so it is tested.
+    const db = member();
+    for (const type of [
+      'reservation_created',
+      'reservation_cancelled',
+      'new_review_on_owned_lounge',
+    ]) {
+      await assertFails(
+        addDoc(collection(db, 'users', target, 'notifications'), notification(type)),
+      );
+    }
+  });
+
+  it('refuses an ADMIN forging an owner notification too', async () => {
+    // Nothing about these is an administrative decision, so admin is not a
+    // reason to be able to write one by hand. The triggers are the only author.
+    const db = admin();
+    await assertFails(
+      addDoc(
+        collection(db, 'users', target, 'notifications'),
+        notification('reservation_created'),
+      ),
+    );
+  });
+
   it('lets a member write the notification types their own actions cause', async () => {
     // These stay open because a member favouriting or reviewing legitimately
     // notifies someone else — see userActionsService.createNotification.

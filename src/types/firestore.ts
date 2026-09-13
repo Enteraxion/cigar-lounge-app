@@ -540,7 +540,20 @@ export type NotificationType =
   | 'claim_rejected'
   | 'ownership_revoked'
   | 'age_verified'
-  | 'age_rejected';
+  | 'age_rejected'
+  /**
+   * Owner-facing: something happened at a lounge this member owns.
+   *
+   * Written ONLY by the Firestore triggers in functions/src/index.ts, which run
+   * as the Admin SDK — so unlike the member-action types above, these are
+   * deliberately absent from the client-write allowlist in firestore.rules. A
+   * member who could forge "a guest booked a table" into an owner's
+   * notifications could also forge the cancellation, and an owner who stops
+   * trusting these stops reading them.
+   */
+  | 'reservation_created'
+  | 'reservation_cancelled'
+  | 'new_review_on_owned_lounge';
 
 export type NotificationDocument = {
   id: string;

@@ -26,17 +26,33 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!userId) return;
-    // A lounge keeps `claimantUserId` for both a pending and an approved
-    // claim (only a rejection clears it — see the mobile app's
-    // ownerService.rejectLoungeClaim), so this one query covers either state.
-    const q = query(collection(db, 'lounges'), where('claimantUserId', '==', userId));
+    /**
+     * Both fields, because ownership and a claim are not the same thing.
+     *
+     * This used to ask only for `claimantUserId`, on the reasoning that the
+     * field survives approval — which is true of the approval path in
+     * ownerService.approveLoungeClaim, and not true of every lounge. Ownership
+     * can be set without a claim ever existing (the demo seed does it, and so
+     * does an admin assigning one), and such a lounge was invisible here while
+     * the app's own My Shops listed it perfectly well: getLoungesForOwner has
+     * always queried both. Rohith hit exactly that on 2026-09-13 — a shop he
+     * owned, absent from the portal that exists to manage it.
+     *
+     * Firestore has no OR across different fields, so this is two queries
+     * merged by id.
+     */
+    const owned = query(collection(db, 'lounges'), where('ownerId', '==', userId));
+    const claimed = query(collection(db, 'lounges'), where('claimantUserId', '==', userId));
 
-    getDocs(q)
-      .then(async snapshot => {
-        const lounges: Lounge[] = snapshot.docs.map(d => ({
-          id: d.id,
-          ...(d.data() as LoungeDocument),
-        }));
+    Promise.all([getDocs(owned), getDocs(claimed)])
+      .then(async ([ownedSnap, claimedSnap]) => {
+        // A lounge that is both owned and claimed by this member appears in
+        // both snapshots; keying by id is what stops it rendering twice.
+        const byId = new Map<string, Lounge>();
+        for (const d of [...ownedSnap.docs, ...claimedSnap.docs]) {
+          byId.set(d.id, { id: d.id, ...(d.data() as LoungeDocument) });
+        }
+        const lounges: Lounge[] = [...byId.values()];
 
         const now = new Date();
         const rows = await Promise.all(

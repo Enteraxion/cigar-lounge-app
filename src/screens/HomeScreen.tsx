@@ -45,6 +45,7 @@ import {
   Leaf,
   MapPin,
   Plus,
+  Sparkles,
   Star,
   User,
   Zap,
@@ -326,6 +327,7 @@ export default function HomeScreen() {
                 />
                 <View style={styles.featuredBadgeRow}>
                   <View style={styles.featuredBadge}>
+                    <Sparkles size={10} color={theme.colors.accentGold} />
                     <Text style={styles.featuredBadgeText}>Featured Lounge</Text>
                   </View>
                   <View style={styles.featuredTopRight}>
@@ -699,15 +701,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  /**
+   * A label, not a button.
+   *
+   * This was a slab of solid accent gold with black text, and that is what made
+   * it read as a call to action sitting on top of the photograph — Rohith,
+   * 2026-09-13: "it feels more like a button than a small featured label".
+   * Nothing about a featured marker is tappable, so it should not look it.
+   *
+   * The gold moves from the fill to the text, the icon and a hairline, over the
+   * same dark translucent scrim the rating pill beside it already uses. The two
+   * badges in this row now read as a pair rather than one shouting over the
+   * other, and the photograph shows through where a gold block used to be.
+   *
+   * The scrim rather than plain transparency is what keeps it legible: this card
+   * carries whatever photo a lounge supplied, and gold text alone would
+   * disappear over a bright one — the current featured image is a lit Vegas
+   * strip. The shadow does the same job at the badge's edge.
+   */
   featuredBadge: {
-    backgroundColor: theme.colors.accentGold,
-    paddingHorizontal: theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingLeft: 7,
+    paddingRight: 9,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.background, 0.72),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.gold.line,
+    ...theme.shadows.soft,
   },
   featuredBadgeText: {
     ...theme.typography.caption,
-    color: theme.colors.primaryBlack,
+    // A step down from caption's 10pt. At this size the letter-spacing is doing
+    // the work of making it read as a label, so the glyphs can afford to shrink.
+    fontSize: 9,
+    letterSpacing: 0.7,
+    color: theme.colors.accentGold,
   },
   featuredTopRight: {
     flexDirection: 'row',

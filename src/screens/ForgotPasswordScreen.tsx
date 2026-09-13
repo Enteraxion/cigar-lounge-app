@@ -34,6 +34,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 import { theme, withAlpha } from '../theme';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
+import AuthTextInput from '../components/AuthTextInput';
 import { requestPasswordResetCode, submitPasswordReset } from '../services/emailCodeService';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
@@ -172,6 +173,7 @@ export default function ForgotPasswordScreen() {
               <Pressable
                 style={({ pressed }) => [
                   styles.primaryButton,
+                  styles.successButton,
                   pressed && styles.primaryButtonPressed,
                 ]}
                 onPress={() => navigation.navigate('Login')}
@@ -214,25 +216,50 @@ export default function ForgotPasswordScreen() {
                 </View>
 
                 <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>New Password</Text>
+                  {/* The requirement sits beside the label, not in the
+                      placeholder. iOS draws the placeholder of a
+                      secureTextEntry field in the system password font —
+                      wide-tracked, and it ignores fontFamily — which clipped
+                      "At least 8 characters" to "At least 8 ch" (2026-09-13).
+                      No textContentType avoids that; bullets are what Login and
+                      SignUp use, and spaced bullets still read as bullets.
+                      Moving the rule out here is better anyway: it stays visible
+                      while they type, which is exactly when it matters. */}
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={styles.fieldLabel}>New Password</Text>
+                    <Text style={styles.fieldRule}>At least 8 characters</Text>
+                  </View>
                   <View style={styles.inputWrapper}>
                     <View style={styles.inputIconSlot}>
                       <Icon name="lock-closed-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
                     </View>
-                    <TextInput
+                    <AuthTextInput
                       accessibilityLabel="Choose a new password"
-                      style={styles.input}
-                      placeholder="At least 8 characters"
-                      placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                      placeholder="••••••••"
                       value={newPassword}
                       onChangeText={setNewPassword}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
+                      autoCorrect={false}
+                      /* `password`, deliberately not `newPassword`. The latter
+                         is semantically righter and switches iOS into Automatic
+                         Strong Password mode, which restyles the whole field —
+                         including drawing the placeholder in a wide-tracked font
+                         that clipped "At least 8 characters" to "At least 8 ch".
+                         Tried on 2026-09-13 and reverted the same hour. The
+                         generator is a small convenience on a reset screen; a
+                         visibly broken field is not a fair price for it. */
+                      textContentType="password"
+                      autoComplete="password"
                     />
-                    <Pressable onPress={() => setShowPassword(v => !v)} hitSlop={10}>
+                    <Pressable
+                      style={styles.inputTrailingIconSlot}
+                      onPress={() => setShowPassword(v => !v)}
+                      hitSlop={8}
+                    >
                       <Icon
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={18}
+                        size={16}
                         color={withAlpha(theme.colors.secondarySilver, 0.6)}
                       />
                     </Pressable>
@@ -278,15 +305,16 @@ export default function ForgotPasswordScreen() {
                     <View style={styles.inputIconSlot}>
                       <Icon name="mail-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
                     </View>
-                    <TextInput
-        accessibilityLabel="Enter your email"
-                      style={styles.input}
+                    <AuthTextInput
+                      accessibilityLabel="Enter your email"
                       placeholder="Enter your email"
-                      placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                       value={email}
                       onChangeText={setEmail}
                       autoCapitalize="none"
                       keyboardType="email-address"
+                      autoCorrect={false}
+                      textContentType="username"
+                      autoComplete="email"
                     />
                   </View>
                 </View>
@@ -462,6 +490,18 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: theme.colors.accentGold,
   },
+  /** Label left, rule right — same row, so it costs no vertical space. */
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  fieldRule: {
+    fontFamily: FONT_SANS_REGULAR,
+    fontSize: 11,
+    lineHeight: 16,
+    color: withAlpha(theme.colors.secondarySilver, 0.7),
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -472,6 +512,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   inputIconSlot: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /**
+   * The show/hide eye. Same 44pt slot as the leading icon, so the icon is
+   * centred in it rather than pressed against the border — which is how it
+   * looked until 2026-09-13, because the Pressable here carried no style at all
+   * while SignUpScreen's identical control did. Matching that is the point: a
+   * member sees this field and the sign-up one minutes apart.
+   *
+   * 44pt is also the smallest comfortable touch target, so the slot earns its
+   * width twice over.
+   */
+  inputTrailingIconSlot: {
     width: 44,
     alignItems: 'center',
     justifyContent: 'center',
@@ -525,6 +580,17 @@ const styles = StyleSheet.create({
   successBlock: {
     alignItems: 'center',
     gap: 12,
+  },
+  /**
+   * `successBlock` centres its children, which shrinks each one to its own
+   * content — right for the badge and the two lines of text, wrong for the
+   * button, which collapsed to the width of the words "Sign In" and read as a
+   * cramped square. Every other primary button in this flow fills its card, so
+   * this one stretches back out and matches them.
+   */
+  successButton: {
+    alignSelf: 'stretch',
+    marginTop: 4,
   },
   successIconBadge: {
     width: 64,

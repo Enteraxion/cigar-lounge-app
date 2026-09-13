@@ -50,7 +50,8 @@ const Stack = createNativeStackNavigator<ProfileStackParamList>();
 export default function ProfileNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+      <Stack.Screen name="ProfileHome" component={ProfileScreen}
+        options={{ gestureEnabled: false }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Passport" component={PassportScreen} />
       <Stack.Screen name="TravelTimeline" component={TravelTimelineScreen} />

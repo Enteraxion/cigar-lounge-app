@@ -53,7 +53,11 @@ export default function AgeVerificationRequiredScreen({
    */
   const handleSubmitted = (outcome: AutomatedReviewOutcome | null) => {
     if (outcome?.decision === 'approve') {
-      Alert.alert('You’re verified', 'Your age is confirmed — everything is unlocked.');
+      // No alert. IdReviewProgress has just shown "Verified" and held it for a
+      // beat, so a dialog saying the same thing is a second thing to dismiss
+      // between the member and the app they were promised. The wall dropping IS
+      // the confirmation — which is what Rohith asked for on 2026-09-13:
+      // straight in, once it passes.
     } else if (outcome?.decision === 'reject' && outcome.memberMessage) {
       // Not a dead end: they are inside the app, and the Profile route lets them
       // correct it. Saying so matters, or a rejection at the door reads as a

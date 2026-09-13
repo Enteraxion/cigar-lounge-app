@@ -84,12 +84,47 @@ export function deriveAgeGateState(verification: AgeVerification | null | undefi
   const deferred = !!verification?.deferredAt;
   return {
     loading: verification === undefined,
-    mustUploadId: status === 'pending' && !complete && !deferred,
+    // `|| submissionInFlight` keeps the wall mounted until the submission says
+    // it is done, not until the record says so — see beginIdSubmission.
+    mustUploadId:
+      (status === 'pending' && !complete && !deferred) || submissionInFlight,
     awaitingReview: status === 'pending' && complete,
     needsId: status === 'pending' && !complete && deferred,
     wasRejected: status === 'rejected',
     isVerified: status === 'verified',
   };
+}
+
+/**
+ * Holds the sign-up wall in place while a submission is still finishing.
+ *
+ * The listener below is live, so the instant attachIdDocument writes the images
+ * the record becomes complete, `mustUploadId` flips false and AppNavigator
+ * swaps the wall out for Main. That is correct for every other way the record
+ * can change — and wrong during a submission, because the automated review is
+ * still running and the screen showing its progress is a child of the wall. It
+ * was unmounted mid-review, so the animation never appeared and the member was
+ * dropped on Home with no idea whether anything had been checked (Rohith,
+ * 2026-09-13).
+ *
+ * Same shape as beginSignUpTransition in firebaseAuth.ts, which suppresses the
+ * auth listener for the same reason: a navigator must not react to an
+ * intermediate state that a flow is still in the middle of producing.
+ *
+ * IdDocumentCapture sets it around the whole submit, and clears it in a finally
+ * — a submission that throws must not wedge the member at the wall forever.
+ */
+let submissionInFlight = false;
+
+export function beginIdSubmission(): void {
+  submissionInFlight = true;
+}
+
+export function endIdSubmission(): void {
+  submissionInFlight = false;
+  // Re-publish so every mounted hook re-derives now the suppression is gone.
+  // Without this the wall stays up until the next unrelated record change.
+  republish();
 }
 
 /**
@@ -110,6 +145,11 @@ const subscribers = new Set<(value: Verification) => void>();
 function publish(value: Verification) {
   shared = value;
   subscribers.forEach(notify => notify(value));
+}
+
+/** Re-sends the current value, so every hook re-derives from it. */
+function republish() {
+  subscribers.forEach(notify => notify(shared));
 }
 
 /** Tests only — the app has one session per process. */

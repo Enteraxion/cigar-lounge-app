@@ -63,6 +63,9 @@ import {
 import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { uploadImage } from '../services/storageService';
+import { askForPushPermission } from '../services/pushService';
+import IdReviewProgress from './IdReviewProgress';
+import { beginIdSubmission, endIdSubmission } from '../hooks/useAgeVerification';
 import {
   attachIdDocument,
   type AutomatedReviewOutcome,
@@ -95,6 +98,11 @@ const DOCUMENT_ICON: Record<IdDocumentType, typeof IdCard> = {
 const CARD_ASPECT = 85.6 / 54;
 const PASSPORT_ASPECT = 125 / 88;
 
+/** A floor under the review screen, so a fast answer does not flash past. */
+const MINIMUM_REVIEW_MS = 2200;
+/** How long "Verified" is held before the app opens behind it. */
+const CONFIRMED_BEAT_MS = 1600;
+
 type Props = {
   /**
    * Called once the record is written, with what the automated review decided —
@@ -120,6 +128,13 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
   const [shots, setShots] = useState<Partial<Record<IdDocumentSide, string>>>({});
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  /**
+   * 'reviewing' while the model reads the document, 'done' for the beat that
+   * confirms it before the caller moves on. Separate from `uploading` because
+   * they are different waits: uploading has a progress bar and a known end,
+   * this has neither and is the part a member is actually anxious about.
+   */
+  const [review, setReview] = useState<'idle' | 'reviewing' | 'done'>('idle');
 
   const sides = useMemo(() => requiredSides(documentType), [documentType]);
 
@@ -257,6 +272,11 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
     }
     setUploading(true);
     setProgress(0);
+    // Holds the sign-up wall in place for the whole submission. Without it the
+    // live age listener drops the wall the instant the images land, unmounting
+    // this component mid-review — which is exactly why the progress screen
+    // never appeared (2026-09-13). Cleared in the finally below.
+    beginIdSubmission();
     try {
       // Sequential, and progress is reported across the whole set rather than
       // per file — a bar that fills and resets reads as a failed upload.
@@ -278,16 +298,58 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
       if (!urls.front) {
         throw new Error('missing front image');
       }
+      /**
+       * The review screen, and a floor under how briefly it can show.
+       *
+       * The read usually takes about four seconds, but it can come back almost
+       * at once — a rejection for an illegible photo needs no model call at
+       * all. A confirmation that flashes past is worse than no confirmation:
+       * the member is left unsure whether anything was checked. Same reasoning
+       * as the splash's minimum in AppNavigator.
+       */
+      setReview('reviewing');
+      const startedAt = Date.now();
       const outcome = await attachIdDocument(userId, documentType, {
         front: urls.front,
         back: urls.back,
       });
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < MINIMUM_REVIEW_MS) {
+        await new Promise(resolve => setTimeout(resolve, MINIMUM_REVIEW_MS - elapsed));
+      }
+
+      // The confirmed state only claims what actually happened. Anything short
+      // of an approval goes straight back to the caller, which has the wording
+      // for a rejection or a referral.
+      if (outcome?.decision === 'approve') {
+        setReview('done');
+        await new Promise(resolve => setTimeout(resolve, CONFIRMED_BEAT_MS));
+      } else {
+        setReview('idle');
+      }
+      /**
+       * The one moment worth spending the push permission prompt on.
+       *
+       * iOS grants an app exactly one chance at that dialog for the life of the
+       * install — refuse it and the only way back is Settings, which nobody
+       * does. Asking on first launch, before anyone knows what the app is,
+       * spends it for nothing. Here the member has just handed over a document
+       * and is waiting to hear whether it passed, so "can we tell you?" answers
+       * a question they already have.
+       *
+       * Deliberately not awaited before `onSubmitted` — the outcome screen
+       * should not wait on a system dialog — and deliberately unguarded by its
+       * result. A member who says no still has the in-app list.
+       */
+      askForPushPermission(userId).catch(() => {});
+
       // Handed up rather than announced here. What to say depends on the
       // outcome, and only the screen knows which surface the member is on — the
       // sign-up wall lets them straight into the app on approval, the voluntary
       // route simply updates in place.
       onSubmitted(outcome);
     } catch {
+      setReview('idle');
       // Retryable, not a dead end: the usual cause is a dropped connection, and
       // a member at the sign-up wall cannot reach the app until this succeeds, so
       // the message has to invite another attempt. The local photos are kept so
@@ -298,6 +360,9 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
       );
     } finally {
       setUploading(false);
+      // After onSubmitted, so the caller has already re-read the record and the
+      // wall drops on the new state rather than flickering through the old one.
+      endIdSubmission();
     }
   };
 
@@ -335,6 +400,13 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
         </View>
       </View>
     );
+  }
+
+  // The review takes over the whole component rather than sitting on top of the
+  // form. There is nothing useful to do underneath it, and a half-visible form
+  // behind a spinner invites a member to tap something mid-submission.
+  if (review !== 'idle') {
+    return <IdReviewProgress done={review === 'done'} />;
   }
 
   // ---------------- Step 2: photograph it ----------------

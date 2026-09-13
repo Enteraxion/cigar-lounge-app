@@ -47,6 +47,7 @@ import {
 import { theme, withAlpha } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
 import { auth, signOut } from '../services/firebaseAuth';
+import { unregisterDeviceForPush } from '../services/pushService';
 import { deleteMyAccount } from '../services/accountService';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '../config/legal';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -152,7 +153,16 @@ export default function AISettingsScreen() {
       {
         text: 'Log Out',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
+          // Forget this device BEFORE signing out, while the member's uid and
+          // their Firestore permissions are both still available — afterwards
+          // the delete would be refused by the rules. Without it the next person
+          // to sign in on this phone keeps receiving the previous member's
+          // notifications, which on an owner's device leaks who booked what.
+          const uid = auth.currentUser?.uid;
+          if (uid) {
+            await unregisterDeviceForPush(uid).catch(() => {});
+          }
           signOut(auth).catch(() => {
             // Sign-out is local-first and effectively never rejects; if it
             // somehow does, onAuthStateChanged won't fire and the member

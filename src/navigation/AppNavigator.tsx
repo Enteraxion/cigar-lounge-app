@@ -32,6 +32,7 @@ import {
   setSignUpTransitionEndListener,
   type AuthUser,
 } from '../services/firebaseAuth';
+import { registerDeviceForPush, watchPushToken } from '../services/pushService';
 import { useAgeVerification } from '../hooks/useAgeVerification';
 import { useEmailVerification } from '../hooks/useEmailVerification';
 import BrandSplash, { SPLASH_MINIMUM_MS } from '../components/BrandSplash';
@@ -84,6 +85,31 @@ export default function AppNavigator() {
     });
     return unsubscribe;
   }, []);
+
+  /**
+   * Keeps this device's push token attached to whoever is signed in.
+   *
+   * Registration is silent and only does anything when permission has already
+   * been granted — the prompt itself is spent at a better moment, after an ID
+   * submission (see IdDocumentCapture). This is what re-attaches the token on
+   * every launch, and what keeps it current when FCM rotates it, which happens
+   * on reinstall and restore with no event anywhere else to notice.
+   *
+   * The cleanup runs on sign-out as well as unmount. Without it the next person
+   * to sign in on a shared phone keeps receiving the previous member's
+   * reservations — which on a lounge owner's device leaks who booked what.
+   */
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid) {
+      return;
+    }
+    registerDeviceForPush(uid);
+    const unwatch = watchPushToken(uid);
+    return () => {
+      unwatch();
+    };
+  }, [user?.uid]);
 
   // The listener above deliberately ignores the signed-in event that
   // createUserWithEmailAndPassword fires, because at that moment the new

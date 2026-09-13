@@ -318,6 +318,20 @@ service cloud.firestore {
           && incomingAgeStatus() != 'pending';
       }
 
+      /**
+       * Push tokens, one document per device — see src/services/pushService.ts.
+       *
+       * Owner-only, and deliberately not readable by admins. A token is a
+       * capability: anybody holding one can send that device a notification
+       * that looks like it came from us, so the list of who has which tokens is
+       * not something to widen "just in case". The Cloud Functions that send
+       * push read them through the Admin SDK, which bypasses these rules
+       * entirely and needs no grant here.
+       */
+      match /fcmTokens/{token} {
+        allow read, write: if isOwner(userId);
+      }
+
       match /favorites/{loungeId} {
         allow read, write: if isOwner(userId);
       }

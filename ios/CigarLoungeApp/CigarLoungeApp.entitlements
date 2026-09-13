@@ -25,6 +25,15 @@
 	  matters because hardcoding either one is what turns the *next* bundle-id
 	  or team change back into this same mystery.
 	-->
+	<!--
+	  Push notifications. `development` here is the APNs *environment* the app
+	  talks to, not a build configuration — Xcode rewrites it to `production`
+	  when archiving for TestFlight or the App Store, which is why both APNs
+	  auth key slots are filled in the Firebase console (2026-09-13). Leave this
+	  as development; overriding it to production breaks push in local builds.
+	-->
+	<key>aps-environment</key>
+	<string>development</string>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>

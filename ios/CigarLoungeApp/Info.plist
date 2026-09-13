@@ -53,6 +53,16 @@
 			</array>
 		</dict>
 	</array>
+	<!--
+	  Remote notifications. Needed so an owner's phone can receive a reservation
+	  or cancellation while the app is backgrounded — which is the entire point of
+	  push. Without this the payload only arrives once the app is next opened,
+	  which is what the in-app notification list already did.
+	-->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Lounge Locator uses your camera so you can take photos to attach to reviews and collections, and photograph your ID to verify you are 21 or over.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

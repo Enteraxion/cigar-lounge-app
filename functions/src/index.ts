@@ -2008,8 +2008,13 @@ const ID_REVIEW_SCHEMA = {
       description:
         'Set only when the image is plainly not an identity document — e.g. "a bank card", "a screenshot". Null otherwise.',
     },
+    fullName: {
+      type: ['string', 'null'],
+      description:
+        'The holder\'s full name exactly as printed, given name(s) first. Null if not readable.',
+    },
   },
-  required: ['dateOfBirth', 'expiryDate', 'documentKind', 'legible', 'notAnIdReason'],
+  required: ['dateOfBirth', 'expiryDate', 'documentKind', 'legible', 'notAnIdReason', 'fullName'],
   additionalProperties: false,
 } as const;
 
@@ -2022,6 +2027,8 @@ const ID_REVIEW_SYSTEM = [
   '  because a null sends the document to a human and a guess does not.',
   '- Set legible=false if the image is blurred, cropped, glared or too dark to read with confidence.',
   '- Set notAnIdReason only when the image is plainly not an identity document.',
+  '- Report fullName exactly as printed, given name(s) first, however the card orders it.',
+  '  Include middle names when printed. Do not expand initials and do not correct spelling.',
   '- Do not judge whether the document is genuine. You cannot, and you are not being asked to.',
   '- Do not describe the person, and do not report anything about their appearance.',
 ].join('\n');
@@ -2052,12 +2059,16 @@ export const reviewIdDocument = onCall(
 
     return guarded('reviewIdDocument', async () => {
       const snapshot = await db.doc(`users/${userId}`).get();
-      const verification = (snapshot.data()?.ageVerification ?? {}) as {
+      const profile = snapshot.data() ?? {};
+      const verification = (profile.ageVerification ?? {}) as {
         status?: string;
         dateOfBirth?: string;
         idImageUrl?: string;
         idBackImageUrl?: string;
       };
+      // Compared loosely against the name printed on the document — see
+      // namesAgree. A member who never filled this in simply is not checked.
+      const accountName = typeof profile.name === 'string' ? profile.name : null;
 
       if (verification.status !== 'pending' || !verification.idImageUrl) {
         return { decision: 'refer' as const, reason: 'nothing pending to review' };
@@ -2114,7 +2125,12 @@ export const reviewIdDocument = onCall(
         return { decision: 'refer' as const, reason: 'automated read failed' };
       }
 
-      const outcome = reviewDocument(read, verification.dateOfBirth ?? '');
+      const outcome = reviewDocument(
+        read,
+        verification.dateOfBirth ?? '',
+        new Date(),
+        accountName,
+      );
 
       // Nothing is logged about what the document said beyond the decision —
       // this is somebody's date of birth, and Cloud Logging is not where it

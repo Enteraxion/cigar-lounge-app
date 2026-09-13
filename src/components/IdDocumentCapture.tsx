@@ -40,8 +40,11 @@ import {
   Text,
   View,
 } from 'react-native';
+import DocumentScanner, {
+  ResponseType,
+  ScanDocumentResponseStatus,
+} from 'react-native-document-scanner-plugin';
 import {
-  launchCamera,
   launchImageLibrary,
   type Asset,
   type ImagePickerResponse,
@@ -171,6 +174,59 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
     setShots(current => ({ ...current, [side]: asset.uri }));
   };
 
+  /**
+   * Scans one side with the system document scanner.
+   *
+   * This replaced a plain `launchCamera` on 2026-09-13. That captured whatever
+   * the lens saw — the licence, the table it was lying on, a hand holding it —
+   * and the framing corners drawn on this screen were decoration, not a camera
+   * overlay; nothing cropped anything. Rohith asked for capture that "covers the
+   * four sides so it looks like a real ID verification", and iOS already has
+   * exactly that: VisionKit's document scanner, the one Notes and Files use. It
+   * finds the document's edges live, waits until the shot is steady, corrects
+   * the perspective and returns the document alone, deskewed.
+   *
+   * The gain is not only that it looks right. A flat, cropped, evenly-lit
+   * licence is far easier for the automated review to read than one lying at an
+   * angle on a dark table, so this should turn some "we couldn't read the date
+   * of birth" rejections into approvals.
+   *
+   * `maxNumDocuments: 1` because each side is captured separately — the scanner
+   * would otherwise happily collect a stack, and a member photographing both
+   * sides in one go would produce a record this screen cannot place.
+   */
+  const scan = async (side: IdDocumentSide) => {
+    try {
+      const { scannedImages, status } = await DocumentScanner.scanDocument({
+        croppedImageQuality: 90,
+        maxNumDocuments: 1,
+        responseType: ResponseType.ImageFilePath,
+      });
+      if (status === ScanDocumentResponseStatus.Cancel) {
+        return;
+      }
+      const uri = scannedImages?.[0];
+      if (!uri) {
+        return;
+      }
+      // The scanner returns a bare path on iOS; Image and the uploader both
+      // need a scheme.
+      setShots(current => ({
+        ...current,
+        [side]: uri.startsWith('file://') ? uri : `file://${uri}`,
+      }));
+    } catch {
+      // Falling back rather than dead-ending. The scanner needs camera
+      // permission and a device that supports it, and a member who cannot use
+      // it must still be able to verify — the library route below is the way
+      // through.
+      Alert.alert(
+        "Couldn't open the scanner",
+        'Allow camera access in Settings, or choose a photo from your library instead.',
+      );
+    }
+  };
+
   const capture = (side: IdDocumentSide) => {
     const options = {
       mediaType: 'photo' as const,
@@ -184,8 +240,10 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
       saveToPhotos: false,
     };
     Alert.alert(sideLabel(documentType, side), 'How would you like to add this photo?', [
-      { text: 'Take Photo', onPress: () => launchCamera(options, r => handlePicked(side, r)) },
+      { text: 'Scan with camera', onPress: () => scan(side) },
       {
+        // Kept as the second option, not removed. Someone may already have a
+        // photo, and it is the only route left if the scanner cannot open.
         text: 'Choose from Library',
         onPress: () => launchImageLibrary(options, r => handlePicked(side, r)),
       },
@@ -284,19 +342,29 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
 
   return (
     <View style={styles.container}>
-      <StepHeader step={2} label={sides.length > 1 ? 'Photograph both sides' : 'Photograph it'} />
-
+      {/* Above the step bar, not below it. Rohith, 2026-09-13: "the back button
+          is very small and located in the middle of the screen". It was a 12pt
+          label with a 14pt chevron sitting under the progress indicator, which
+          is the last place anyone looks for a way back — the eye goes to the top
+          of a screen. It is now the first thing in the column, full-width so the
+          whole row is tappable rather than just the words, and 44pt tall, which
+          is the smallest target a thumb finds reliably. */}
       <Pressable
-        style={styles.changeRow}
+        style={({ pressed }) => [styles.changeRow, pressed && styles.changeRowPressed]}
         onPress={() => setDocumentType(null)}
         disabled={uploading}
         accessibilityRole="button"
+        accessibilityLabel="Choose a different document"
+        hitSlop={8}
       >
-        <ChevronLeft size={14} color={theme.colors.accentGold} />
+        <ChevronLeft size={18} color={theme.colors.accentGold} />
         <Text style={styles.changeText}>
-          {ID_DOCUMENT_OPTIONS.find(o => o.id === documentType)?.label} — change
+          {ID_DOCUMENT_OPTIONS.find(o => o.id === documentType)?.label}
         </Text>
+        <Text style={styles.changeHint}>Change</Text>
       </Pressable>
+
+      <StepHeader step={2} label={sides.length > 1 ? 'Photograph both sides' : 'Photograph it'} />
 
       {sides.map(side => {
         const uri = shownFor(side);
@@ -450,8 +518,30 @@ const styles = StyleSheet.create({
   },
   optionHint: { ...theme.typography.body, fontSize: 12, color: theme.colors.mutedGray },
 
-  changeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  changeText: { ...theme.typography.medium, fontSize: 12, color: theme.colors.accentGold },
+  changeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.gold.line,
+  },
+  changeRowPressed: { opacity: 0.7 },
+  changeText: {
+    ...theme.typography.medium,
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.white,
+  },
+  /** "Change" on the right, so the row reads as a control and not a heading. */
+  changeHint: {
+    ...theme.typography.medium,
+    fontSize: 12,
+    color: theme.colors.accentGold,
+  },
 
   captureBlock: { gap: theme.spacing.sm },
   captureLabelRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },

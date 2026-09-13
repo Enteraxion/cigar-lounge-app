@@ -10,7 +10,8 @@
  * mismatch — none of those may approve.
  */
 
-import { ageOn, parseIsoDate, reviewDocument } from './idReview';
+import {
+  namesAgree, ageOn, parseIsoDate, reviewDocument } from './idReview';
 
 const NOW = new Date(Date.UTC(2026, 7, 31)); // 2026-08-31
 const ADULT = '1990-05-12';
@@ -210,5 +211,74 @@ describe('ageOn', () => {
   it('does not count a birthday that has not happened yet this year', () => {
     expect(ageOn(new Date(Date.UTC(2000, 11, 31)), NOW)).toBe(25);
     expect(ageOn(new Date(Date.UTC(2000, 0, 1)), NOW)).toBe(26);
+  });
+});
+
+
+describe('namesAgree — loose on purpose', () => {
+  it('accepts a member who typed only their first name', () => {
+    // The realistic case: sign-up is a free-text box and people put one word in
+    // it, while a licence prints the legal name in full.
+    expect(namesAgree('AKEPATI ROHITH REDDY', 'Rohith')).toBe(true);
+  });
+
+  it('accepts a missing middle name, in either direction', () => {
+    expect(namesAgree('John Michael Smith', 'John Smith')).toBe(true);
+    expect(namesAgree('John Smith', 'John Michael Smith')).toBe(true);
+  });
+
+  it('ignores case, punctuation and accents', () => {
+    expect(namesAgree("O'BRIEN, SEAN", 'Sean OBrien')).toBe(true);
+    expect(namesAgree('MUÑOZ ANA', 'Ana Munoz')).toBe(true);
+    expect(namesAgree('SMITH-JONES ALICE', 'Alice Smith Jones')).toBe(true);
+  });
+
+  it('treats a single letter as an initial', () => {
+    expect(namesAgree('Rohith Reddy Akepati', 'R Akepati')).toBe(true);
+  });
+
+  it('rejects two plainly different people', () => {
+    expect(namesAgree('AKEPATI ROHITH REDDY', 'Jane Wilson')).toBe(false);
+    expect(namesAgree('John Smith', 'Test User')).toBe(false);
+  });
+
+  it('says yes when either name is missing', () => {
+    // An unreadable name is not evidence. Treating it as a mismatch would refer
+    // every document whose name we simply failed to parse.
+    expect(namesAgree(null, 'Rohith')).toBe(true);
+    expect(namesAgree('AKEPATI ROHITH', null)).toBe(true);
+    expect(namesAgree('', '')).toBe(true);
+    expect(namesAgree('   ', 'Rohith')).toBe(true);
+  });
+});
+
+describe('reviewDocument — the name check', () => {
+  it('refers a name that does not match, and never rejects it', () => {
+    const out = reviewDocument({ dateOfBirth: ADULT, fullName: 'JANE WILSON' }, ADULT, NOW, 'Rohith Akepati');
+    expect(out.decision).toBe('refer');
+    expect(out.reason).toContain('name');
+  });
+
+  it('still approves when the name is compatible', () => {
+    const out = reviewDocument(
+      { dateOfBirth: ADULT, fullName: 'AKEPATI ROHITH REDDY' },
+      ADULT,
+      NOW,
+      'Rohith',
+    );
+    expect(out.decision).toBe('approve');
+  });
+
+  it('approves when the account has no name on file', () => {
+    const out = reviewDocument({ dateOfBirth: ADULT, fullName: 'AKEPATI ROHITH' }, ADULT, NOW, null);
+    expect(out.decision).toBe('approve');
+  });
+
+  it('checks the name LAST, after the document has passed on its own', () => {
+    // An under-age document must be refused as under-age, not referred for a
+    // name — same ordering rule as the date of birth.
+    const out = reviewDocument({ dateOfBirth: '2010-03-04', fullName: 'JANE WILSON' }, ADULT, NOW, 'Rohith');
+    expect(out.decision).toBe('reject');
+    expect(out.reason).toContain('under age');
   });
 });

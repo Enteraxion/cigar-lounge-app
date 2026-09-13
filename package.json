@@ -39,6 +39,7 @@
     "lucide-react-native": "^1.24.0",
     "react": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-document-scanner-plugin": "^2.0.4",
     "react-native-gesture-handler": "^3.0.2",
     "react-native-image-picker": "^8.2.1",
     "react-native-linear-gradient": "^2.8.3",

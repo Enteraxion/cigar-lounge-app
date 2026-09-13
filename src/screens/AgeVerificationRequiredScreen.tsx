@@ -106,14 +106,19 @@ export default function AgeVerificationRequiredScreen({
 
         <IdDocumentCapture onSubmitted={handleSubmitted} />
 
-        {/* Said plainly, because a request for a photograph of a passport is one
-            people are right to hesitate over. Vagueness here makes the ask
-            larger, not smaller. */}
+        {/* Kept, but cut to one line. A request for a photograph of a passport
+            is one people are right to hesitate over, and this is the sentence
+            that makes it reasonable — it is also what an App Store reviewer
+            looks for on the screen that collects an identity document.
+            Rohith called the previous wording weird on 2026-09-13 and he was
+            right: three clauses explaining automated review, human fallback and
+            non-disclosure, at the moment someone just wants to know whether
+            strangers will see their licence. Only the two promises that answer
+            that question survive. */}
         <View style={styles.privacy}>
           <Lock size={14} color={theme.colors.mutedGray} />
           <Text style={styles.privacyText}>
-            Checked automatically to confirm your date of birth, and by a person on our team if
-            anything is unclear. Never shown to other members or to lounges.
+            Used only to confirm your age. Never shown to other members or to lounges.
           </Text>
         </View>
 

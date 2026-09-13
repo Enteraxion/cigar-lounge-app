@@ -49,6 +49,8 @@ export type ReadDocument = {
   legible?: boolean | null;
   /** Set when the image is not an identity document at all. */
   notAnIdReason?: string | null;
+  /** The holder's name as printed, given name(s) first. */
+  fullName?: string | null;
 };
 
 /**
@@ -90,6 +92,61 @@ export function ageOn(birth: Date, when: Date): number {
 
 export const MINIMUM_AGE = 21;
 
+/** Letters and spaces only, accents folded, lowercased. */
+function nameTokens(value: string | null | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+  return value
+    .normalize('NFD')
+    // Strip combining marks, so "Muñoz" and "Munoz" are the same name.
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    // Hyphens and apostrophes become separators rather than disappearing, so
+    // "O'Brien" and "Smith-Jones" split into parts that can match either form.
+    .replace(/[^a-z]+/g, ' ')
+    .split(' ')
+    .filter(Boolean);
+}
+
+/**
+ * Whether the name on the document and the name on the account are compatible.
+ *
+ * Deliberately generous, because the account's name is a free-text field and the
+ * document's is a legal one. "Rohith" against "AKEPATI ROHITH REDDY" is the same
+ * person; so is "Rob Smith" against "ROBERT SMITH" only in the sense that we
+ * cannot prove otherwise, which is why a disagreement REFERS rather than
+ * rejects — see reviewDocument.
+ *
+ * The rule: every part of the shorter name must appear in the longer one. That
+ * accepts a missing middle name, a maiden name kept on the account, or a member
+ * who typed only their first name; it rejects two plainly different people.
+ * A single letter matches a name beginning with it, so "R Akepati" agrees with
+ * "Rohith Akepati".
+ *
+ * Returns true when either side is unreadable — an absent name is not evidence
+ * of anything, and treating it as a mismatch would refer every document whose
+ * name we failed to parse.
+ */
+export function namesAgree(
+  documentName: string | null | undefined,
+  accountName: string | null | undefined,
+): boolean {
+  const a = nameTokens(documentName);
+  const b = nameTokens(accountName);
+  if (a.length === 0 || b.length === 0) {
+    return true;
+  }
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+  return shorter.every(part =>
+    longer.some(other =>
+      part.length === 1 || other.length === 1
+        ? part[0] === other[0]
+        : part === other,
+    ),
+  );
+}
+
 /**
  * Turns what the model read into a decision.
  *
@@ -102,6 +159,8 @@ export function reviewDocument(
   read: ReadDocument,
   declaredDateOfBirth: string,
   now: Date = new Date(),
+  /** The name on the account, when there is one. Compared loosely — see namesAgree. */
+  accountName?: string | null,
 ): ReviewOutcome {
   // Not an identity document at all. Rejected rather than referred: this needs
   // the member to do something, and waiting on a human to tell them so wastes
@@ -225,6 +284,22 @@ export function reviewDocument(
   // against what the member selected. It confuses a state ID with a driving
   // licence often enough that enforcing agreement would refer honest
   // submissions, and nothing downstream depends on which of the two it was.
+
+  // Last, and a referral rather than a rejection. A name that does not line up
+  // is the strongest signal available here that the document belongs to somebody
+  // else — which is the realistic way this gate gets beaten, since borrowing a
+  // relative's licence costs nothing. But the account's name is free text and
+  // the document's is legal, so married names, transliterations and a member who
+  // typed "Rob" produce honest disagreements. A person decides those; the app
+  // never calls somebody a liar over a name.
+  if (!namesAgree(read.fullName, accountName)) {
+    return {
+      decision: 'refer',
+      reason: `name on document does not match the account`,
+      memberMessage:
+        "We're checking your ID now — this one needs a quick look from our team. We'll let you know shortly.",
+    };
+  }
 
   return { decision: 'approve', reason: `date of birth matches, age ${age}` };
 }

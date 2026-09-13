@@ -48,6 +48,7 @@ import type {
   UserDocument,
 } from '../types/firestore';
 import { getLoungesByIds, type Lounge } from './loungeService';
+import { createKeyedAsyncCache } from '../utils/asyncCache';
 
 const db = getFirestore();
 
@@ -79,17 +80,58 @@ export async function toggleFavorite(userId: string, loungeId: string): Promise<
   if (snapshot.exists()) {
     await deleteDoc(ref);
     await updateDoc(loungeRef, { favoritedByUserIds: arrayRemove(userId) });
+    invalidateSavedCaches();
     return false;
   }
   const favorite: FavoriteDocument = { addedAt: Timestamp.now() };
   await setDoc(ref, favorite);
   await updateDoc(loungeRef, { favoritedByUserIds: arrayUnion(userId) });
+  invalidateSavedCaches();
   return true;
 }
 
-/** Fetches every lounge `userId` has favorited (real Lounge records, not just ids). */
+/**
+ * Favourites and collections, cached per member.
+ *
+ * The Saved tab presents Favorites, Collections and Wishlist as three segments
+ * of one control, but they are three screens, and each refetched from Firestore
+ * every time it took focus. Switching segment therefore meant a network round
+ * trip and a loading state — Rohith, 2026-09-12: "the page keeps loading".
+ *
+ * A short TTL is the whole fix: long enough that flicking between the three
+ * segments reads from memory, short enough that nothing goes stale in a way a
+ * member would notice. The in-flight de-duplication matters as much as the TTL
+ * here, because FavoritesScreen asks for both at once.
+ *
+ * Correctness does not rest on the TTL, though. Every write below invalidates,
+ * and every write to either collection goes through this file — so a favourite
+ * toggled anywhere in the app is visible on the next read, not in sixty seconds.
+ */
+const SAVED_TTL_MS = 60_000;
+
+const favoritesCache = createKeyedAsyncCache<Lounge[]>(
+  async userId => getLoungesByIds(await getUserFavoriteIds(userId)),
+  SAVED_TTL_MS,
+);
+
+const collectionsCache = createKeyedAsyncCache<UserCollection[]>(async userId => {
+  const snapshot = await getDocs(collection(db, 'users', userId, 'collections'));
+  return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as CollectionDocument) }));
+}, SAVED_TTL_MS);
+
+/**
+ * Called by every write in this file. Deliberately blunt — it clears both
+ * caches for every member rather than trying to be surgical, because a member
+ * only ever has their own entry in them and a wrong cache here shows somebody
+ * their favourites missing.
+ */
+function invalidateSavedCaches(): void {
+  favoritesCache.invalidate();
+  collectionsCache.invalidate();
+}
+
 export async function getUserFavorites(userId: string): Promise<Lounge[]> {
-  return getLoungesByIds(await getUserFavoriteIds(userId));
+  return favoritesCache.get(userId);
 }
 
 /**
@@ -379,6 +421,7 @@ export async function createCollection(
     updatedAt: now,
   };
   const ref = await addDoc(collection(db, 'users', userId, 'collections'), data);
+  invalidateSavedCaches();
   return ref.id;
 }
 
@@ -392,12 +435,12 @@ export async function addLoungeToCollection(
     loungeIds: arrayUnion(loungeId),
     updatedAt: Timestamp.now(),
   });
+  invalidateSavedCaches();
 }
 
 /** Fetches every collection `userId` has created. */
 export async function getUserCollections(userId: string): Promise<UserCollection[]> {
-  const snapshot = await getDocs(collection(db, 'users', userId, 'collections'));
-  return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as CollectionDocument) }));
+  return collectionsCache.get(userId);
 }
 
 /** Fetches a single collection by id, or null if it doesn't exist (e.g. CollectionDetailScreen). */
@@ -448,6 +491,7 @@ export async function updateCollection(
     data.isPrivate = input.isPrivate;
   }
   await updateDoc(doc(db, 'users', userId, 'collections', collectionId), data);
+  invalidateSavedCaches();
 }
 
 /**
@@ -465,6 +509,7 @@ export async function removeLoungeFromCollection(
     loungeIds: arrayRemove(loungeId),
     updatedAt: Timestamp.now(),
   });
+  invalidateSavedCaches();
 }
 
 /**
@@ -476,6 +521,7 @@ export async function removeLoungeFromCollection(
  */
 export async function deleteCollection(userId: string, collectionId: string): Promise<void> {
   await deleteDoc(doc(db, 'users', userId, 'collections', collectionId));
+  invalidateSavedCaches();
 }
 
 /**
@@ -493,6 +539,7 @@ export async function toggleCollectionFavorite(
   const current = (snapshot.data() as CollectionDocument | undefined)?.isFavorited ?? false;
   const next = !current;
   await setDoc(ref, { isFavorited: next }, { merge: true });
+  invalidateSavedCaches();
   return next;
 }
 

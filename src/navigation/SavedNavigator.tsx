@@ -29,11 +29,33 @@ const Stack = createNativeStackNavigator<SavedStackParamList>();
 export default function SavedNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="FavoritesHome" component={FavoritesScreen} />
-      <Stack.Screen name="CollectionsGrid" component={CollectionsGridScreen} />
+      {/* The three switcher destinations slide nowhere. They are presented to
+          the member as tabs — one row, one highlighted — so a push animation
+          between them contradicts what the control says it is: tapping "Wishlist"
+          should change the panel, not travel somewhere. They are also entered
+          with navigation.replace rather than navigate, which keeps the stack one
+          deep; pushing let it grow Favorites → Collections → Wishlist, and
+          tapping a segment already in the stack then POPPED backwards to it,
+          which is the "it jumps to another tab" Rohith reported on 2026-09-12. */}
+      <Stack.Screen
+        name="FavoritesHome"
+        component={FavoritesScreen}
+        options={{ animation: 'none' }}
+      />
+      <Stack.Screen
+        name="CollectionsGrid"
+        component={CollectionsGridScreen}
+        options={{ animation: 'none' }}
+      />
+      <Stack.Screen
+        name="TravelWishlist"
+        component={TravelWishlistScreen}
+        options={{ animation: 'none' }}
+      />
+      {/* These two are genuine pushes — they go somewhere, and keep their
+          animation and their back gesture. */}
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="CreateCollection" component={CreateCollectionScreen} />
-      <Stack.Screen name="TravelWishlist" component={TravelWishlistScreen} />
     </Stack.Navigator>
   );
 }

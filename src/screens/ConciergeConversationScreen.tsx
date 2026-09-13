@@ -373,11 +373,23 @@ export default function ConciergeConversationScreen() {
     };
   }, []);
 
-  // The reported height includes the home-indicator strip, which SafeAreaView
-  // has already reserved as padding — subtracting it stops the bar floating a
-  // finger's width above the keyboard.
-  const keyboardInset =
-    keyboardHeight > 0 ? Math.max(keyboardHeight - insets.bottom, 0) : 0;
+  /**
+   * The bottom gap under the input bar, owned outright rather than shared with
+   * SafeAreaView.
+   *
+   * The first attempt subtracted `insets.bottom` from the keyboard height, on
+   * the reasoning that SafeAreaView had already reserved the home-indicator
+   * strip. It left the bar sitting about a third of its height behind the
+   * keyboard, because iOS drops that bottom inset to zero while a keyboard is
+   * up — the keyboard IS occupying that strip — so the subtraction was paying
+   * for a reservation that no longer existed.
+   *
+   * Splitting the two cases removes the dependency on which way that inset
+   * happens to resolve: the keyboard's own height when it is up, the home
+   * indicator when it is not. `edges` on the SafeAreaView below is `top` only
+   * for the same reason — exactly one thing decides this number.
+   */
+  const bottomInset = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
   const handledInitialQuery = useRef(false);
   const { profile } = useUserProfile();
@@ -571,14 +583,17 @@ export default function ConciergeConversationScreen() {
     });
   };
 
+  // `edges` is `top` only on purpose. The bottom gap is bottomInset's job — see
+  // above; having both SafeAreaView and the padding below reserve it is what
+  // left the input bar sitting behind the keyboard.
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       {/* Padding the column rather than the bar. The ScrollView below has
           `flex: 1`, so this space is taken from the transcript and the input bar
           rides up on top of the keyboard — no measurement, no coordinate spaces
           to reconcile. See the keyboardHeight listener above for why
           KeyboardAvoidingView could not do this here. */}
-      <View style={[styles.flex, { paddingBottom: keyboardInset }]}>
+      <View style={[styles.flex, { paddingBottom: bottomInset }]}>
         {/* ---------------- Header ---------------- */}
         <View style={styles.header}>
           <Pressable
@@ -622,7 +637,7 @@ export default function ConciergeConversationScreen() {
             // Overrides the shared props deliberately. Those set
             // automaticallyAdjustKeyboardInsets for screens whose input scrolls
             // WITH the content; here the input bar sits outside the ScrollView
-            // and the keyboardInset padding above already moves it. Leaving both
+            // and the bottomInset padding above already moves it. Leaving both
             // on compensates for the keyboard twice — the same mistake made on
             // the review and reserve forms.
             automaticallyAdjustKeyboardInsets={false}

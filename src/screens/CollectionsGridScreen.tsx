@@ -115,13 +115,13 @@ export default function CollectionsGridScreen() {
         </View>
 
         <View style={styles.segmentRow}>
-          <Pressable style={styles.segment} onPress={() => navigation.navigate('FavoritesHome')}>
+          <Pressable style={styles.segment} onPress={() => navigation.replace('FavoritesHome')}>
             <Text style={styles.segmentText}>Favorites</Text>
           </Pressable>
           <Pressable style={[styles.segment, styles.segmentActive]}>
             <Text style={[styles.segmentText, styles.segmentTextActive]}>Collections</Text>
           </Pressable>
-          <Pressable style={styles.segment} onPress={() => navigation.navigate('TravelWishlist')}>
+          <Pressable style={styles.segment} onPress={() => navigation.replace('TravelWishlist')}>
             <Text style={styles.segmentText}>Wishlist</Text>
           </Pressable>
         </View>

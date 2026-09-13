@@ -96,7 +96,14 @@ const Stack = createNativeStackNavigator<SearchStackParamList>();
 export default function SearchNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="SearchHome" component={SearchScreen} />
+      <Stack.Screen name="SearchHome" component={SearchScreen}
+        /* No back gesture on a tab's root screen. There is nowhere back to go
+           inside this stack, and if anything ever IS left beneath the root —
+           which is precisely the bug Rohith kept hitting, a lounge opened from
+           Home surviving underneath SearchHome — the gesture is what exposes it.
+           The state reset in MainNavigator should mean nothing is ever there;
+           this makes the symptom impossible either way. */
+        options={{ gestureEnabled: false }} />
       <Stack.Screen name="LiveSearchSuggestions" component={SearchSuggestionsScreen} />
       <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
       <Stack.Screen name="LoungeDetail" component={LoungeDetailScreen} />

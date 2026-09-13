@@ -13,8 +13,8 @@ import {
   type BottomTabNavigationProp,
 } from '@react-navigation/bottom-tabs';
 import {
+  CommonActions,
   getFocusedRouteNameFromRoute,
-  StackActions,
   type RouteProp,
 } from '@react-navigation/native';
 import { Home, Search, Map, Heart, User } from 'lucide-react-native';
@@ -118,34 +118,34 @@ function resetToRootOnRepeatPress(rootScreenName: string) {
       e.preventDefault();
 
       /**
-       * popToTop, targeted at the tab's own stack.
+       * Rewrites this tab's nested stack to just its root.
        *
-       * This used to call `navigate(tab, { screen: root })`, which is not the
-       * same thing and is what Rohith reported on 2026-09-13: open a lounge
-       * from Home — which cross-navigates into the SEARCH stack, since Home has
-       * no stack of its own — then tap Search. The root screen came back to the
-       * front, so it looked right, while LoungeDetail was still sitting in the
-       * stack underneath it. Swiping back from Search returned to a lounge the
-       * member had opened from a different tab, which is exactly the leakage
-       * between tabs they described.
+       * Two earlier attempts at this were both wrong, and for instructive
+       * reasons. `navigate(tab, { screen: root })` brings the root forward
+       * without guaranteeing that what sits above it is removed — so after
+       * opening a lounge from Home (which cross-navigates into the SEARCH
+       * stack, Home having no stack of its own), tapping Search looked right
+       * while LoungeDetail stayed underneath, and swiping back returned to it.
+       * Then `StackActions.popToTop` with `target: state.key` — but React
+       * Navigation types a parent's view of a nested navigator as a PARTIAL
+       * state, where `key` may simply be absent. When it was, the code fell
+       * through to the old path and nothing changed at all.
        *
-       * `target` matters. Dispatched without it, a stack action this tab
-       * navigator cannot handle bubbles UP to the root stack rather than down
-       * into the nested one, and would act on the wrong navigator entirely.
+       * Rewriting the state says what we mean without depending on either: the
+       * tab's nested routes become exactly one entry, the root. Nothing can be
+       * left beneath it to swipe back to.
        */
-      const nestedKey = navigation
-        .getState()
-        .routes.find(r => r.name === route.name)?.state?.key;
-
-      if (nestedKey) {
-        navigation.dispatch({ ...StackActions.popToTop(), target: nestedKey });
-      } else {
-        // The tab has never been opened, so there is no nested state and
-        // nothing to pop — just show its root.
-        (navigation.navigate as (name: string, params?: object) => void)(route.name, {
-          screen: rootScreenName,
-        });
-      }
+      const state = navigation.getState();
+      navigation.dispatch(
+        CommonActions.reset({
+          ...state,
+          routes: state.routes.map(r =>
+            r.name === route.name
+              ? { ...r, state: { index: 0, routes: [{ name: rootScreenName }] } }
+              : r,
+          ),
+        }),
+      );
     },
   });
 }

@@ -40,7 +40,7 @@ export default function SavedNavigator() {
       <Stack.Screen
         name="FavoritesHome"
         component={FavoritesScreen}
-        options={{ animation: 'none' }}
+        options={{ animation: 'none', gestureEnabled: false }}
       />
       <Stack.Screen
         name="CollectionsGrid"

@@ -165,13 +165,13 @@ export default function FavoritesScreen() {
             </Pressable>
             <Pressable
               style={styles.segment}
-              onPress={() => navigation.navigate('CollectionsGrid')}
+              onPress={() => navigation.replace('CollectionsGrid')}
             >
               <Text style={styles.segmentText}>Collections</Text>
             </Pressable>
             <Pressable
               style={styles.segment}
-              onPress={() => navigation.navigate('TravelWishlist')}
+              onPress={() => navigation.replace('TravelWishlist')}
             >
               <Text style={styles.segmentText}>Wishlist</Text>
             </Pressable>
@@ -215,7 +215,7 @@ export default function FavoritesScreen() {
           </Pressable>
           <Pressable
             style={styles.secondaryButton}
-            onPress={() => navigation.navigate('CollectionsGrid')}
+            onPress={() => navigation.replace('CollectionsGrid')}
           >
             <Text style={styles.secondaryButtonText}>Browse Collections</Text>
           </Pressable>
@@ -258,13 +258,13 @@ export default function FavoritesScreen() {
           </Pressable>
           <Pressable
             style={styles.segment}
-            onPress={() => navigation.navigate('CollectionsGrid')}
+            onPress={() => navigation.replace('CollectionsGrid')}
           >
             <Text style={styles.segmentText}>Collections</Text>
           </Pressable>
           <Pressable
             style={styles.segment}
-            onPress={() => navigation.navigate('TravelWishlist')}
+            onPress={() => navigation.replace('TravelWishlist')}
           >
             <Text style={styles.segmentText}>Wishlist</Text>
           </Pressable>

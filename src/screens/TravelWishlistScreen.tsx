@@ -180,10 +180,10 @@ export default function TravelWishlistScreen() {
         </View>
 
         <View style={styles.segmentRow}>
-          <Pressable style={styles.segment} onPress={() => navigation.navigate('FavoritesHome')}>
+          <Pressable style={styles.segment} onPress={() => navigation.replace('FavoritesHome')}>
             <Text style={styles.segmentText}>Favorites</Text>
           </Pressable>
-          <Pressable style={styles.segment} onPress={() => navigation.navigate('CollectionsGrid')}>
+          <Pressable style={styles.segment} onPress={() => navigation.replace('CollectionsGrid')}>
             <Text style={styles.segmentText}>Collections</Text>
           </Pressable>
           <Pressable style={[styles.segment, styles.segmentActive]}>
@@ -289,7 +289,7 @@ export default function TravelWishlistScreen() {
             actionLabel="View List"
             // The full list already exists — FavoritesScreen is exactly it. This
             // was raising "coming soon" for a screen shipped months ago.
-            onActionPress={() => navigation.navigate('FavoritesHome')}
+            onActionPress={() => navigation.replace('FavoritesHome')}
           />
           {error ? (
             <View style={styles.savedLoungesStateBox}>

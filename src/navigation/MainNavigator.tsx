@@ -8,8 +8,15 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { getFocusedRouteNameFromRoute, type RouteProp } from '@react-navigation/native';
+import {
+  createBottomTabNavigator,
+  type BottomTabNavigationProp,
+} from '@react-navigation/bottom-tabs';
+import {
+  getFocusedRouteNameFromRoute,
+  StackActions,
+  type RouteProp,
+} from '@react-navigation/native';
 import { Home, Search, Map, Heart, User } from 'lucide-react-native';
 import HomeScreen from '../screens/HomeScreen';
 import SearchNavigator, { type SearchStackParamList } from './SearchNavigator';
@@ -93,17 +100,51 @@ function floatingTabBarStyle(bottomInset: number) {
  * Map are leaf screens with no nested stack to reset.
  */
 function resetToRootOnRepeatPress(rootScreenName: string) {
+  // Loosely typed on purpose. React Navigation's per-screen listener props are
+  // generic over the exact tab name, so one shared helper cannot satisfy all of
+  // them without repeating the signature per tab; the shapes used below are
+  // stable across versions.
   return ({
     navigation,
     route,
   }: {
-    navigation: { isFocused: () => boolean; navigate: (name: string, params?: object) => void };
+    navigation: BottomTabNavigationProp<MainTabParamList, keyof MainTabParamList>;
     route: { name: string };
   }) => ({
     tabPress: (e: { preventDefault: () => void }) => {
-      if (navigation.isFocused()) {
-        e.preventDefault();
-        navigation.navigate(route.name, { screen: rootScreenName });
+      if (!navigation.isFocused()) {
+        return;
+      }
+      e.preventDefault();
+
+      /**
+       * popToTop, targeted at the tab's own stack.
+       *
+       * This used to call `navigate(tab, { screen: root })`, which is not the
+       * same thing and is what Rohith reported on 2026-09-13: open a lounge
+       * from Home — which cross-navigates into the SEARCH stack, since Home has
+       * no stack of its own — then tap Search. The root screen came back to the
+       * front, so it looked right, while LoungeDetail was still sitting in the
+       * stack underneath it. Swiping back from Search returned to a lounge the
+       * member had opened from a different tab, which is exactly the leakage
+       * between tabs they described.
+       *
+       * `target` matters. Dispatched without it, a stack action this tab
+       * navigator cannot handle bubbles UP to the root stack rather than down
+       * into the nested one, and would act on the wrong navigator entirely.
+       */
+      const nestedKey = navigation
+        .getState()
+        .routes.find(r => r.name === route.name)?.state?.key;
+
+      if (nestedKey) {
+        navigation.dispatch({ ...StackActions.popToTop(), target: nestedKey });
+      } else {
+        // The tab has never been opened, so there is no nested state and
+        // nothing to pop — just show its root.
+        (navigation.navigate as (name: string, params?: object) => void)(route.name, {
+          screen: rootScreenName,
+        });
       }
     },
   });

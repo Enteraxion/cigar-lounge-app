@@ -79,7 +79,7 @@ function ReservationCard({
         </Text>
         {reservation.lounge?.address ? (
           <View style={styles.metaRow}>
-            <MapPin size={13} color={theme.colors.mutedGray} />
+            <MapPin size={15} color={theme.colors.mutedGray} />
             <Text style={styles.metaText} numberOfLines={1}>
               {reservation.lounge.address}
             </Text>
@@ -91,15 +91,15 @@ function ReservationCard({
 
       <View style={styles.factsRow}>
         <View style={styles.fact}>
-          <CalendarClock size={14} color={theme.colors.accentGold} />
+          <CalendarClock size={15} color={theme.colors.accentGold} />
           <Text style={styles.factText}>{formatDate(reservation.date.seconds)}</Text>
         </View>
         <View style={styles.fact}>
-          <Clock size={14} color={theme.colors.accentGold} />
+          <Clock size={15} color={theme.colors.accentGold} />
           <Text style={styles.factText}>{reservation.timeSlot}</Text>
         </View>
         <View style={styles.fact}>
-          <Users size={14} color={theme.colors.accentGold} />
+          <Users size={15} color={theme.colors.accentGold} />
           <Text style={styles.factText}>
             {reservation.partySize} {reservation.partySize === 1 ? 'guest' : 'guests'}
           </Text>
@@ -234,7 +234,14 @@ export default function MyReservationsScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          // `flex: 1` so the scroll area is the screen rather than the height of
+          // its content. With one reservation the difference is invisible; with
+          // a full list it is the difference between scrolling and not.
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           {upcoming.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Upcoming</Text>
@@ -284,13 +291,21 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.md,
+    // Was `md`. With the section label's own 16 above it, the gap between the
+    // title and UPCOMING came to 32 and read as a seam rather than a group.
+    paddingBottom: theme.spacing.sm,
   },
+  /**
+   * Centred by taking the space between two equal 24pt gutters rather than by
+   * `space-between`, which only centres while the chevron and the spacer happen
+   * to measure the same. This holds if either ever changes.
+   */
   headerTitle: {
     ...theme.typography.medium,
+    flex: 1,
+    textAlign: 'center',
     fontFamily: theme.fontFamily.bold,
     fontSize: 18,
     color: theme.colors.white,
@@ -299,6 +314,7 @@ const styles = StyleSheet.create({
     width: 24,
   },
 
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: theme.spacing.lg,
     // Clears MainNavigator\'s floating pill tab bar. One shared value, so
@@ -319,28 +335,41 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
 
+  /**
+   * Scaled up on 2026-09-13. The first pass tightened the internal spacing and
+   * changed nothing anybody could see — the complaint was never that the card
+   * was badly spaced, it was that a booking someone is about to keep looked
+   * slight against a full screen. Type and padding are what carry weight, so
+   * those moved rather than the layout.
+   *
+   * Still one card and still the same five pieces of information: this is the
+   * same design at a confident size, not a different one.
+   */
   card: {
-    padding: theme.spacing.md,
+    padding: 18,
     borderRadius: theme.radius.large,
     backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
+    gap: 6,
     ...theme.shadows.soft,
   },
   cardTitle: {
     ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
-    fontSize: 15,
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 18,
+    letterSpacing: -0.2,
     color: theme.colors.white,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    // Same gap as a fact below, so every icon sits the same distance from its
+    // label whatever row it is in.
+    gap: 6,
   },
   metaText: {
     ...theme.typography.medium,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 18,
     color: theme.colors.mutedGray,
     flex: 1,
   },
@@ -348,28 +377,31 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: theme.colors.mutedGray,
     opacity: 0.3,
-    marginVertical: theme.spacing.xs,
+    // Separates the lounge from its booking details, so it gets a little more
+    // room than the card's uniform gap.
+    marginVertical: theme.spacing.sm,
   },
   factsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.md,
+    rowGap: theme.spacing.sm,
+    columnGap: theme.spacing.md,
+    paddingVertical: 2,
   },
   fact: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   factText: {
     ...theme.typography.medium,
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.secondarySilver,
   },
   bookedFor: {
     ...theme.typography.medium,
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.mutedGray,
-    marginTop: 2,
   },
   notes: {
     ...theme.typography.medium,
@@ -377,14 +409,23 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: theme.colors.secondarySilver,
   },
+  /**
+   * The only thing on this card a member can act on, so it is separated from
+   * the details rather than dressed up. `sm` on top of the card's own `xs` gap
+   * gives it 12pt of clear air — enough to read as an action, not so much that
+   * it becomes a footer.
+   */
   cancelButton: {
     alignSelf: 'flex-start',
-    marginTop: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
   },
   cancelButtonText: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
-    fontSize: 12,
+    // A point above the informational text around it. The gold already
+    // distinguishes it; this stops it reading as another muted caption that
+    // happens to be a different colour.
+    fontSize: 14,
     color: theme.colors.accentGold,
   },
 

@@ -205,6 +205,21 @@ export default function EmailVerificationRequiredScreen() {
           {codeSent ? '.' : ' so you can confirm it here.'}
         </Text>
 
+        {/* Said on screen, not buried in an alert after the fact. Until
+            2026-09-13 the only mention of spam was inside an Alert on the
+            legacy link path, so a member on the code path — which is everyone
+            now — was never told. `enteraxion.com` is a young sending domain and
+            filters treat those harshly, so this is the likeliest reason a code
+            appears not to arrive, and it costs a member the whole sign-up if
+            they give up before checking. */}
+        <View style={styles.hint}>
+          <Text style={styles.hintText}>
+            It usually arrives within a minute. If it hasn’t,{' '}
+            <Text style={styles.hintStrong}>check your spam or junk folder</Text> — mail from a new
+            sender often lands there.
+          </Text>
+        </View>
+
         {codeSent ? (
           <>
             <TextInput
@@ -422,6 +437,8 @@ const styles = StyleSheet.create({
     color: theme.colors.secondarySilver,
     textAlign: 'center',
   },
+  /** The one instruction in that sentence, so it survives a skim. */
+  hintStrong: { fontFamily: theme.fontFamily.semibold, color: theme.colors.white },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',

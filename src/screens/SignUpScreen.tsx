@@ -44,6 +44,7 @@ import {
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { AuthStackParamList } from '../navigation/AuthNavigator';
 import { theme, withAlpha } from '../theme';
+import AuthTextInput from '../components/AuthTextInput';
 import { ageCheckMessage, checkMinimumAge } from '../utils/ageCheck';
 import { submitAgeVerification } from '../services/ageVerificationService';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
@@ -311,11 +312,9 @@ export default function SignUpScreen() {
                 <View style={styles.inputIconSlot}>
                   <Icon name="person-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
                 </View>
-                <TextInput
-        accessibilityLabel="Enter your full name"
-                  style={styles.input}
+                <AuthTextInput
+                  accessibilityLabel="Enter your full name"
                   placeholder="Enter your full name"
-                  placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                   value={fullName}
                   onChangeText={setFullName}
                   autoCapitalize="words"
@@ -330,11 +329,12 @@ export default function SignUpScreen() {
                 <View style={styles.inputIconSlot}>
                   <Icon name="mail-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
                 </View>
-                <TextInput
-        accessibilityLabel="Enter your email"
-                  style={styles.input}
+                <AuthTextInput
+                  accessibilityLabel="Enter your email"
                   placeholder="Enter your email"
-                  placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
+                  textContentType="username"
+                  autoComplete="email"
+                  autoCorrect={false}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -350,14 +350,16 @@ export default function SignUpScreen() {
                 <View style={styles.inputIconSlot}>
                   <Icon name="lock-closed-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
                 </View>
-                <TextInput
-        accessibilityLabel="••••••••"
-                  style={styles.input}
+                <AuthTextInput
+                  accessibilityLabel="Choose a password"
                   placeholder="••••••••"
-                  placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  autoComplete="new-password"
                 />
                 <Pressable
                   style={styles.inputTrailingIconSlot}
@@ -380,14 +382,16 @@ export default function SignUpScreen() {
                 <View style={styles.inputIconSlot}>
                   <Icon name="lock-closed-outline" size={16} color={withAlpha(theme.colors.secondarySilver, 0.6)} />
                 </View>
-                <TextInput
-        accessibilityLabel="••••••••"
-                  style={styles.input}
+                <AuthTextInput
+                  accessibilityLabel="Confirm your password"
                   placeholder="••••••••"
-                  placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  autoComplete="new-password"
                 />
                 <Pressable
                   style={styles.inputTrailingIconSlot}

@@ -22,7 +22,6 @@ import {
   StyleSheet,
   Text,
   ScrollView,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,6 +35,7 @@ import { auth, getAuthErrorMessage } from '../../services/firebaseAuth';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { theme, withAlpha } from '../../theme';
+import AuthTextInput from '../../components/AuthTextInput';
 
 const FONT_SERIF_REGULAR = 'PlayfairDisplay-Regular';
 const FONT_SERIF_SEMIBOLD = 'PlayfairDisplay-SemiBold';
@@ -147,19 +147,26 @@ export default function LoginScreen() {
             {/* Email field */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Email Address</Text>
+              {/* AuthTextInput, not TextInput, because iOS substitutes its own
+                  wide-tracked font into the placeholder of anything it reads as
+                  a credential field — including this email box, next to the
+                  password one. See that component's header. The textContentType
+                  values below stay for their real purpose: AutoFill and the
+                  iCloud Keychain, which never worked before they were set. */}
               <View style={styles.inputWrapper}>
                 <View style={styles.inputIconSlot}>
                   <Icon name="mail-outline" size={16} color={theme.colors.accentGold} />
                 </View>
-                <TextInput
-        accessibilityLabel="Enter your email"
-                  style={styles.input}
+                <AuthTextInput
+                  accessibilityLabel="Enter your email"
                   placeholder="Enter your email"
-                  placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
+                  autoCorrect={false}
+                  textContentType="username"
+                  autoComplete="email"
                 />
               </View>
             </View>
@@ -176,14 +183,16 @@ export default function LoginScreen() {
                 <View style={styles.inputIconSlot}>
                   <Icon name="lock-closed-outline" size={16} color={theme.colors.accentGold} />
                 </View>
-                <TextInput
-        accessibilityLabel="••••••••"
-                  style={styles.input}
+                <AuthTextInput
+                  accessibilityLabel="Enter your password"
                   placeholder="••••••••"
-                  placeholderTextColor={withAlpha(theme.colors.secondarySilver, 0.4)}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="password"
+                  autoComplete="current-password"
                 />
               </View>
             </View>

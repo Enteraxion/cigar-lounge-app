@@ -32,7 +32,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ExternalLink } from 'lucide-react-native';
 import { theme } from '../theme';
@@ -40,7 +40,6 @@ import { getLoungesForOwner } from '../services/ownerService';
 import type { OwnedLounge } from '../utils/ownedLounges';
 import { auth } from '../services/firebaseAuth';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
-import type { MainTabParamList } from '../navigation/MainNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { OWNER_PORTAL_URL, OWNER_PORTAL_FEATURES } from '../config/ownerPortal';
 
@@ -48,7 +47,6 @@ type MyShopsNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
 export default function MyShopsScreen() {
   const navigation = useNavigation<MyShopsNavigationProp>();
-  const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   const userId = auth.currentUser?.uid;
 
   const [shops, setShops] = useState<OwnedLounge[] | null>(null);
@@ -78,12 +76,11 @@ export default function MyShopsScreen() {
   };
 
   const openEditListing = (loungeId: string) => {
-    // EditListing lives in the Search stack, so this is the same cross-tab
-    // navigation MyReviewsScreen and ProfileScreen use.
-    (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
-      screen: 'EditListing',
-      params: { loungeId },
-    });
+    // Stays inside the Profile stack. This used to hop into the Search tab,
+    // where EditListing is also registered — which worked, but left the member
+    // standing in Search: swiping back from the form landed on search results
+    // rather than back here in My Shops.
+    navigation.navigate('EditListing', { loungeId });
   };
 
   return (

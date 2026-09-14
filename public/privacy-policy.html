@@ -45,7 +45,7 @@
 <body>
 
 <h1>Privacy Policy</h1>
-<p class="updated">Last updated: 13 September 2026</p>
+<p class="updated">Last updated: 14 September 2026</p>
 
 <p>
   This policy explains what Lounge Locator (&ldquo;the app&rdquo;, &ldquo;we&rdquo;,
@@ -93,16 +93,22 @@
   <li>
     <strong>An automated check reads it first, and a person reviews anything it
     cannot settle.</strong> Your photographs are sent to Microsoft Azure OpenAI,
-    which reads the printed date of birth and compares it against what you
-    entered. If everything agrees and the document is in date, you are verified
-    without a person seeing it. If anything does not add up &mdash; the photo is
-    unclear, the dates disagree, the document has expired &mdash; an
-    administrator at Enteraxion opens the photographs and decides.
+    which reads the printed date of birth and the printed name, and reports the
+    document&rsquo;s type and expiry date. We then compare what it read against
+    the date of birth and the name on your account. If everything agrees and the
+    document is in date, you are verified without a person seeing it. If
+    anything does not add up &mdash; the photograph is unclear, the dates
+    disagree, the name does not match, the document has expired &mdash; an
+    administrator at Enteraxion opens the photographs and decides. A name or a
+    date that disagrees is never treated as dishonesty on its own: married
+    names, shortened first names and typing mistakes are ordinary, so a person
+    looks rather than the app refusing you.
   </li>
   <li>
     <strong>Microsoft does not keep them.</strong> The images are sent for that
     single check and are not used to train any model. We do not send your name,
-    email address or account details with them.
+    email address or account details with them &mdash; the comparison against
+    your account is made on our own servers, after the reading comes back.
   </li>
   <li>
     <strong>They are stored privately</strong> in Firebase Storage, under access rules
@@ -145,6 +151,10 @@
     <tr>
       <td><strong>Table reservations</strong> — the name, phone number, date, time and party size you enter</td>
       <td>To make the booking. <strong>This is shared with the lounge you are booking</strong>, so they can hold your table and contact you.</td>
+    </tr>
+    <tr>
+      <td><strong>Notification token</strong> — an identifier for the device you install the app on, stored only while Lounge Alerts is switched on</td>
+      <td>To send notifications to your phone: a reservation at a lounge you own, an answer to a claim, the outcome of your age verification. It identifies the device, not you, and is deleted when you switch Lounge Alerts off, sign out, or delete your account. You can switch alerts off at any time under <strong>Profile → Settings → Notifications</strong>.</td>
     </tr>
     <tr>
       <td><strong>Location</strong> — your device&rsquo;s GPS position, with your permission</td>
@@ -191,6 +201,7 @@
   <li><strong>Firebase (Google)</strong> — accounts, database, file storage, and the server-side functions that run the app.</li>
   <li><strong>Yelp and Google Places</strong> — used server-side to source public business information about lounges: names, addresses, opening hours and photographs. This is public data about businesses, not personal data about you.</li>
   <li><strong>SendGrid (Twilio)</strong> — sends the emails the app needs to send, such as your verification code and reservation notifications.</li>
+  <li><strong>Firebase Cloud Messaging and the Apple Push Notification service</strong> — deliver notifications to your device. They receive the notification itself and the device it is addressed to. We do not put reservation names, telephone numbers or review text into a notification.</li>
   <li><strong>Apple speech recognition</strong> — used only when you tap the microphone to search by voice. The audio may be transcribed on Apple's servers rather than on your device. Nothing is sent unless you start a voice search.</li>
   <li><strong>National Weather Service</strong> — we send an approximate map location to retrieve current conditions. No account details are sent with it.</li>
   <li><strong>Microsoft Azure OpenAI</strong> — two things. It powers the in-app Concierge, which receives your question and a list of lounges we have selected in order to recommend from it. And it performs the automated first check on your identity document, described above.</li>
@@ -205,8 +216,9 @@
   </p>
   <p>
     Deleting removes your account, your reviews and their photographs, your
-    reservations, your saved lounges and collections, your problem reports, and the
-    photographs of your identity document. If you own a lounge listing, the listing
+    reservations, your saved lounges and collections, your problem reports, the
+    notification tokens for any device you signed in on, and the photographs of
+    your identity document. If you own a lounge listing, the listing
     stays in the directory but is released, so it can be claimed again. This cannot be
     undone.
   </p>

@@ -50,6 +50,19 @@ export type Badge = {
     | 'award'
     | 'box';
   unlocked: boolean;
+  /**
+   * What this badge asks of a member, in their words — "Upload 10 photos",
+   * not "photosUploaded >= 10".
+   *
+   * It lives here, beside the threshold it describes, for one reason: the
+   * screen used to tell everyone to "keep exploring", whatever the badge
+   * actually wanted. Host needs ten photographs; no amount of exploring
+   * unlocks it, and a prompt that names the wrong action is worse than no
+   * prompt (Rohith spotted this on his own 75% screen, 2026-09-13). Kept as
+   * a separate string rather than generated from the number so a badge can
+   * phrase itself naturally, and kept adjacent so the two cannot drift.
+   */
+  requirement: string;
 };
 
 export type AchievementCategory = {
@@ -60,8 +73,15 @@ export type AchievementCategory = {
   badges: Badge[];
 };
 
-function badge(id: string, label: string, icon: Badge['icon'], value: number, threshold: number): Badge {
-  return { id, label, icon, unlocked: value >= threshold };
+function badge(
+  id: string,
+  label: string,
+  icon: Badge['icon'],
+  value: number,
+  threshold: number,
+  requirement: string,
+): Badge {
+  return { id, label, icon, unlocked: value >= threshold, requirement };
 }
 
 export function computeAchievementCategories(
@@ -80,20 +100,20 @@ export function computeAchievementCategories(
       id: 'explorer',
       name: 'Explorer',
       badges: [
-        badge('pathfinder', 'Pathfinder', 'compass', loungesVisited, 1),
-        badge('wayfarer', 'Wayfarer', 'map', loungesVisited, 5),
-        badge('globetrotter', 'Globetrotter', 'globe', citiesExplored, 3),
-        badge('trailblazer', 'Trailblazer', 'send', statesExplored, 3),
+        badge('pathfinder', 'Pathfinder', 'compass', loungesVisited, 1, 'Visit your first lounge'),
+        badge('wayfarer', 'Wayfarer', 'map', loungesVisited, 5, 'Visit 5 lounges'),
+        badge('globetrotter', 'Globetrotter', 'globe', citiesExplored, 3, 'Visit lounges in 3 cities'),
+        badge('trailblazer', 'Trailblazer', 'send', statesExplored, 3, 'Visit lounges in 3 states'),
       ],
     },
     {
       id: 'social-member',
       name: 'Social Member',
       badges: [
-        badge('mixer', 'Mixer', 'users', reviewsWritten, 1),
-        badge('networker', 'Networker', 'messageCircle', reviewsWritten, 5),
-        badge('host', 'Host', 'crown', photosUploaded, 10),
-        badge('ambassador', 'Ambassador', 'award', reviewsWritten, 15),
+        badge('mixer', 'Mixer', 'users', reviewsWritten, 1, 'Write your first review'),
+        badge('networker', 'Networker', 'messageCircle', reviewsWritten, 5, 'Write 5 reviews'),
+        badge('host', 'Host', 'crown', photosUploaded, 10, 'Upload 10 photos'),
+        badge('ambassador', 'Ambassador', 'award', reviewsWritten, 15, 'Write 15 reviews'),
       ],
     },
     {
@@ -103,14 +123,14 @@ export function computeAchievementCategories(
       id: 'traveler',
       name: 'Traveler',
       badges: [
-        badge('frequent-flyer', 'Frequent Flyer', 'plane', loungesVisited, 2),
-        badge('road-warrior', 'Road Warrior', 'car', citiesExplored, 2),
-        badge('diplomat', 'Diplomat', 'award', loungesVisited, 5),
-        badge('globehopper', 'Globehopper', 'globe', citiesExplored, 4),
-        badge('jetsetter', 'Jetsetter', 'send', milesTraveled, 250),
-        badge('nomad', 'Nomad', 'mountain', weekStreak, 3),
-        badge('voyager', 'Voyager', 'ship', milesTraveled, 1000),
-        badge('elite-explorer', 'Elite Explorer', 'compass', loungesVisited, 15),
+        badge('frequent-flyer', 'Frequent Flyer', 'plane', loungesVisited, 2, 'Visit 2 lounges'),
+        badge('road-warrior', 'Road Warrior', 'car', citiesExplored, 2, 'Visit lounges in 2 cities'),
+        badge('diplomat', 'Diplomat', 'award', loungesVisited, 5, 'Visit 5 lounges'),
+        badge('globehopper', 'Globehopper', 'globe', citiesExplored, 4, 'Visit lounges in 4 cities'),
+        badge('jetsetter', 'Jetsetter', 'send', milesTraveled, 250, 'Travel 250 miles to a lounge'),
+        badge('nomad', 'Nomad', 'mountain', weekStreak, 3, 'Visit a lounge 3 weeks running'),
+        badge('voyager', 'Voyager', 'ship', milesTraveled, 1000, 'Travel 1,000 miles to lounges'),
+        badge('elite-explorer', 'Elite Explorer', 'compass', loungesVisited, 15, 'Visit 15 lounges'),
       ],
     },
   ];

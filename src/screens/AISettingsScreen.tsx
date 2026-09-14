@@ -18,6 +18,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Modal,
   ScrollView,
   StyleSheet,
@@ -32,7 +33,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
-  Accessibility,
   Bell,
   Briefcase,
   ChevronLeft,
@@ -47,11 +47,15 @@ import {
 import { theme, withAlpha } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
 import { auth, signOut } from '../services/firebaseAuth';
-import { unregisterDeviceForPush } from '../services/pushService';
 import { deleteMyAccount } from '../services/accountService';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '../config/legal';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { saveAiPreferences } from '../services/conciergeMemoryService';
+import {
+  askForPushPermission,
+  isDeviceRegisteredForPush,
+  unregisterDeviceForPush,
+} from '../services/pushService';
 import { CIGAR_BRANDS } from '../data/cigarBrands';
 import { DRINK_OPTIONS } from '../data/drinks';
 import type { AiExperienceMode } from '../types/firestore';
@@ -60,7 +64,6 @@ import {
   defaultExperienceMode,
   defaultMaxTravelDistance,
   defaultSelectedAtmosphereIds,
-  defaultSystemPreferences,
   experienceModes,
   type ExperienceMode,
 } from '../data/mockAISettings';
@@ -92,10 +95,15 @@ export default function AISettingsScreen() {
   const [selectedAtmosphereIds, setSelectedAtmosphereIds] = useState<Set<string>>(
     new Set(defaultSelectedAtmosphereIds),
   );
-  const [accessibilityMode, setAccessibilityMode] = useState(
-    defaultSystemPreferences.accessibilityMode,
-  );
-  const [loungeAlerts, setLoungeAlerts] = useState(defaultSystemPreferences.loungeAlerts);
+
+  /**
+   * Lounge Alerts reflects whether THIS device is registered to receive push,
+   * not merely whether iOS granted permission — see isDeviceRegisteredForPush.
+   * `null` while we are still asking, so the switch never flickers through a
+   * guessed position on the way to the real one.
+   */
+  const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
 
   // Hydrate from the member's stored preferences once the profile arrives.
   // Without this the screen always opened on the defaults and quietly
@@ -108,6 +116,63 @@ export default function AISettingsScreen() {
     setCigarBrands(saved.cigarBrands ?? []);
     setDrinks(saved.drinks ?? []);
   }, [saved]);
+
+  /**
+   * Read the real state on mount, and again whenever the app comes back to
+   * the foreground — someone sent to iOS Settings to undo a denial returns
+   * here, and the switch has to agree with what they just did there.
+   */
+  useEffect(() => {
+    if (!userId) return undefined;
+
+    let cancelled = false;
+    const refresh = () => {
+      isDeviceRegisteredForPush(userId).then(enabled => {
+        if (!cancelled) setPushEnabled(enabled);
+      });
+    };
+
+    refresh();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') refresh();
+    });
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
+  }, [userId]);
+
+  /**
+   * iOS gives an app exactly one permission prompt for the life of the
+   * install. Once refused, requestPermission returns "denied" without showing
+   * anything, so switching this on would appear to do nothing at all — the
+   * member must be sent to Settings instead, and told why.
+   */
+  const onTogglePush = async (next: boolean) => {
+    if (!userId || pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (next) {
+        const granted = await askForPushPermission(userId);
+        setPushEnabled(granted);
+        if (!granted) {
+          Alert.alert(
+            'Notifications are off for this app',
+            'Turn them on in iOS Settings and Lounge Alerts will switch on here.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ],
+          );
+        }
+      } else {
+        await unregisterDeviceForPush(userId);
+        setPushEnabled(false);
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const atmosphereLabels = useMemo(
     () =>
@@ -399,29 +464,33 @@ export default function AISettingsScreen() {
           </Pressable>
         </View>
 
-        {/* ---------------- System Preferences ---------------- */}
+        {/* ---------------- Notifications ----------------
+            "Accessibility Mode" used to sit above this and has been removed.
+            It was a switch over nothing: no line of the app ever read it, and
+            iOS already owns accessibility — the app honours Reduce Motion and
+            ships VoiceOver labels whatever this said. Offering our own switch
+            implied those were off until you opted in, which was the opposite
+            of the truth. (Rohith, 2026-09-13.) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>System Preferences</Text>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLeft}>
-              <Accessibility size={18} color={theme.colors.secondarySilver} />
-              <Text style={styles.toggleLabel}>Accessibility Mode</Text>
-            </View>
-            <Switch
-              value={accessibilityMode}
-              onValueChange={setAccessibilityMode}
-              trackColor={{ false: theme.colors.surface, true: theme.colors.secondarySilver }}
-              thumbColor={theme.colors.white}
-            />
-          </View>
+          <Text style={styles.sectionTitle}>Notifications</Text>
           <View style={styles.toggleRow}>
             <View style={styles.toggleLeft}>
               <Bell size={18} color={theme.colors.secondarySilver} />
-              <Text style={styles.toggleLabel}>Lounge Alerts</Text>
+              <View style={styles.toggleTextGroup}>
+                <Text style={styles.toggleLabel}>Lounge Alerts</Text>
+                <Text style={styles.toggleHint}>
+                  {pushEnabled === null
+                    ? 'Checking…'
+                    : pushEnabled
+                      ? 'Reservations, reviews and claim updates on this device.'
+                      : 'Turn on to be told about reservations and claim updates.'}
+                </Text>
+              </View>
             </View>
             <Switch
-              value={loungeAlerts}
-              onValueChange={setLoungeAlerts}
+              value={pushEnabled === true}
+              onValueChange={onTogglePush}
+              disabled={pushEnabled === null || pushBusy}
               trackColor={{ false: theme.colors.surface, true: theme.colors.secondarySilver }}
               thumbColor={theme.colors.white}
             />
@@ -789,9 +858,21 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   toggleLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
+    paddingRight: theme.spacing.md,
+  },
+  toggleTextGroup: {
+    flex: 1,
+    gap: 2,
+  },
+  toggleHint: {
+    ...theme.typography.body,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: theme.colors.mutedGray,
   },
   toggleLabel: {
     ...theme.typography.medium,

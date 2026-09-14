@@ -36,12 +36,6 @@ export const atmosphereOptions: AtmosphereOption[] = [
 
 export const defaultSelectedAtmosphereIds = ['lively-jazz'];
 
-
-export const defaultSystemPreferences = {
-  accessibilityMode: false,
-  loungeAlerts: true,
-};
-
 export const lastRecommendation = {
   loungeName: 'Heritage Oak Room',
   image: loungeInteriors[0],

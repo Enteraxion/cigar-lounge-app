@@ -261,6 +261,30 @@ export default function FilterBottomSheet({
   // enough to skip memoizing.
   const resultCount = applySearchFilters(results, draftFilters, currentLocation).length;
 
+  /**
+   * When the count is zero, say which filter caused it.
+   *
+   * "Show 0 Results" with eight collapsed sections above it gives a member
+   * nothing to act on, and the commonest cause is invisible: searching a city
+   * with "Near Current Location" still on measures every result against where
+   * the PHONE is. Berlin is not fifteen miles from Texas, so the honest answer
+   * is zero — and it reads as the filters being broken (Rohith, 2026-09-13).
+   *
+   * Rather than guess, this re-runs the same filter with the location clause
+   * removed. If results reappear, that clause is provably the cause and the
+   * message can offer to drop it; if they do not, the emptiness is genuinely
+   * the other chips and saying so would be wrong.
+   */
+  const countIgnoringLocation =
+    resultCount === 0 && draftFilters.nearCurrentLocation
+      ? applySearchFilters(
+          results,
+          { ...draftFilters, nearCurrentLocation: false },
+          currentLocation,
+        ).length
+      : 0;
+  const locationIsTheCause = countIgnoringLocation > 0;
+
   // Only offer chips that can actually match something in the data we have
   // — see viableFilterOptions for why a chip that always returns zero is
   // worse than no chip at all.
@@ -559,6 +583,24 @@ export default function FilterBottomSheet({
         </ScrollView>
 
         <View style={styles.footer}>
+          {locationIsTheCause ? (
+            <Pressable
+              style={styles.zeroHint}
+              onPress={() =>
+                setNearCurrentLocation(false)
+              }
+              accessibilityRole="button"
+            >
+              <Text style={styles.zeroHintText}>
+                Nothing is within {draftFilters.distanceMiles} miles of you.{' '}
+                <Text style={styles.zeroHintAction}>
+                  Turn off &ldquo;Near Current Location&rdquo;
+                </Text>{' '}
+                to see {countIgnoringLocation}{' '}
+                {countIgnoringLocation === 1 ? 'result' : 'results'}.
+              </Text>
+            </Pressable>
+          ) : null}
           <Pressable style={styles.showResultsButton} onPress={handleShowResults}>
             <Text style={styles.showResultsButtonText}>Show {resultCount} Results</Text>
           </Pressable>
@@ -821,5 +863,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.accentGold,
     textAlign: 'center',
+  },
+  /**
+   * Shown only when a zero is provably caused by the distance filter — see
+   * locationIsTheCause. Tappable, because naming a problem without offering
+   * the fix is half an answer.
+   */
+  zeroHint: {
+    padding: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.gold.wash,
+    borderWidth: 1,
+    borderColor: theme.gold.line,
+  },
+  zeroHintText: {
+    ...theme.typography.body,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: theme.colors.secondarySilver,
+    textAlign: 'center',
+  },
+  zeroHintAction: {
+    fontFamily: theme.fontFamily.semibold,
+    color: theme.colors.accentGold,
   },
 });

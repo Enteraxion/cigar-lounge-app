@@ -55,7 +55,7 @@ function FavoriteLoungeCard({ lounge, onPress }: { lounge: Lounge; onPress: () =
       <Image source={{ uri: loungeImageUri(lounge) }} style={styles.loungeImage} />
       <View style={styles.loungeBody}>
         <Text style={styles.loungeName}>{lounge.name}</Text>
-        <Text style={styles.loungeTags}>{displayTags(lounge.tags).join(' • ')}</Text>
+        <Text style={styles.loungeTags}>{displayTags(lounge.tags ?? []).join(' • ')}</Text>
         <StarRating rating={lounge.ratings.overall} size={13} />
       </View>
     </Pressable>

@@ -321,7 +321,7 @@ export default function TravelWishlistScreen() {
                     image={{ uri: loungeImageUri(item) }}
                     name={item.name}
                     location={item.address}
-                    tags={displayTags(item.tags)}
+                    tags={displayTags(item.tags ?? [])}
                     rating={item.ratings.overall}
                   />
                 </Pressable>

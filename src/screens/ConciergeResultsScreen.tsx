@@ -95,7 +95,7 @@ function insightFor(lounge: Lounge, distanceMiles: number | null): string {
   if (lounge.ratings.overall >= 4.5) {
     parts.push(`Rated ${lounge.ratings.overall.toFixed(1)} by ${lounge.reviewCount} members`);
   }
-  const tags = displayTags(lounge.tags).slice(0, 2);
+  const tags = displayTags(lounge.tags ?? []).slice(0, 2);
   if (tags.length) parts.push(tags.join(' and ').toLowerCase());
   if (distanceMiles !== null && distanceMiles < 5) parts.push('close to you');
   return parts.length ? `${parts.join(' • ')}.` : 'In your area.';
@@ -170,7 +170,7 @@ export default function ConciergeResultsScreen() {
       distance: entry.distance !== null ? `${entry.distance.toFixed(1)} mi` : '',
       rating: entry.lounge.ratings.overall,
       location: entry.lounge.city ?? entry.lounge.address,
-      tags: displayTags(entry.lounge.tags).slice(0, 3),
+      tags: displayTags(entry.lounge.tags ?? []).slice(0, 3),
       image: loungeImageUri(entry.lounge),
       insight: insightFor(entry.lounge, entry.distance),
       topMatch: index === 0 && isPremiumLounge(entry.lounge),

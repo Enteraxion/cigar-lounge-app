@@ -88,7 +88,20 @@ function keywordForLabel(label: string): string {
 
 /** `tags` + `amenities` + `description`, lowercased, as one search haystack. */
 function loungeKeywordHaystack(lounge: Lounge): string {
-  return [...lounge.tags, ...lounge.amenities, lounge.description].join(' ').toLowerCase();
+  /**
+   * Guarded, because LoungeDocument's types are a description of what an import
+   * SHOULD write, not a guarantee about what is in Firestore. Two of 8,513
+   * lounges have no `amenities` at all — both Google-sourced — and spreading
+   * undefined throws "Cannot convert undefined value to object", which took the
+   * entire app down the moment the filter sheet touched one (2026-09-13).
+   *
+   * Nothing about a missing field should be fatal here. A lounge with no
+   * amenities recorded simply matches fewer filters, which is true rather than
+   * merely safe.
+   */
+  return [...(lounge.tags ?? []), ...(lounge.amenities ?? []), lounge.description ?? '']
+    .join(' ')
+    .toLowerCase();
 }
 
 /** A lounge matches a chip category (OR within the category) if none are
@@ -202,7 +215,7 @@ function dollarSignCount(priceRange: string): number {
 export function isPremiumLounge(lounge: Lounge): boolean {
   return (
     dollarSignCount(lounge.priceRange) >= 4 ||
-    [...lounge.tags, lounge.description].join(' ').toLowerCase().includes('premium')
+    [...(lounge.tags ?? []), lounge.description ?? ''].join(' ').toLowerCase().includes('premium')
   );
 }
 

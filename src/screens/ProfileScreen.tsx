@@ -50,10 +50,16 @@
  *    gone entirely — there's no check-in feature to source them from.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+  type NavigationProp,
+  type RouteProp,
+} from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   BookMarked,
@@ -181,6 +187,8 @@ function ActivityRow({ entry, isLast }: { entry: RecentActivityEntry; isLast: bo
 
 export default function ProfileScreen() {
   const navigation = useNavigation<ProfileNavigationProp>();
+  const route = useRoute<RouteProp<ProfileStackParamList, 'ProfileHome'>>();
+  const scrollRef = useRef<ScrollView>(null);
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
   const userId = auth.currentUser?.uid;
 
@@ -265,6 +273,28 @@ export default function ProfileScreen() {
     }, [reloadProfile, loadProfileSections]),
   );
 
+  /**
+   * Back to the top when Profile is opened deliberately, rather than merely
+   * returned to.
+   *
+   * A tab keeps its scroll position, and should — that is what makes a tab bar
+   * feel like switching rooms rather than reloading. But tapping your own
+   * avatar on Home is a different intent, and landing halfway down the page
+   * where you happened to stop reading last time reads as the app having lost
+   * its place (Rohith, 2026-09-13).
+   *
+   * Keyed on the timestamp, not a boolean: React Navigation merges params, so a
+   * flag that is already true looks unchanged on the second tap and nothing
+   * would happen. `animated: false` because this is not a scroll the member
+   * made — animating it would draw attention to a position they never chose.
+   */
+  const scrollToTopAt = route.params?.scrollToTopAt;
+  useEffect(() => {
+    if (scrollToTopAt) {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [scrollToTopAt]);
+
   // Travel History counts places actually visited, matching the JourneyMap
   // directly above it — these used to count favorites, so the card claimed
   // travel to lounges the member had only saved.
@@ -310,7 +340,11 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* ---------------- Profile ---------------- */}
         <View style={styles.profileSection}>
           <Pressable

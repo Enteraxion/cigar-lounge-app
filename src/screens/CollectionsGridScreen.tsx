@@ -87,11 +87,29 @@ export default function CollectionsGridScreen() {
     }, [load]),
   );
 
+  /**
+   * Same tap target as Home's header — the avatar and name there open the
+   * Profile tab, and this is the identical header, so it behaves identically.
+   * scrollToTopAt makes Profile open at the top rather than wherever it was
+   * last left scrolled to.
+   */
+  const openProfile = () => {
+    (tabNavigation.navigate as (name: string, params?: object) => void)('Profile', {
+      screen: 'ProfileHome',
+      params: { scrollToTopAt: Date.now() },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
+          <Pressable
+            style={styles.headerLeft}
+            onPress={openProfile}
+            accessibilityRole="button"
+            accessibilityLabel="Open your profile"
+          >
             {profile?.avatarUri ? (
               <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
             ) : (
@@ -103,7 +121,7 @@ export default function CollectionsGridScreen() {
               <Text style={styles.welcomeCaption}>Welcome back</Text>
               <Text style={styles.welcomeName}>{profile?.name ?? 'Member'}</Text>
             </View>
-          </View>
+          </Pressable>
           <Pressable
             style={styles.bellButton}
             hitSlop={8}

@@ -66,6 +66,20 @@ export default function FavoritesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<FavoritesNavigationProp>();
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
+
+  /**
+   * Same tap target as Home's header — the avatar and name there open the
+   * Profile tab, and this is the identical header, so it behaves identically.
+   * scrollToTopAt makes Profile open at the top rather than wherever it was
+   * last left scrolled to.
+   */
+  const openProfile = () => {
+    (tabNavigation.navigate as (name: string, params?: object) => void)('Profile', {
+      screen: 'ProfileHome',
+      params: { scrollToTopAt: Date.now() },
+    });
+  };
+
   const userId = auth.currentUser?.uid;
   const { profile } = useUserProfile();
   const { count: unreadNotificationCount } = useUnreadNotificationCount();
@@ -134,8 +148,13 @@ export default function FavoritesScreen() {
   if (favorites.length === 0) {
     return (
       <SafeAreaView style={styles.screen} edges={['top']}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
+        <View style={[styles.header, styles.headerStandalone]}>
+          <Pressable
+            style={styles.headerLeft}
+            onPress={openProfile}
+            accessibilityRole="button"
+            accessibilityLabel="Open your profile"
+          >
             {profile?.avatarUri ? (
               <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
             ) : (
@@ -147,7 +166,7 @@ export default function FavoritesScreen() {
               <Text style={styles.welcomeCaption}>Activity History</Text>
               <Text style={styles.emptyHeaderTitle}>Favorites</Text>
             </View>
-          </View>
+          </Pressable>
           <Pressable
             style={styles.bellButton}
             hitSlop={8}
@@ -229,7 +248,12 @@ export default function FavoritesScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
+          <Pressable
+            style={styles.headerLeft}
+            onPress={openProfile}
+            accessibilityRole="button"
+            accessibilityLabel="Open your profile"
+          >
             {profile?.avatarUri ? (
               <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
             ) : (
@@ -241,7 +265,7 @@ export default function FavoritesScreen() {
               <Text style={styles.welcomeCaption}>Welcome back</Text>
               <Text style={styles.welcomeName}>{profile?.name ?? 'Member'}</Text>
             </View>
-          </View>
+          </Pressable>
           <Pressable
             style={styles.bellButton}
             hitSlop={8}
@@ -351,12 +375,22 @@ const styles = StyleSheet.create({
   },
 
   // ---- Header (shared between states) ----
+  /**
+   * No horizontal padding here — the normal state renders this inside the
+   * ScrollView, whose contentContainerStyle already pads to spacing.lg, so
+   * carrying it here indented the avatar and "Welcome back" further right
+   * than everything beneath them and further right than the identical header
+   * on Home (Rohith, 2026-09-13). The empty state renders it outside that
+   * ScrollView and adds the padding itself, via headerStandalone.
+   */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
+  },
+  headerStandalone: {
+    paddingHorizontal: theme.spacing.lg,
   },
   headerLeft: {
     flexDirection: 'row',

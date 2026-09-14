@@ -36,6 +36,7 @@ import {
   collection,
   doc,
   deleteDoc,
+  getDoc,
   setDoc,
   Timestamp,
 } from '@react-native-firebase/firestore';
@@ -56,6 +57,33 @@ export async function isPushAuthorised(): Promise<boolean> {
     return (
       status === AuthorizationStatus.AUTHORIZED || status === AuthorizationStatus.PROVISIONAL
     );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether this device is actually set up to receive notifications.
+ *
+ * Deliberately not the same question as isPushAuthorised. iOS permission and
+ * "is this phone registered" come apart in both directions: a member who turns
+ * Lounge Alerts off in Settings keeps the iOS grant but must stop receiving,
+ * and a member who granted permission on another phone has told us nothing
+ * about this one. The settings toggle has to show what is true for the device
+ * in front of them, so it asks whether the token document exists — which is
+ * the thing the server actually sends to.
+ */
+export async function isDeviceRegisteredForPush(userId: string): Promise<boolean> {
+  try {
+    if (!(await isPushAuthorised())) {
+      return false;
+    }
+    const token = await getToken(messaging);
+    if (!token) {
+      return false;
+    }
+    const snapshot = await getDoc(tokenRef(userId, token));
+    return snapshot.exists();
   } catch {
     return false;
   }

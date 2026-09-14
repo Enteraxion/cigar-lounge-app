@@ -3019,6 +3019,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-voice (3.2.4):
+    - React-Core
   - React-NativeModulesApple (0.86.0):
     - hermes-engine
     - React-callinvoker
@@ -3747,6 +3749,7 @@ DEPENDENCIES:
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-maps (from `../node_modules/react-native-maps`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - "react-native-voice (from `../node_modules/@react-native-voice/voice`)"
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -3915,6 +3918,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-maps"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-voice:
+    :path: "../node_modules/@react-native-voice/voice"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -4079,6 +4084,7 @@ SPEC CHECKSUMS:
   react-native-image-picker: 09cea417bef3ee25008ad21d4426f9a1fc54ad84
   react-native-maps: f6b0ae1b6a4219d835846c2d817abbc2d95bdf50
   react-native-safe-area-context: 0bbcdfba5c4a1b3203276f1ed9128e3239fdf199
+  react-native-voice: 908a0eba96c8c3d643e4f98b7232c6557d0a6f9c
   React-NativeModulesApple: a092d89b58f635ebfab88048b0eda9fb516819fd
   React-networking: ee8e1504d7c1c73a3655bf545ca1184bebae4c7f
   React-oscompat: 0b72a7e926954a0415ccd83e0748b6561fe45367

@@ -63,6 +63,17 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<!--
+	  Voice search. BOTH keys are required and the app hard-crashes without
+	  either — iOS does not prompt, it terminates. Speech recognition needs its
+	  own permission on top of the microphone because the audio may leave the
+	  device: Apple can transcribe on its servers rather than on-device, which is
+	  also why public/privacy-policy.html names it.
+	-->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lounge Locator uses your microphone so you can search for lounges by speaking instead of typing.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Lounge Locator converts your speech to text so it can search for the lounge, city or brand you asked for. Nothing is recorded or kept.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Lounge Locator uses your camera so you can take photos to attach to reviews and collections, and photograph your ID to verify you are 21 or over.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

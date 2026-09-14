@@ -47,6 +47,7 @@ import {
   updateReview as updateReviewInFirestore,
 } from '../services/userActionsService';
 import { auth } from '../services/firebaseAuth';
+import { objectionInReview } from '../utils/moderation';
 import type { ReviewCategoryRatings } from '../types/firestore';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
@@ -156,6 +157,16 @@ export default function WriteReviewScreen() {
         'Tell us a little more',
         'Add a sentence about your visit so other members know what to expect.',
       );
+      return;
+    }
+    // App Store guideline 1.2 asks for a filter on what gets posted, not only
+    // a way to report it afterwards. Deliberately narrow — slurs and explicit
+    // sexual language, nothing else. "The staff were useless and the humidor
+    // was dry" is a bad review, not an objectionable one, and a directory
+    // whose filter silences criticism is worth less than one with no filter.
+    const objection = objectionInReview(reviewText);
+    if (objection) {
+      Alert.alert('We cannot publish this', objection.message);
       return;
     }
     if (submitting) return;

@@ -217,12 +217,19 @@ export default function WriteReviewScreen() {
           <StarRating rating={overallRating} onChange={setOverallRating} size={34} />
         </View>
 
-        {/* ---------------- Visit Date ---------------- */}
+        {/* ---------------- Visited ----------------
+            Read-only, and now dressed as such. This was styled exactly like
+            the text inputs above it — bordered box, calendar icon — while
+            being inert: submit always writes `visitDate: new Date()`. A
+            member who went on Saturday and writes on Tuesday had no way to
+            say so and no way to tell that the field was refusing them.
+            Until there is a real picker, show it as the stamp it is.
+            (Rohith, 2026-09-13.) */}
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Visit Date</Text>
+          <Text style={styles.fieldLabel}>Visited</Text>
           <View style={styles.dateRow}>
+            <Calendar size={16} color={theme.colors.mutedGray} />
             <Text style={styles.dateText}>{formatToday()}</Text>
-            <Calendar size={18} color={theme.colors.secondarySilver} />
           </View>
         </View>
 
@@ -437,19 +444,13 @@ const styles = StyleSheet.create({
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 50,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radius.medium,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: withAlpha(theme.colors.accentGold, 0.15),
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
   },
   dateText: {
     ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
     fontSize: 14,
-    color: theme.colors.white,
+    color: theme.colors.secondarySilver,
   },
 
   // ---- Would Return / Recommend ----

@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   Award,
   Box,
@@ -43,11 +43,32 @@ export const BADGE_ICON: Record<Badge['icon'], React.ComponentType<{ size?: numb
   box: Box,
 };
 
-export default function BadgeTile({ badge }: { badge: Badge }) {
+/**
+ * `onPress` is optional: ProfileScreen's preview row is a shortcut into the
+ * full screen, so its tiles stay inert, while AchievementsScreen passes a
+ * handler so a member can ask what a locked badge wants.
+ */
+export default function BadgeTile({
+  badge,
+  onPress,
+}: {
+  badge: Badge;
+  onPress?: () => void;
+}) {
   const Icon = BADGE_ICON[badge.icon];
 
   return (
-    <View style={styles.badgeTile}>
+    <Pressable
+      style={styles.badgeTile}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={
+        onPress
+          ? `${badge.label}. ${badge.unlocked ? 'Unlocked' : 'Locked'}. ${badge.requirement}.`
+          : undefined
+      }
+    >
       <View style={[styles.badgeIconBox, !badge.unlocked && styles.badgeIconBoxLocked]}>
         <Icon
           size={22}
@@ -60,7 +81,7 @@ export default function BadgeTile({ badge }: { badge: Badge }) {
       >
         {badge.label}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 

@@ -18,7 +18,15 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, Star } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,11 +34,12 @@ import { theme, withAlpha } from '../theme';
 import { auth } from '../services/firebaseAuth';
 import { getUserStats, type UserStats } from '../services/userActionsService';
 import {
+  type Badge,
   computeAchievementCategories,
   nextLockedBadge,
   overallAchievementProgress,
 } from '../utils/achievements';
-import BadgeTile from '../components/BadgeTile';
+import BadgeTile, { BADGE_ICON } from '../components/BadgeTile';
 import { getPassport } from '../services/passportService';
 import type { PassportSummary } from '../utils/passport';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
@@ -47,6 +56,9 @@ export default function AchievementsScreen() {
   // The travel badges (Explorer/Traveler) are computed from real visits,
   // so this screen needs the passport alongside the plain stats.
   const [passport, setPassport] = useState<PassportSummary | null>(null);
+  // The badge a member has tapped to ask "why is this locked?". Nothing in
+  // the app answered that before — a locked tile was grey and silent.
+  const [explained, setExplained] = useState<Badge | null>(null);
 
   const load = useCallback(() => {
     if (!userId) {
@@ -123,7 +135,10 @@ export default function AchievementsScreen() {
               <Star size={18} color={theme.colors.accentGold} fill={theme.colors.accentGold} />
             </View>
             <Text style={styles.recommendationText}>
-              Keep exploring to unlock &quot;{nextBadge.label}&quot;
+              {/* The badge names its own requirement — see Badge.requirement.
+                  This used to read "Keep exploring" for every badge, which
+                  sent members after photographs by visiting more lounges. */}
+              {nextBadge.requirement} to unlock &quot;{nextBadge.label}&quot;
             </Text>
           </View>
         )}
@@ -143,13 +158,54 @@ export default function AchievementsScreen() {
               contentContainerStyle={styles.badgeRow}
             >
               {category.badges.map(badge => (
-                <BadgeTile key={badge.id} badge={badge} />
+                <BadgeTile
+                  key={badge.id}
+                  badge={badge}
+                  onPress={() => setExplained(badge)}
+                />
               ))}
             </ScrollView>
           </View>
         ))}
       </ScrollView>
+
+      <Modal
+        visible={explained !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExplained(null)}
+      >
+        <Pressable style={styles.explainBackdrop} onPress={() => setExplained(null)}>
+          <Pressable style={styles.explainCard} onPress={() => {}}>
+            {explained ? <ExplainedBadge badge={explained} /> : null}
+            <Pressable
+              style={styles.explainDismiss}
+              onPress={() => setExplained(null)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.explainDismissText}>Got it</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
+  );
+}
+
+/** The contents of the tap-a-badge card: what it is, and what it asks for. */
+function ExplainedBadge({ badge }: { badge: Badge }) {
+  const Icon = BADGE_ICON[badge.icon];
+  return (
+    <>
+      <View style={[styles.explainIconBox, !badge.unlocked && styles.explainIconBoxLocked]}>
+        <Icon size={26} color={badge.unlocked ? theme.colors.accentGold : theme.colors.mutedGray} />
+      </View>
+      <Text style={styles.explainTitle}>{badge.label}</Text>
+      <Text style={styles.explainRequirement}>{badge.requirement}</Text>
+      <Text style={styles.explainStatus}>
+        {badge.unlocked ? 'Unlocked' : 'Not yet unlocked'}
+      </Text>
+    </>
   );
 }
 
@@ -223,6 +279,67 @@ const styles = StyleSheet.create({
   },
 
   // ---- Recommendation ----
+  // ---- Tap-a-badge explanation ----
+  explainBackdrop: {
+    flex: 1,
+    backgroundColor: withAlpha(theme.colors.primaryBlack, 0.72),
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.xl,
+  },
+  explainCard: {
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    padding: theme.spacing.xl,
+    borderRadius: theme.radius.large,
+    backgroundColor: theme.colors.surface,
+  },
+  explainIconBox: {
+    width: 68,
+    height: 68,
+    borderRadius: theme.radius.large,
+    backgroundColor: withAlpha(theme.colors.accentGold, 0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  explainIconBoxLocked: {
+    backgroundColor: theme.colors.background,
+  },
+  explainTitle: {
+    ...theme.typography.headingSmall,
+    fontSize: 20,
+    color: theme.colors.white,
+    textAlign: 'center',
+  },
+  explainRequirement: {
+    ...theme.typography.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: theme.colors.secondarySilver,
+    textAlign: 'center',
+  },
+  explainStatus: {
+    ...theme.typography.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: theme.colors.mutedGray,
+  },
+  explainDismiss: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  explainDismissText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 13,
+    color: theme.colors.accentGold,
+  },
+
   recommendationCard: {
     flexDirection: 'row',
     alignItems: 'center',

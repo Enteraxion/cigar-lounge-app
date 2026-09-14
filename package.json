@@ -22,6 +22,7 @@
     "seed:age-verification": "ts-node --project scripts/tsconfig.json scripts/seedAgeVerification.ts",
     "reset:database": "ts-node --project scripts/tsconfig.json scripts/resetDatabase.ts",
     "create:admin": "ts-node --project scripts/tsconfig.json scripts/createAdmin.ts",
+    "create:reviewer": "ts-node --project scripts/tsconfig.json scripts/createReviewerAccount.ts",
     "backfill:google": "ts-node --project scripts/tsconfig.json scripts/backfillFromGoogle.ts",
     "emulate": "npm --prefix functions run build && npx firebase-tools emulators:start --only functions,firestore,auth"
   },

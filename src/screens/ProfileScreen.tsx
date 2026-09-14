@@ -135,11 +135,31 @@ function CollectionCard({ collection, onPress }: { collection: UserCollection; o
   );
 }
 
-function ActivityRow({ entry, isLast }: { entry: RecentActivityEntry; isLast: boolean }) {
+/**
+ * `onPress` opens the lounge the activity is about. The lounge name was
+ * already drawn gold and underlined — it read as a link, and tapping it did
+ * nothing at all (Rohith, 2026-09-13). The whole row is the target rather
+ * than just the name: the name is two words in a paragraph, and a member
+ * reaching for their own review is aiming at the card.
+ */
+function ActivityRow({
+  entry,
+  isLast,
+  onPress,
+}: {
+  entry: RecentActivityEntry;
+  isLast: boolean;
+  onPress: () => void;
+}) {
   const hasPhotos = entry.photos.length > 0;
 
   return (
-    <View style={styles.activityRow}>
+    <Pressable
+      style={({ pressed }) => [styles.activityRow, pressed && styles.activityRowPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${hasPhotos ? 'Photos added to' : 'Review of'} ${entry.loungeName}. Opens the lounge.`}
+    >
       <View style={styles.activityRail}>
         <View style={styles.activityIconBox}>
           {hasPhotos ? (
@@ -181,7 +201,7 @@ function ActivityRow({ entry, isLast }: { entry: RecentActivityEntry; isLast: bo
           </View>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -325,6 +345,14 @@ export default function ProfileScreen() {
   const openFavorites = () => {
     (tabNavigation.navigate as (name: string, params?: object) => void)('Saved', {
       screen: 'FavoritesHome',
+    });
+  };
+
+  /** Lounge pages live in the Search stack — same cross-tab hop as above. */
+  const openLounge = (loungeId: string) => {
+    (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
+      screen: 'LoungeDetail',
+      params: { loungeId },
     });
   };
 
@@ -541,12 +569,7 @@ export default function ProfileScreen() {
             {lastViewedLounge && (
               <Pressable
                 style={styles.destinationRow}
-                onPress={() =>
-                  (tabNavigation.navigate as (name: string, params?: object) => void)('Search', {
-                    screen: 'LoungeDetail',
-                    params: { loungeId: lastViewedLounge.id },
-                  })
-                }
+                onPress={() => openLounge(lastViewedLounge.id)}
               >
                 <View style={styles.destinationIconBox}>
                   <Plane size={16} color={theme.colors.accentGold} />
@@ -580,6 +603,7 @@ export default function ProfileScreen() {
                   key={entry.id}
                   entry={entry}
                   isLast={index === recentActivity.length - 1}
+                  onPress={() => openLounge(entry.loungeId)}
                 />
               ))}
             </View>
@@ -870,6 +894,11 @@ const styles = StyleSheet.create({
   activityRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
+  },
+  // The row opens a lounge, so it needs to acknowledge a touch — without
+  // this it navigates with no sign it registered the tap.
+  activityRowPressed: {
+    opacity: 0.6,
   },
   activityRail: {
     alignItems: 'center',

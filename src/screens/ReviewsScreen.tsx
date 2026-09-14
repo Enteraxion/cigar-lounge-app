@@ -21,7 +21,17 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,12 +39,19 @@ import type { RouteProp } from '@react-navigation/native';
 import {
   ChevronLeft,
   MessageCircle,
+  MoreHorizontal,
   Pencil,
   SlidersHorizontal,
   ThumbsUp,
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import {
+  blockMember,
+  getBlockedUserIds,
+  reportReview,
+} from '../services/moderationService';
+import { REPORT_REASONS, type ReportReason } from '../utils/moderation';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { useVerificationGate } from '../hooks/useVerificationGate';
 import StarRating from '../components/StarRating';
@@ -111,6 +128,7 @@ function ReviewCard({
   deleting,
   onEdit,
   onDelete,
+  onReport,
 }: {
   review: Review;
   loungeId: string;
@@ -118,6 +136,7 @@ function ReviewCard({
   deleting: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onReport: () => void;
 }) {
   const userId = auth.currentUser?.uid;
   const [markedHelpful, setMarkedHelpful] = useState(
@@ -207,7 +226,21 @@ function ReviewCard({
               )}
             </Pressable>
           </View>
-        ) : null}
+        ) : (
+          /* Somebody else's review: report it, or stop seeing this member.
+             App Store guideline 1.2 requires both of any app carrying
+             user-generated content, and reviews are exactly that. Placed
+             beside the owner's own edit/delete so there is one obvious place
+             to act on a review, whoever wrote it (2026-09-14). */
+          <Pressable
+            onPress={onReport}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Report or block ${review.userName}`}
+          >
+            <MoreHorizontal size={16} color={theme.colors.mutedGray} />
+          </Pressable>
+        )}
         <Pressable
           style={[styles.helpfulButton, markedHelpful && styles.helpfulButtonActive]}
           onPress={onPressHelpful}
@@ -244,6 +277,14 @@ export default function ReviewsScreen() {
   const [appliedReviewFilters, setAppliedReviewFilters] =
     useState<ReviewFilters>(defaultReviewFilters);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  /** The review whose report/block sheet is open, if any. */
+  const [reporting, setReporting] = useState<Review | null>(null);
+  /**
+   * Members this one has blocked. Their reviews are filtered out of
+   * displayReviews below — a block has to take effect the moment it is made,
+   * not when somebody eventually acts on a report.
+   */
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!loungeId) {
@@ -262,7 +303,10 @@ export default function ReviewsScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load]),
+      if (userId) {
+        getBlockedUserIds(userId).then(setBlockedIds);
+      }
+    }, [load, userId]),
   );
 
   const onEditReview = (review: Review) => {
@@ -315,9 +359,44 @@ export default function ReviewsScreen() {
   const distributionTopToBottom = [...summary.distribution].reverse();
 
   const displayReviews = useMemo(
-    () => applyReviewFilters(reviews ?? [], appliedReviewFilters),
-    [reviews, appliedReviewFilters],
+    () =>
+      applyReviewFilters(reviews ?? [], appliedReviewFilters).filter(
+        review => !blockedIds.has(review.userId),
+      ),
+    [reviews, appliedReviewFilters, blockedIds],
   );
+
+  const onBlockAuthor = async (review: Review) => {
+    if (!userId) return;
+    await blockMember(userId, review.userId, review.userName).catch(() => {});
+    setBlockedIds(previous => new Set(previous).add(review.userId));
+    setReporting(null);
+    Alert.alert(
+      'Member blocked',
+      `You will no longer see reviews from ${review.userName}. You can undo this in Settings.`,
+    );
+  };
+
+  const onSubmitReport = async (review: Review, reason: ReportReason) => {
+    if (!userId) return;
+    setReporting(null);
+    try {
+      await reportReview({
+        reporterId: userId,
+        loungeId,
+        reviewId: review.id,
+        reviewAuthorId: review.userId,
+        reviewAuthorName: review.userName,
+        reviewText: review.text ?? '',
+        reason,
+      });
+      // Says it has been sent, not what will happen — we cannot promise a
+      // particular outcome and should not imply one.
+      Alert.alert('Report sent', 'Thank you. Our team will take a look at this review.');
+    } catch {
+      Alert.alert("Couldn't send the report", 'Check your connection and try again.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -400,6 +479,7 @@ export default function ReviewsScreen() {
                   deleting={deletingIds.has(review.id)}
                   onEdit={() => onEditReview(review)}
                   onDelete={() => onDeleteReview(review)}
+                  onReport={() => setReporting(review)}
                 />
               ))}
             </View>
@@ -423,6 +503,48 @@ export default function ReviewsScreen() {
         onApply={setAppliedReviewFilters}
         onClose={() => setFilterVisible(false)}
       />
+
+      {/* Report / block. One sheet, because the two belong together: somebody
+          who finds a review offensive usually wants both, and making them hunt
+          for the second is how an app ends up with a report button nobody
+          finds. */}
+      <Modal
+        visible={reporting !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setReporting(null)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setReporting(null)}>
+          <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
+            <Text style={styles.sheetTitle}>Report this review</Text>
+            <Text style={styles.sheetHint}>
+              Tell us what is wrong with it and our team will take a look.
+            </Text>
+            {REPORT_REASONS.map(reason => (
+              <Pressable
+                key={reason}
+                style={styles.sheetRow}
+                onPress={() => reporting && onSubmitReport(reporting, reason)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.sheetRowText}>{reason}</Text>
+              </Pressable>
+            ))}
+            <Pressable
+              style={[styles.sheetRow, styles.sheetRowDanger]}
+              onPress={() => reporting && onBlockAuthor(reporting)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.sheetRowDangerText}>
+                Block {reporting?.userName ?? 'this member'}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.sheetCancel} onPress={() => setReporting(null)}>
+              <Text style={styles.sheetCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -721,5 +843,60 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bold,
     fontSize: 15,
     color: theme.colors.primaryBlack,
+  },
+
+  // ---- Report / block sheet ----
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: withAlpha(theme.colors.primaryBlack, 0.7),
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.large,
+    borderTopRightRadius: theme.radius.large,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.xs,
+  },
+  sheetTitle: {
+    ...theme.typography.headingSmall,
+    fontSize: 18,
+    color: theme.colors.white,
+  },
+  sheetHint: {
+    ...theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.mutedGray,
+    marginBottom: theme.spacing.sm,
+  },
+  sheetRow: {
+    paddingVertical: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: withAlpha(theme.colors.secondarySilver, 0.12),
+  },
+  sheetRowText: {
+    ...theme.typography.medium,
+    fontSize: 15,
+    color: theme.colors.white,
+  },
+  sheetRowDanger: {
+    marginTop: theme.spacing.sm,
+  },
+  sheetRowDangerText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 15,
+    color: theme.colors.danger,
+  },
+  sheetCancel: {
+    marginTop: theme.spacing.md,
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  sheetCancelText: {
+    ...theme.typography.medium,
+    fontSize: 15,
+    color: theme.colors.accentGold,
   },
 });

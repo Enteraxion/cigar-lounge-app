@@ -42,6 +42,7 @@ import {
   MessageSquareText,
   Trash2,
   TreePalm,
+  UserX,
   User,
   Wine,
 } from 'lucide-react-native';
@@ -52,6 +53,7 @@ import { deleteMyAccount } from '../services/accountService';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '../config/legal';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { saveAiPreferences } from '../services/conciergeMemoryService';
+import { getBlockedMembers, unblockMember } from '../services/moderationService';
 import {
   askForPushPermission,
   isDeviceRegisteredForPush,
@@ -105,6 +107,7 @@ export default function AISettingsScreen() {
    */
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
+  const [blockedMembers, setBlockedMembers] = useState<{ id: string; name: string }[]>([]);
 
   // Hydrate from the member's stored preferences once the profile arrives.
   // Without this the screen always opened on the defaults and quietly
@@ -173,6 +176,17 @@ export default function AISettingsScreen() {
     } finally {
       setPushBusy(false);
     }
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+    getBlockedMembers(userId).then(setBlockedMembers);
+  }, [userId]);
+
+  const onUnblock = async (blockedUserId: string) => {
+    if (!userId) return;
+    await unblockMember(userId, blockedUserId).catch(() => {});
+    setBlockedMembers(previous => previous.filter(member => member.id !== blockedUserId));
   };
 
   const atmosphereLabels = useMemo(
@@ -522,6 +536,39 @@ export default function AISettingsScreen() {
             <ChevronRight size={17} color={theme.colors.mutedGray} />
           </Pressable>
         </View>
+
+        {/* ---------------- Blocked members ----------------
+            A block a member cannot undo is a trap, not a control: people
+            block in irritation and change their minds, and with nowhere to
+            reverse it the only way back is to stop using the app. Shown only
+            when there is something in it, so it does not advertise a feature
+            most members never touch. (Guideline 1.2, 2026-09-14.) */}
+        {blockedMembers.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Blocked Members</Text>
+            {blockedMembers.map(member => (
+              <View key={member.id} style={styles.toggleRow}>
+                <View style={styles.toggleLeft}>
+                  <UserX size={18} color={theme.colors.secondarySilver} />
+                  <View style={styles.toggleTextGroup}>
+                    <Text style={styles.toggleLabel}>{member.name}</Text>
+                    <Text style={styles.toggleHint}>
+                      You do not see this member&rsquo;s reviews.
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => onUnblock(member.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Unblock ${member.name}`}
+                  hitSlop={8}
+                >
+                  <Text style={styles.unblockText}>Unblock</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {/* ---------------- Account ----------------
             Log Out and Delete Account used to be a red-bordered button with
@@ -947,6 +994,12 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(theme.colors.danger, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  unblockText: {
+    ...theme.typography.medium,
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 13,
+    color: theme.colors.accentGold,
   },
   dangerTitle: {
     ...theme.typography.medium,

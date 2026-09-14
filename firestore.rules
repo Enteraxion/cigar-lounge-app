@@ -70,6 +70,25 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------
+    // reviewReports/{reportId}
+    //
+    // Reports of offensive reviews, required by App Store guideline 1.2.
+    //
+    // Any signed-in member may file one, and only an admin may read the
+    // queue. That asymmetry is the point: a report names the member who
+    // made it, and a queue the reported member could read is a queue
+    // nobody would use twice. Nobody may edit or delete a report from the
+    // app — resolving one is an admin action, and a reported member being
+    // able to clear the report against them would defeat the feature.
+    // ---------------------------------------------------------------
+    match /reviewReports/{reportId} {
+      allow create: if isSignedIn()
+                    && request.resource.data.reporterId == request.auth.uid
+                    && request.resource.data.status == 'open';
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
     // emailVerificationCodes/{userId}
     // ---------------------------------------------------------------
     // The 6-digit email verification codes (functions/src/index.ts's
@@ -329,6 +348,18 @@ service cloud.firestore {
        * entirely and needs no grant here.
        */
       match /fcmTokens/{token} {
+        allow read, write: if isOwner(userId);
+      }
+
+      /**
+       * Who this member has blocked (moderationService.blockMember).
+       *
+       * Private to them: a block list is a statement about other people, and
+       * the person blocked has no business reading it. App Store guideline
+       * 1.2 requires the ability to block abusive members — this is where it
+       * is kept (2026-09-14).
+       */
+      match /blockedUsers/{blockedUserId} {
         allow read, write: if isOwner(userId);
       }
 

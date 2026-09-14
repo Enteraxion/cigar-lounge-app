@@ -879,3 +879,83 @@ describe('password reset code rules', () => {
     );
   });
 });
+
+describe('moderation rules', () => {
+  const report = (overrides: Record<string, unknown> = {}) => ({
+    reporterId: 'member-1',
+    loungeId: 'lounge-1',
+    reviewId: 'review-1',
+    reviewAuthorId: 'member-2',
+    reviewAuthorName: 'Someone Else',
+    reviewText: 'a review',
+    reason: 'Offensive or abusive language',
+    reportedAt: new Date(),
+    status: 'open',
+    ...overrides,
+  });
+
+  it('lets a signed-in member report a review', async () => {
+    await assertSucceeds(
+      setDoc(doc(member(), 'reviewReports/report-1'), report()),
+    );
+  });
+
+  it('refuses a report filed in somebody else’s name', async () => {
+    // Otherwise a member could manufacture a paper trail of another member
+    // reporting people, which is worse than no reporting at all.
+    await assertFails(
+      setDoc(doc(member(), 'reviewReports/report-1'), report({ reporterId: 'member-9' })),
+    );
+  });
+
+  it('refuses a report that arrives pre-resolved', async () => {
+    await assertFails(
+      setDoc(doc(member(), 'reviewReports/report-1'), report({ status: 'resolved' })),
+    );
+  });
+
+  it('refuses to let anyone but an admin read the queue', async () => {
+    // A report names the member who made it. A queue the reported member
+    // could read is a queue nobody would use twice.
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'reviewReports/report-1'), report());
+    });
+    await assertFails(getDoc(doc(member(), 'reviewReports/report-1')));
+    await assertFails(getDoc(doc(member('member-2'), 'reviewReports/report-1')));
+    await assertSucceeds(getDoc(doc(admin(), 'reviewReports/report-1')));
+  });
+
+  it('refuses to let a member clear a report against themselves', async () => {
+    await testEnv.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'reviewReports/report-1'), report());
+    });
+    await assertFails(deleteDoc(doc(member('member-2'), 'reviewReports/report-1')));
+    await assertFails(
+      setDoc(doc(member('member-2'), 'reviewReports/report-1'), report({ status: 'resolved' })),
+    );
+  });
+
+  it('keeps a block list private to the member who made it', async () => {
+    await assertSucceeds(
+      setDoc(doc(member(), 'users/member-1/blockedUsers/member-2'), {
+        name: 'Someone Else',
+        blockedAt: new Date(),
+      }),
+    );
+    // The person blocked has no business knowing.
+    await assertFails(getDoc(doc(member('member-2'), 'users/member-1/blockedUsers/member-2')));
+    await assertFails(
+      setDoc(doc(member('member-2'), 'users/member-1/blockedUsers/member-2'), {
+        name: 'tampered',
+        blockedAt: new Date(),
+      }),
+    );
+  });
+
+  it('lets a member unblock somebody', async () => {
+    await assertSucceeds(
+      setDoc(doc(member(), 'users/member-1/blockedUsers/member-2'), { blockedAt: new Date() }),
+    );
+    await assertSucceeds(deleteDoc(doc(member(), 'users/member-1/blockedUsers/member-2')));
+  });
+});

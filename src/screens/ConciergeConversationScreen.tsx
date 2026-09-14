@@ -106,7 +106,7 @@ function toRecommendationCard(lounge: Lounge): RecommendationCard {
     distance: '',
     rating: lounge.ratings.overall,
     image: loungeImageUri(lounge),
-    tags: displayTags(lounge.tags).slice(0, 3),
+    tags: displayTags(lounge.tags ?? []).slice(0, 3),
   };
 }
 

@@ -104,7 +104,7 @@ export default function SearchResultCard({
         </View>
 
         <View style={styles.amenityRow}>
-          {result.amenities.slice(0, 6).map(amenity => {
+          {(result.amenities ?? []).slice(0, 6).map(amenity => {
             const Icon = getAmenityIcon(amenity);
             return <Icon key={amenity} size={15} color={theme.colors.secondarySilver} />;
           })}

@@ -79,8 +79,18 @@ export type LoungeDocument = {
   hours: string;
   status: LoungeStatus;
   images: string[];
-  amenities: string[];
-  tags: string[];
+  /**
+   * Optional because Firestore disagrees with the importers.
+   *
+   * Both builders in refreshCityLounges write these, so every lounge SHOULD
+   * have them — and two of 8,513 do not, both Google-sourced. Declaring them
+   * required made every read site trust a field that can be absent, and
+   * spreading `undefined` crashed the whole app from the filter sheet
+   * (2026-09-13). The type says what Firestore actually holds now, so the
+   * compiler points at each place that has to cope.
+   */
+  amenities?: string[];
+  tags?: string[];
   priceRange: string;
   ratings: LoungeRatings;
   reviewCount: number;

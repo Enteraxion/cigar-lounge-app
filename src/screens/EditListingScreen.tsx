@@ -54,7 +54,7 @@ export default function EditListingScreen() {
           setDescription(lounge.description);
           setHours(lounge.hours);
           setPriceRange(lounge.priceRange);
-          setAmenitiesText(lounge.amenities.join(', '));
+          setAmenitiesText((lounge.amenities ?? []).join(', '));
         }
       })
       .catch(() => setLoadError(true))

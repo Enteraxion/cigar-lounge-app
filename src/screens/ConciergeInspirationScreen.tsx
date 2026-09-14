@@ -43,13 +43,13 @@ const EXPERIENCE_THEMES: {
     id: 'remote-work',
     title: 'Perfect for Remote Work',
     subtitle: 'Quiet • Reliable Wi-Fi',
-    match: l => /wi-?fi|quiet|work/i.test([...l.tags, ...l.amenities].join(' ')),
+    match: l => /wi-?fi|quiet|work/i.test([...(l.tags ?? []), ...(l.amenities ?? [])].join(' ')),
   },
   {
     id: 'whiskey-pairings',
     title: 'Whiskey Pairings',
     subtitle: 'Full bar, rare pours',
-    match: l => /whiske?y|bourbon|scotch|full bar|cocktail/i.test([...l.tags, ...l.amenities].join(' ')),
+    match: l => /whiske?y|bourbon|scotch|full bar|cocktail/i.test([...(l.tags ?? []), ...(l.amenities ?? [])].join(' ')),
   },
   {
     id: 'hidden-gems',
@@ -61,7 +61,7 @@ const EXPERIENCE_THEMES: {
     id: 'outdoor',
     title: 'Outdoor & Terrace',
     subtitle: 'Somewhere to sit outside',
-    match: l => /patio|outdoor|terrace|rooftop/i.test([...l.tags, ...l.amenities].join(' ')),
+    match: l => /patio|outdoor|terrace|rooftop/i.test([...(l.tags ?? []), ...(l.amenities ?? [])].join(' ')),
   },
 ];
 

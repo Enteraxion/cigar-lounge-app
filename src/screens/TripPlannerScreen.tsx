@@ -94,7 +94,7 @@ function RouteStopCard({
             {lounge.name}
           </Text>
           <Text style={styles.loungeLocation} numberOfLines={1}>
-            {displayTags(lounge.tags).slice(0, 2).join(' • ') || lounge.address}
+            {displayTags(lounge.tags ?? []).slice(0, 2).join(' • ') || lounge.address}
           </Text>
         </View>
         <View style={styles.reserveButton}>

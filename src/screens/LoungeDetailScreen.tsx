@@ -402,11 +402,11 @@ export default function LoungeDetailScreen() {
           </View>
 
           {/* ---------------- Amenities ---------------- */}
-          {lounge.amenities.length > 0 ? (
+          {(lounge.amenities ?? []).length > 0 ? (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Amenities</Text>
               <View style={styles.amenityGrid}>
-                {lounge.amenities.map(amenity => {
+                {(lounge.amenities ?? []).map(amenity => {
                   const Icon = getAmenityIcon(amenity);
                   return (
                     <AmenityCard

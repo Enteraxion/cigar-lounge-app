@@ -59,6 +59,14 @@ export default function AchievementsScreen() {
   // The badge a member has tapped to ask "why is this locked?". Nothing in
   // the app answered that before — a locked tile was grey and silent.
   const [explained, setExplained] = useState<Badge | null>(null);
+  /**
+   * Without this the screen hung. The load was `.then().finally()` with no
+   * `.catch()`: a rejection left `stats` null while `loading` went false, and
+   * the render guard `loading || !stats` then showed the spinner for ever —
+   * indistinguishable from a frozen app, with an unhandled rejection behind
+   * it. Same error-and-retry shape as MyShopsScreen (audit F6, 2026-09-14).
+   */
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!userId) {
@@ -66,17 +74,41 @@ export default function AchievementsScreen() {
       return;
     }
     setLoading(true);
+    setError(null);
     Promise.all([getUserStats(userId), getPassport(userId)])
       .then(([nextStats, bundle]) => {
         setStats(nextStats);
         setPassport(bundle.passport);
       })
+      .catch(() => setError("We couldn't load your achievements."))
       .finally(() => setLoading(false));
   }, [userId]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  if (error || (!loading && !stats)) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <View style={styles.header}>
+          <Pressable onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back" hitSlop={12}>
+            <ChevronLeft size={24} color={theme.colors.white} />
+          </Pressable>
+        </View>
+        <View style={styles.stateBox}>
+          <Text style={styles.stateText}>
+            {error ?? "We couldn't load your achievements."}
+          </Text>
+          <Pressable style={styles.retryButton} onPress={load} accessibilityRole="button">
+            <Text style={styles.retryText}>Try Again</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading || !stats) {
     return (
@@ -223,6 +255,25 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  stateText: {
+    ...theme.typography.medium,
+    fontSize: 14,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surface,
+  },
+  retryText: {
+    ...theme.typography.medium,
+    fontSize: 14,
+    color: theme.colors.accentGold,
   },
 
   scrollContent: {

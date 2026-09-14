@@ -39,6 +39,7 @@ import type { NavigationProp } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Bell, MapPin, Plus, Star, User } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import HorizontalGap from '../components/HorizontalGap';
 import SectionHeader from '../components/SectionHeader';
 import CompactLoungeCard from '../components/CompactLoungeCard';
 import NotificationBadge from '../components/NotificationBadge';
@@ -234,7 +235,7 @@ export default function TravelWishlistScreen() {
             keyExtractor={item => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+            ItemSeparatorComponent={HorizontalGap}
             renderItem={({ item }) => <DestinationCard destination={item} />}
           />
         </View>
@@ -314,7 +315,7 @@ export default function TravelWishlistScreen() {
               keyExtractor={item => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
-              ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+              ItemSeparatorComponent={HorizontalGap}
               renderItem={({ item }) => (
                 <Pressable onPress={() => openLounge(item.id)}>
                   <CompactLoungeCard

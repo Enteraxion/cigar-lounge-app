@@ -18,7 +18,7 @@
  * by rounded star rating.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -63,18 +63,30 @@ export default function RatingsBreakdownScreen() {
   const { loungeId } = route.params;
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lounge, setLounge] = useState<Lounge | null>(null);
   const [distribution, setDistribution] = useState<DistributionRow[]>(
     [5, 4, 3, 2, 1].map(stars => ({ stars, percent: 0 })),
   );
 
-  useEffect(() => {
+  /**
+   * Extracted from the effect so the retry below can call it again. It also
+   * needed a `.catch()`: without one a rejection left `lounge` null while
+   * `loading` went false, and the guard `loading || !lounge` showed the
+   * spinner for ever (audit F6, 2026-09-14).
+   */
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
     let cancelled = false;
     Promise.all([getLoungeById(loungeId), getReviewsForLounge(loungeId)])
       .then(([loungeResult, reviews]) => {
         if (cancelled) return;
         setLounge(loungeResult);
         setDistribution(ratingDistributionFrom(reviews.map(review => review.rating)));
+      })
+      .catch(() => {
+        if (!cancelled) setError("We couldn't load this rating breakdown.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -83,6 +95,8 @@ export default function RatingsBreakdownScreen() {
       cancelled = true;
     };
   }, [loungeId]);
+
+  useEffect(() => load(), [load]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -96,7 +110,16 @@ export default function RatingsBreakdownScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {loading || !lounge ? (
+      {error || (!loading && !lounge) ? (
+        <View style={styles.stateBox}>
+          <Text style={styles.stateText}>
+            {error ?? "We couldn't load this rating breakdown."}
+          </Text>
+          <Pressable style={styles.retryButton} onPress={load} accessibilityRole="button">
+            <Text style={styles.retryText}>Try Again</Text>
+          </Pressable>
+        </View>
+      ) : loading || !lounge ? (
         <View style={styles.stateBox}>
           <ActivityIndicator color={theme.colors.secondarySilver} />
         </View>
@@ -199,6 +222,25 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  stateText: {
+    ...theme.typography.medium,
+    fontSize: 14,
+    color: theme.colors.mutedGray,
+    textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.medium,
+    backgroundColor: theme.colors.surface,
+  },
+  retryText: {
+    ...theme.typography.medium,
+    fontSize: 14,
+    color: theme.colors.accentGold,
   },
 
   scrollContent: {

@@ -1,31 +1,27 @@
 /**
  * ConciergeNavigator
  *
- * Stack for the AI Concierge flow: the Concierge home (conversational
- * search, quick suggestions, suggested/trending lounges), the
- * conversation thread, the full recommendation results list, the
- * Discovery/Inspiration screen, the Trip Planner, and Saved
- * Conversations. Mounted at the root level (see AppNavigator's
- * "AIConcierge" screen) since it's reachable from more than one tab
- * (currently the Map screen's Concierge card).
+ * The stack behind the Concierge, mounted at the root level (AppNavigator's
+ * "AIConcierge" screen) because it is presented as a modal over whichever tab
+ * the member was on.
+ *
+ * It held six screens until 2026-09-14, five of which no member could ever
+ * reach: the only way in is SearchScreen, which navigates straight to the
+ * conversation, and the other five were reachable only from a home screen
+ * nothing navigated to. All five were mock — invented trips, invented
+ * recommendations, an invented conversation history — and three of them still
+ * called getAllLounges(), the unbounded 8,513-document read retired everywhere
+ * else in August. Deleted rather than wired up: there is no product decision
+ * behind them to preserve, and unreachable mock screens are exactly what
+ * shipping a "Coming Soon" surface to App Review looks like (audit F7).
  */
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import ConciergeHomeScreen from '../screens/ConciergeHomeScreen';
 import ConciergeConversationScreen from '../screens/ConciergeConversationScreen';
-import ConciergeResultsScreen from '../screens/ConciergeResultsScreen';
-import ConciergeInspirationScreen from '../screens/ConciergeInspirationScreen';
-import TripPlannerScreen from '../screens/TripPlannerScreen';
-import SavedConversationsScreen from '../screens/SavedConversationsScreen';
 
 export type ConciergeStackParamList = {
-  ConciergeHome: undefined;
   ConciergeConversation: { initialQuery?: string; conversationId?: string } | undefined;
-  ConciergeResults: undefined;
-  ConciergeInspiration: undefined;
-  TripPlanner: undefined;
-  SavedConversations: undefined;
 };
 
 const Stack = createNativeStackNavigator<ConciergeStackParamList>();
@@ -33,12 +29,7 @@ const Stack = createNativeStackNavigator<ConciergeStackParamList>();
 export default function ConciergeNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ConciergeHome" component={ConciergeHomeScreen} />
       <Stack.Screen name="ConciergeConversation" component={ConciergeConversationScreen} />
-      <Stack.Screen name="ConciergeResults" component={ConciergeResultsScreen} />
-      <Stack.Screen name="ConciergeInspiration" component={ConciergeInspirationScreen} />
-      <Stack.Screen name="TripPlanner" component={TripPlannerScreen} />
-      <Stack.Screen name="SavedConversations" component={SavedConversationsScreen} />
     </Stack.Navigator>
   );
 }

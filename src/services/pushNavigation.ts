@@ -30,15 +30,25 @@ export const navigationRef = createNavigationContainerRef();
 const messaging = getMessaging(getApp());
 
 /**
- * Opens the lounge a notification is about.
+ * Opens whatever a notification is about.
  *
- * Silent when there is no lounge id — several notification types legitimately
- * carry no destination, and the same is true here as on NotificationsScreen:
- * navigating nowhere is better than guessing.
+ * A tap used to do nothing at all unless the notification carried a lounge id,
+ * which meant the ones members care most about — your ID was verified, your ID
+ * was rejected — opened the app to wherever it happened to be and left them to
+ * find the news themselves (audit F14, 2026-09-14).
+ *
+ * There is still nothing to guess at: rather than invent a destination, a
+ * notification with no lounge now opens the notifications list, where the
+ * message they just tapped is the first thing on the screen. That is the
+ * honest answer to "show me what you just told me about".
  */
 function openFrom(message: FirebaseMessagingTypes.RemoteMessage | null): void {
-  const loungeId = message?.data?.loungeId;
-  if (typeof loungeId !== 'string' || !loungeId || !navigationRef.isReady()) {
+  if (!message || !navigationRef.isReady()) {
+    return;
+  }
+  const loungeId = message.data?.loungeId;
+  if (typeof loungeId !== 'string' || !loungeId) {
+    (navigationRef.navigate as (name: string, params?: object) => void)('Notifications');
     return;
   }
   // Same two-step as NotificationsScreen: the tab navigator has to be entered

@@ -51,6 +51,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import HorizontalGap from '../components/HorizontalGap';
 import SectionHeader from '../components/SectionHeader';
 import LoungeCard from '../components/LoungeCard';
 import FavoriteButton from '../components/FavoriteButton';
@@ -424,7 +425,7 @@ export default function HomeScreen() {
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+                ItemSeparatorComponent={HorizontalGap}
                 renderItem={({ item }) => (
                   <Pressable onPress={() => openLoungeDetails(item.id)}>
                     <LoungeCard
@@ -506,7 +507,7 @@ export default function HomeScreen() {
               keyExtractor={item => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
-              ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+              ItemSeparatorComponent={HorizontalGap}
               renderItem={({ item }) => (
                 <Pressable onPress={() => openLoungeDetails(item.id)}>
                   <LoungeCard

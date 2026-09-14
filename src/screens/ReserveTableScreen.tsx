@@ -30,6 +30,12 @@ import { theme, withAlpha } from '../theme';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { createReservation } from '../services/reservationService';
 import { auth } from '../services/firebaseAuth';
+import {
+  formatPhone,
+  normalizePhoneInput,
+  personNameIsValid,
+  phoneIsValid,
+} from '../utils/contactDetails';
 import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
@@ -47,7 +53,7 @@ const SLOTS = [
 const MIN_PARTY_SIZE = 1;
 const MAX_PARTY_SIZE = 8;
 const NAME_CHARS_REGEX = /^[A-Za-z' -]*$/;
-const NAME_REGEX = /^[A-Za-z]+(?:[' -][A-Za-z]+)*$/;
+
 
 function buildUpcomingDays(count: number): Date[] {
   const today = new Date();
@@ -59,11 +65,7 @@ function buildUpcomingDays(count: number): Date[] {
   });
 }
 
-function formatPhone(digits: string): string {
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-}
+
 
 export default function ReserveTableScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -93,7 +95,7 @@ export default function ReserveTableScreen() {
   };
 
   const onChangePhone = (text: string) => {
-    setPhoneDigits(text.replace(/\D/g, '').slice(0, 10));
+    setPhoneDigits(normalizePhoneInput(text));
     if (phoneError) setPhoneError('');
   };
 
@@ -108,12 +110,12 @@ export default function ReserveTableScreen() {
     }
     const trimmedName = guestName.trim();
     let hasError = false;
-    if (!NAME_REGEX.test(trimmedName)) {
-      setNameError('Enter your full name using letters only.');
+    if (!personNameIsValid(trimmedName)) {
+      setNameError('Enter the name the lounge should put the table under.');
       hasError = true;
     }
-    if (phoneDigits.length !== 10) {
-      setPhoneError('Enter a valid 10-digit phone number.');
+    if (!phoneIsValid(phoneDigits)) {
+      setPhoneError('Enter a phone number the lounge can reach you on.');
       hasError = true;
     }
     if (hasError) {

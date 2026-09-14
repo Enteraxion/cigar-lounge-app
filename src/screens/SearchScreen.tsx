@@ -55,6 +55,7 @@ import {
   Sparkles,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import HorizontalGap from '../components/HorizontalGap';
 import SectionHeader from '../components/SectionHeader';
 import FilterChip from '../components/FilterChip';
 import CompactLoungeCard from '../components/CompactLoungeCard';
@@ -279,7 +280,7 @@ export default function SearchScreen() {
               keyExtractor={item => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
-              ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+              ItemSeparatorComponent={HorizontalGap}
               renderItem={({ item }) => (
                 <Pressable
                   style={styles.destinationCard}
@@ -330,7 +331,7 @@ export default function SearchScreen() {
               keyExtractor={item => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
-              ItemSeparatorComponent={() => <View style={{ width: theme.spacing.md }} />}
+              ItemSeparatorComponent={HorizontalGap}
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => navigation.navigate('LoungeDetail', { loungeId: item.id })}

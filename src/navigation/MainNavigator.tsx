@@ -190,6 +190,12 @@ export default function MainNavigator() {
           letterSpacing: 0.5,
           textTransform: 'uppercase' as const,
         },
+        // React Navigation's documented API: tabBarIcon is a render callback it
+        // invokes itself, not a component type it mounts, so the usual cost of
+        // an inline component does not apply. Suppressed rather than hoisted —
+        // hoisting would mean threading `route` through as a prop and changing
+        // working navigation for a lint rule that is wrong here.
+        // eslint-disable-next-line react/no-unstable-nested-components
         tabBarIcon: ({ color, size }) => {
           const Icon = ICONS[route.name as keyof MainTabParamList];
           return <Icon color={color} size={size ?? 20} />;

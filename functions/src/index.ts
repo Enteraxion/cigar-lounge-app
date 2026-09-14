@@ -1177,7 +1177,6 @@ async function purgeMember(userId: string): Promise<{
   filesDeleted: number;
   authDeleted: boolean;
 }> {
-  const db = getFirestore();
   const counts = {
     reviews: 0,
     reservations: 0,
@@ -1410,7 +1409,6 @@ export const adminBackfillCities = onCall({ cors: true, timeoutSeconds: 540 }, a
   requireAdmin(request);
   const dryRun = request.data?.dryRun !== false;
 
-  const db = getFirestore();
   const snapshot = await db.collection('lounges').get();
 
   let missing = 0;
@@ -1475,7 +1473,6 @@ export const adminBackfillCities = onCall({ cors: true, timeoutSeconds: 540 }, a
 export const adminRebuildCityStats = onCall({ cors: true, timeoutSeconds: 540 }, async request => {
   requireAdmin(request);
 
-  const db = getFirestore();
   const snapshot = await db.collection('lounges').get();
 
   // The field names here are NOT free to choose. src/services/loungeService.ts

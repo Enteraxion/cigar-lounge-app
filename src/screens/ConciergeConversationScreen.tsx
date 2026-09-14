@@ -63,7 +63,7 @@ import {
   noResultsSuggestions,
   type CompactSuggestion,
   type RecommendationCard,
-} from '../data/mockConcierge';
+} from '../data/conciergeContent';
 import { askConcierge, type ConciergeTurn } from '../services/conciergeService';
 import {
   DEFAULT_AI_PREFERENCES,

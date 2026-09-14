@@ -107,6 +107,10 @@ function stripAamvaHeader(raw: string): string {
 
 function aamvaElements(raw: string): Map<string, string> {
   const elements = new Map<string, string>();
+  // AAMVA's own record separators — \x1e ends the header and \x1f the
+  // subfile. They are control characters because the standard says so, not
+  // by accident, so the rule is suppressed rather than the bytes changed.
+  // eslint-disable-next-line no-control-regex
   for (const line of stripAamvaHeader(raw).split(/[\r\n\x1e\x1f]+/)) {
     const trimmed = line.trim();
     // A data element is a three-character uppercase code plus its value. The

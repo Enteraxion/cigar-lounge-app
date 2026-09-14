@@ -277,9 +277,13 @@ export async function searchLounges(
   if (isKnownUsCityName(searchQuery)) {
     const cityCoordinates = findCityCoordinates(searchQuery);
     if (cityCoordinates) {
-      const near = await getLoungesNear(cityCoordinates, NEARBY_SEARCH_RADIUS_MILES, 200);
-      if (near.length > 0) {
-        return near;
+      const cityMatches = await getLoungesNear(
+        cityCoordinates,
+        NEARBY_SEARCH_RADIUS_MILES,
+        200,
+      );
+      if (cityMatches.length > 0) {
+        return cityMatches;
       }
     }
   }

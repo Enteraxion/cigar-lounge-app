@@ -20,6 +20,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import { ChevronLeft, MonitorSmartphone } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import {
+  formatPhone,
+  normalizePhoneInput,
+  personNameIsValid,
+  phoneIsValid,
+} from '../utils/contactDetails';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { submitLoungeClaim } from '../services/ownerService';
 import { auth } from '../services/firebaseAuth';
@@ -32,16 +38,12 @@ type ClaimListingRouteProp = RouteProp<SearchStackParamList, 'ClaimListing'>;
 // Letters, spaces, hyphens, and apostrophes only — covers real names
 // (e.g. "Mary-Jane O'Brien") while rejecting digits/symbols.
 const NAME_CHARS_REGEX = /^[A-Za-z' -]*$/;
-const NAME_REGEX = /^[A-Za-z]+(?:[' -][A-Za-z]+)*$/;
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 
 const functions = getFunctions();
 
-function formatPhone(digits: string): string {
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-}
 
 export default function ClaimListingScreen() {
   const navigation = useNavigation<ClaimListingNavigationProp>();
@@ -66,7 +68,7 @@ export default function ClaimListingScreen() {
   };
 
   const onChangePhone = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 10);
+    const digits = normalizePhoneInput(text);
     setPhoneDigits(digits);
     if (phoneError) setPhoneError('');
   };
@@ -83,16 +85,16 @@ export default function ClaimListingScreen() {
     const trimmedEmail = ownerContactEmail.trim();
 
     let hasError = false;
-    if (!NAME_REGEX.test(trimmedName)) {
-      setNameError('Enter your full name using letters only.');
+    if (!personNameIsValid(trimmedName)) {
+      setNameError('Enter the name we should use when we get in touch.');
       hasError = true;
     }
     if (!EMAIL_REGEX.test(trimmedEmail)) {
       setEmailError('Enter a valid email address (e.g. you@yourbusiness.com).');
       hasError = true;
     }
-    if (phoneDigits.length !== 10) {
-      setPhoneError('Enter a valid 10-digit phone number.');
+    if (!phoneIsValid(phoneDigits)) {
+      setPhoneError('Enter a phone number our team can reach you on.');
       hasError = true;
     }
     if (hasError) {

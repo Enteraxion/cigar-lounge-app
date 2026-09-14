@@ -78,6 +78,9 @@ function formatToday() {
   return `${MONTH_NAMES[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
 }
 
+/** Short enough not to be a hurdle, long enough to rule out "ok". */
+const MIN_REVIEW_LENGTH = 10;
+
 export default function WriteReviewScreen() {
   const navigation = useNavigation<WriteReviewNavigationProp>();
   const route = useRoute<WriteReviewRouteProp>();
@@ -140,6 +143,19 @@ export default function WriteReviewScreen() {
     }
     if (overallRating === 0) {
       Alert.alert('Add a rating', 'Rate your overall experience before submitting.');
+      return;
+    }
+    // Only the rating was required before, so a star and nothing else stored a
+    // review with no text: a blank quote card in Recent Activity, and — because
+    // a review is the only evidence the Passport has that anybody went
+    // anywhere — a visit, a city and a badge earned from an empty box
+    // (audit F10, 2026-09-14). A sentence is not much to ask of someone who
+    // chose to open this screen.
+    if (reviewText.trim().length < MIN_REVIEW_LENGTH) {
+      Alert.alert(
+        'Tell us a little more',
+        'Add a sentence about your visit so other members know what to expect.',
+      );
       return;
     }
     if (submitting) return;

@@ -190,7 +190,6 @@ function invalidateSavedCaches(): void {
 function invalidateProfileCaches(): void {
   statsCache.invalidate();
   userReviewsCache.invalidate();
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   (require('./passportService') as typeof import('./passportService')).invalidatePassportCache();
 }
 

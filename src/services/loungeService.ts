@@ -221,6 +221,8 @@ const NEARBY_SEARCH_RADIUS_MILES = 60;
  * a city the directory covers well.
  */
 const BROWSE_RADIUS_MILES = 250;
+/** Ceiling on a blank-query browse with no location — see searchLounges. */
+const BROWSE_FALLBACK_LIMIT = 500;
 
 export async function searchLounges(
   searchQuery: string,
@@ -247,7 +249,20 @@ export async function searchLounges(
         return nearby;
       }
     }
-    return getAllLounges();
+    /**
+     * Capped, not the whole directory.
+     *
+     * This fallback runs whenever there is no location — permission refused,
+     * or simply not resolved yet — and it used to return all 8,496 documents to
+     * a screen that renders a card AND a native map marker per result. That is
+     * not slow, it is fatal: iOS kills the app for memory, which is what Rohith
+     * saw as "if I click the third one the app itself is closing" when the Map's
+     * list button navigated here with no query (2026-09-13).
+     *
+     * The same 500 the located path uses. Browsing past five hundred lounges
+     * with no idea where the member is was never the useful answer anyway.
+     */
+    return (await getAllLounges()).slice(0, BROWSE_FALLBACK_LIMIT);
   }
 
   // Place searches take the bounded path, before anything downloads the whole
@@ -274,7 +289,7 @@ export async function searchLounges(
   const lounges = await getAllLounges();
 
   const textMatches = lounges.filter(lounge => {
-    const haystack = [lounge.name, lounge.address, ...lounge.tags].join(' ').toLowerCase();
+    const haystack = [lounge.name, lounge.address, ...(lounge.tags ?? [])].join(' ').toLowerCase();
     return haystack.includes(needle);
   });
   if (textMatches.length > 0) {

@@ -64,9 +64,11 @@ import {
   ChevronLeft,
   List,
   Map as MapIcon,
+  Mic,
   Search as SearchIcon,
   SearchX,
   SlidersHorizontal,
+  X,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import FilterChip from '../components/FilterChip';
@@ -344,6 +346,40 @@ export default function SearchResultsScreen() {
           <Text style={styles.searchText} numberOfLines={1}>
             {query}
           </Text>
+
+          {/* Clear, then speak again — both without leaving the screen.
+              A voice search that returns nothing used to be a dead end: the bar
+              showed the phrase with no way to remove it, and the only escape
+              was tapping the Search tab to reset the stack (Rohith,
+              2026-09-13). Two taps at the end of the bar is where anyone looks
+              for that, and it is where every browser and map app puts them.
+
+              `stopPropagation` on both, or the tap also opens the suggestions
+              screen underneath and whichever is intended loses. */}
+          {query ? (
+            <Pressable
+              onPress={e => {
+                e.stopPropagation();
+                navigation.setParams({ query: '' });
+              }}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
+              <X size={16} color={theme.colors.mutedGray} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={e => {
+              e.stopPropagation();
+              (navigation.navigate as (name: string, params?: object) => void)('VoiceSearch');
+            }}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Search by voice"
+          >
+            <Mic size={17} color={theme.colors.accentGold} />
+          </Pressable>
         </Pressable>
       </View>
 
@@ -485,7 +521,11 @@ export default function SearchResultsScreen() {
               <Text style={styles.emptyTitle}>
                 {hasActiveFilters
                   ? 'No lounges match your current filters.'
-                  : `No lounges matched "${query}".`}
+                  : query
+                    ? `No lounges matched "${query}".`
+                    : // Clearing the search leaves no phrase to quote, and
+                      // `No lounges matched ""` is how that reads otherwise.
+                      'No lounges nearby.'}
               </Text>
               <Text style={styles.emptyDescription}>
                 We couldn't find any spots matching your selection. Try

@@ -23,7 +23,17 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
@@ -100,6 +110,12 @@ function MapPin({
  * returns them nearest-first, so the ones dropped are always the furthest.
  */
 const MAX_PINS = 150;
+
+/**
+ * Zoom for "take me to where I am" — roughly a neighbourhood, matching the
+ * scale LOCATED_ZOOM_DELTA gives the region API.
+ */
+const LOCATED_ZOOM_LEVEL = 12;
 
 export default function MapScreen() {
   const tabNavigation = useNavigation<NavigationProp<MainTabParamList>>();
@@ -282,8 +298,56 @@ export default function MapScreen() {
 
   const selectedLounge = lounges?.find(lounge => lounge.id === selectedLoungeId) ?? null;
 
+  /**
+   * Back to where the member is.
+   *
+   * This animated to `initialRegion`, which is only the member's position if
+   * the GPS fix had already resolved when the screen first mounted — otherwise
+   * it is a static fallback somewhere in the US. So a crosshair, the universal
+   * "show me where I am", could quietly take you to a default region, or
+   * appear to do nothing at all if the map was already near it. Rohith reported
+   * it as simply not working (2026-09-13).
+   *
+   * It reads the live location now. With no fix at all there is nothing honest
+   * to centre on, so it says so rather than moving the map somewhere arbitrary
+   * and letting the member believe that is where they are.
+   */
   const recenter = () => {
-    mapRef.current?.animateToRegion(initialRegion, 400);
+    if (!location) {
+      Alert.alert(
+        'Location unavailable',
+        "We can't tell where you are. Allow location access in Settings to centre the map on you.",
+      );
+      return;
+    }
+    /**
+     * animateCamera, not animateToRegion.
+     *
+     * `animateToRegion` is the older API and on iOS with Apple Maps it fails
+     * silently often enough to be untrustworthy — no error, no movement, which
+     * is how this button came to look dead after the location fix (Rohith,
+     * 2026-09-13). `animateCamera` is the current API and does the same job.
+     *
+     * The region call stays as a fallback: if the camera API is unavailable on
+     * whatever version is installed, moving the old way beats not moving.
+     */
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    const center = { latitude: location.latitude, longitude: location.longitude };
+    if (typeof map.animateCamera === 'function') {
+      map.animateCamera({ center, zoom: LOCATED_ZOOM_LEVEL }, { duration: 400 });
+    } else {
+      map.animateToRegion(
+        {
+          ...center,
+          latitudeDelta: LOCATED_ZOOM_DELTA,
+          longitudeDelta: LOCATED_ZOOM_DELTA,
+        },
+        400,
+      );
+    }
   };
 
   const openVoiceSearch = () => {
@@ -509,7 +573,7 @@ export default function MapScreen() {
           </View>
 
           <View style={styles.amenityRow}>
-            {selectedLounge.amenities.map(amenity => (
+            {(selectedLounge.amenities ?? []).map(amenity => (
               <View key={amenity} style={styles.amenityChip}>
                 <Check size={12} color={theme.colors.success} />
                 <Text style={styles.amenityText}>{amenity}</Text>

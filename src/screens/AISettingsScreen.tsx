@@ -36,13 +36,14 @@ import {
   Bell,
   Briefcase,
   ChevronLeft,
+  ChevronRight,
   Cigarette,
   LogOut,
   MessageSquareText,
+  Trash2,
   TreePalm,
   User,
   Wine,
-  ChevronRight,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import DistanceSlider from '../components/DistanceSlider';
@@ -522,37 +523,67 @@ export default function AISettingsScreen() {
           </Pressable>
         </View>
 
-        {/* ---------------- Log Out ---------------- */}
-        <View style={styles.section}>
-          <Pressable style={styles.logOutButton} onPress={handleLogOut}>
-            <LogOut size={18} color={theme.colors.danger} />
-            <Text style={styles.logOutButtonText}>Log Out</Text>
-          </Pressable>
-        </View>
+        {/* ---------------- Account ----------------
+            Log Out and Delete Account used to be a red-bordered button with
+            bare red text loose underneath it: two red things of similar
+            weight, the second looking like something that had come adrift.
+            Red now means one thing on this screen. Logging out is routine and
+            reversible, so it reads as neutral; deleting is the only
+            destructive act and the only thing in danger colour.
 
-        {/* ---------------- Delete Account ---------------- */}
-        {/* Apple guideline 5.1.1(v): an app that lets you make an account must
-            let you delete it in-app. Placed here, under Log Out, because that is
-            where a member looks for it and where a reviewer looks for it.
-            Visually quieter than Log Out on purpose — findable when wanted, not
-            competing with the button people actually press. */}
+            Both are the same card the rest of this screen is built from, so
+            the section below Notifications does not change shape.
+
+            Apple guideline 5.1.1(v): an app that lets you create an account
+            must let you delete it in-app. It stays under Log Out because that
+            is where a member looks for it, and where a reviewer looks for
+            it. */}
         <View style={[styles.section, styles.lastSection]}>
+          <Text style={styles.sectionTitle}>Account</Text>
+
           <Pressable
-            style={styles.deleteAccountButton}
+            style={({ pressed }) => [styles.infoRow, pressed && styles.rowPressed]}
+            onPress={handleLogOut}
+            accessibilityRole="button"
+            accessibilityLabel="Log out on this device"
+          >
+            <View style={styles.neutralIconBox}>
+              <LogOut size={18} color={theme.colors.secondarySilver} />
+            </View>
+            <View style={styles.infoTextGroup}>
+              <Text style={styles.infoTitle}>Log Out</Text>
+              <Text style={styles.infoSubtitle}>
+                Signs you out on this device. Nothing is deleted.
+              </Text>
+            </View>
+            <ChevronRight size={16} color={theme.colors.mutedGray} />
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.infoRow, pressed && styles.rowPressed]}
             onPress={handleDeleteAccount}
             disabled={deleting}
             accessibilityRole="button"
             accessibilityLabel="Delete my account permanently"
           >
-            {deleting ? (
-              <ActivityIndicator size="small" color={theme.colors.mutedGray} />
-            ) : (
-              <Text style={styles.deleteAccountText}>Delete Account</Text>
-            )}
+            <View style={styles.dangerIconBox}>
+              {deleting ? (
+                <ActivityIndicator size="small" color={theme.colors.danger} />
+              ) : (
+                <Trash2 size={18} color={theme.colors.danger} />
+              )}
+            </View>
+            <View style={styles.infoTextGroup}>
+              <Text style={styles.dangerTitle}>
+                {deleting ? 'Deleting your account…' : 'Delete Account'}
+              </Text>
+              <Text style={styles.infoSubtitle}>
+                Permanently removes your account, reviews, reservations, saved
+                lounges and verification documents. This cannot be undone.
+              </Text>
+            </View>
+            {!deleting ? <ChevronRight size={16} color={theme.colors.mutedGray} /> : null}
           </Pressable>
-          <Text style={styles.deleteAccountHint}>
-            Permanently removes your account, reviews and saved lounges.
-          </Text>
         </View>
       </ScrollView>
       <Modal
@@ -895,36 +926,29 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
   },
 
-  // ---- Delete Account ----
-  deleteAccountButton: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
+  // ---- Account ----
+  // Both rows reuse infoRow above; only the icon wash and the title colour
+  // differ, which is what separates "routine" from "destructive" here.
+  rowPressed: {
+    opacity: 0.7,
   },
-  deleteAccountText: {
-    ...theme.typography.medium,
-    fontFamily: theme.fontFamily.semibold,
-    fontSize: 14,
-    color: theme.colors.danger,
-  },
-  deleteAccountHint: {
-    ...theme.typography.medium,
-    fontSize: 11,
-    color: theme.colors.mutedGray,
-    textAlign: 'center',
-  },
-
-  // ---- Log Out ----
-  logOutButton: {
-    flexDirection: 'row',
+  neutralIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.medium,
+    backgroundColor: withAlpha(theme.colors.secondarySilver, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.sm,
-    height: 52,
-    borderRadius: theme.radius.medium,
-    borderWidth: 1,
-    borderColor: withAlpha(theme.colors.danger, 0.3),
   },
-  logOutButtonText: {
+  dangerIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.medium,
+    backgroundColor: withAlpha(theme.colors.danger, 0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerTitle: {
     ...theme.typography.medium,
     fontFamily: theme.fontFamily.semibold,
     fontSize: 14,

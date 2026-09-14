@@ -2223,7 +2223,8 @@ async function notifyOwner(
     createdAt: Timestamp.now(),
   });
   logger.info('notifyOwner', { loungeId, ownerId, type: notification.type });
-  await pushToMember(ownerId, notification);
+  // No push from here: onMemberNotificationCreated fires on the write above and
+  // delivers it. Pushing here as well would send everything twice.
 }
 
 /**
@@ -2238,7 +2239,14 @@ async function notifyOwner(
  * uninstalled or restored onto a new device, and FCM says so explicitly; left
  * alone they accumulate for the life of the account and every send retries them.
  */
-async function pushToMember(userId: string, notification: OwnerNotification): Promise<void> {
+type PushableNotification = {
+  type: string;
+  title: string;
+  body: string;
+  data?: { loungeId?: string };
+};
+
+async function pushToMember(userId: string, notification: PushableNotification): Promise<void> {
   try {
     const tokensSnapshot = await db.collection(`users/${userId}/fcmTokens`).get();
     const tokens = tokensSnapshot.docs.map(d => d.id);
@@ -2251,7 +2259,7 @@ async function pushToMember(userId: string, notification: OwnerNotification): Pr
       notification: { title: notification.title, body: notification.body },
       // Read by the app when a notification is tapped, to open the right lounge.
       // Every value must be a string — FCM rejects anything else.
-      data: { loungeId: notification.data.loungeId, type: notification.type },
+      data: { loungeId: notification.data?.loungeId ?? '', type: notification.type },
       apns: {
         payload: {
           aps: {
@@ -2307,6 +2315,49 @@ function reservationDateLabel(date: unknown): string | undefined {
     timeZone: 'UTC',
   });
 }
+
+/**
+ * Delivers every notification to the phone, whoever wrote it.
+ *
+ * Push used to be sent by notifyOwner alone, which meant exactly three events
+ * reached a device: a reservation made, a reservation cancelled, a review left
+ * on a lounge you own. Everything else — your business claim approved, your
+ * claim rejected, your ownership revoked, your age verification decided —
+ * wrote a notification document that sat in the in-app list until the member
+ * happened to open the app and tap the bell. Rohith's own shop was approved
+ * and his phone never said a word (2026-09-13).
+ *
+ * Hanging this off the document write rather than off each event is what stops
+ * it happening again: the next notification type anybody adds is delivered
+ * without them knowing this code exists. It is the same lesson as the
+ * reservations that were written and never read, and the issueReports nothing
+ * ever looked at — a write with no reader is not a feature.
+ *
+ * Every notification document already carries its own title and body, written
+ * for the in-app list, so there is nothing to map per type and no second
+ * wording to keep in step with the first.
+ */
+export const onMemberNotificationCreated = onDocumentCreated(
+  'users/{userId}/notifications/{notificationId}',
+  async event => {
+    const notification = event.data?.data();
+    if (!notification) {
+      return;
+    }
+    const title = typeof notification.title === 'string' ? notification.title : '';
+    const body = typeof notification.body === 'string' ? notification.body : '';
+    // A notification with nothing to say is not worth waking a phone for.
+    if (!title && !body) {
+      return;
+    }
+    await pushToMember(event.params.userId, {
+      type: typeof notification.type === 'string' ? notification.type : 'notification',
+      title,
+      body,
+      data: { loungeId: notification.data?.loungeId as string | undefined },
+    });
+  },
+);
 
 export const onReservationCreated = onDocumentCreated(
   'lounges/{loungeId}/reservations/{reservationId}',

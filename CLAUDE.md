@@ -520,3 +520,75 @@ a travel "passport" feature, and an AI concierge.
     (`~/Desktop/Lounge-Locator-Handover.docx`, ~10k words) and a short personal
     overview. **43 commits were still unpushed when they were written** — that
     remains the single biggest risk to this project.
+- 2026-09-13/14: A full audit, ten fixes, and build 7 on TestFlight.
+  * **The Cigar Passport's achievements were real but mute.** Every badge is
+    computed from live data — reviews, distinct lounges, cities, states, miles
+    from the member's home city, a Monday-based week streak — but the screen
+    told everyone to "Keep exploring" whatever the badge wanted. Host needs ten
+    photographs; no amount of exploring unlocks it. Each badge now carries its
+    requirement **next to its threshold** so the sentence and the number cannot
+    drift, and tapping any badge says what it asks for. Note a "visit" is a
+    review: there is no check-in feature, so somebody who visits fifty lounges
+    and writes nothing earns nothing. Thresholds are a guess and want Lakhan's
+    sign-off — 75% is reachable on five reviews.
+  * **Write Review's "Visit Date" was a fake input** — bordered box, calendar
+    icon, sat among the real fields, and submit always wrote `new Date()`.
+    Presented as a timestamp now; a real picker is backlogged.
+  * **Notifications only ever reached three events.** Push was sent from
+    `notifyOwner`, so a reservation, a cancellation and a review on a lounge you
+    own travelled to a phone and nothing else did — including "your business was
+    approved", which is the one members wait for. Delivery now hangs off
+    `onMemberNotificationCreated`, a trigger on the notification document
+    itself, so the next type anyone adds is delivered without them knowing the
+    push code exists. Every notification already carried its own title and body,
+    so there is no second wording to maintain. **A push arriving while the app
+    is foregrounded sets the badge and shows no banner** — iOS behaviour, not a
+    bug; presenting it needs notifee (a native dep) or an in-app banner, both
+    deferred.
+  * **Edit Listing was registered only in the Search stack**, so opening it from
+    Profile → My Shops hopped the member into Search and swiping back stranded
+    them there. Registered in both stacks now: a screen belongs to whichever
+    stack you walked in through.
+  * **Lounge Alerts and Accessibility Mode were ornaments** — neither was in the
+    save payload, neither identifier appeared anywhere else. Lounge Alerts now
+    reflects whether *this device* is registered (`isDeviceRegisteredForPush` —
+    iOS permission and "is this phone registered" come apart in both
+    directions), requests permission, unregisters on off, and sends a member to
+    Settings when iOS has already refused once. Accessibility Mode deleted
+    rather than implemented: iOS owns accessibility and the app already honours
+    it.
+  * **Legal documents updated and deployed.** The automated ID check reads the
+    printed *name* as well as the date of birth now, and the policy still said
+    it read a date; push notification tokens were undocumented entirely. Terms
+    gained sections on proving your age and on notifications. Account deletion's
+    list now mentions the tokens (verified `recursiveDelete` really takes them).
+  * **A full audit produced 21 findings** (Word doc on the Desktop,
+    `Lounge-Locator-Audit.docx`). Ten fixed. The two that mattered:
+    **24 photographs of government identity documents, and 19 user documents,
+    survived accounts that no longer existed** — Auth had been emptied from the
+    console during QA, so `purgeMember` never ran, and the privacy policy
+    promises exactly that deletion. Purged against a fully paged `listUsers`,
+    dry run first, manifest on the Desktop. Also fixed: Achievements and
+    RatingsBreakdown spun for ever on any load failure (`.then().finally()` with
+    no `.catch()`, and a `loading || !data` guard); **five unreachable Concierge
+    screens** deleted, all mock, three still calling `getAllLounges()`;
+    accented names and non-US phone numbers were refused, making all 273
+    international lounges unbookable (now one tested `contactDetails` module);
+    empty reviews counted as Passport visits; 17 lounges had no city, backfilled,
+    cityStats drift now zero; 13 lint warnings to zero.
+  * **The Google Places key was never a placeholder.** It works, on Places v1 —
+    verified live with real hours and phone numbers. **Yelp is `TRIAL_EXPIRED`**,
+    killing three scripts; `refreshCityLounges` degrades to Google alone exactly
+    as its `.catch()` intended. The ~$192 backfill is deferred until Apple
+    accepts the app (Rohith's call), leaving 8,396 lounges with no phone, 5,080
+    reading "Hours not yet available" and 4,055 with no photograph.
+  * **Build 7 uploaded, Complete, and with the internal testers.** First since
+    24 August. New `npm run create:reviewer` makes
+    `appreview@enteraxion.com` — pre-verified, no identity document, **not an
+    admin** — because a reviewer who signs up fresh hits the 21+ wall and can
+    reach nothing. The App Review notes must say so.
+  * **Still open:** the App Store listing itself (screenshots at 6.9"/6.5",
+    description, keywords, age rating, App Privacy); rotating
+    `GOOGLE_PLACES_API_KEY`, exposed during the audit; `npm run seed:firestore`
+    has been broken since August (imports four deleted mock files); accessibility
+    roles on ~1 Pressable in 4; the Map still renders light on a dark device.

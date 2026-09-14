@@ -339,7 +339,7 @@ export default function SearchScreen() {
                     image={{ uri: loungeImageUri(item) }}
                     name={item.name}
                     location={item.address}
-                    tags={displayTags(item.tags).slice(0, 2)}
+                    tags={displayTags(item.tags ?? []).slice(0, 2)}
                     rating={item.ratings.overall}
                   />
                 </Pressable>

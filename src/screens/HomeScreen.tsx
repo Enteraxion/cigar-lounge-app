@@ -277,7 +277,19 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Pressable
             style={styles.headerLeft}
-            onPress={() => (tabNavigation.navigate as (name: string, params?: object) => void)('Profile')}
+            /* `scrollToTopAt` carries a timestamp rather than a flag, because a
+               flag whose value never changes is indistinguishable from the last
+               time it was set — React Navigation merges params, so the second
+               tap would look identical to the first and ProfileScreen would not
+               react. Opening a profile from here is an explicit "show me my
+               profile" and should start at the top; simply switching to the tab
+               keeps its place, which is what a tab bar is for. */
+            onPress={() =>
+              (tabNavigation.navigate as (name: string, params?: object) => void)('Profile', {
+                screen: 'ProfileHome',
+                params: { scrollToTopAt: Date.now() },
+              })
+            }
           >
             {profile?.avatarUri ? (
               <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
@@ -418,7 +430,7 @@ export default function HomeScreen() {
                     <LoungeCard
                       image={{ uri: loungeImageUri(item) }}
                       name={item.name}
-                      tags={displayTags(item.tags).join(' • ')}
+                      tags={displayTags(item.tags ?? []).join(' • ')}
                       rating={item.ratings.overall}
                       loungeId={item.id}
                       userId={userId}

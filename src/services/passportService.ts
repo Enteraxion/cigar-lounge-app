@@ -10,6 +10,7 @@
 import { getLoungesByIds, getLoungesNear, type Lounge } from './loungeService';
 import { getUserProfile, getUserReviews } from './userActionsService';
 import { findCityCoordinates } from '../utils/cityAutocomplete';
+import { createKeyedAsyncCache } from '../utils/asyncCache';
 import { buildPassport, suggestNextLounge, type PassportSummary } from '../utils/passport';
 
 /**
@@ -33,7 +34,30 @@ export type PassportBundle = {
   hasHomeCity: boolean;
 };
 
+/**
+ * Cached, because the Profile tab asks for this on every focus and building it
+ * is not cheap: reviews, then a lounge document per lounge visited, then a
+ * nearby-lounge search for the suggestion. Tapping Profile rebuilt the whole
+ * thing every time and showed a spinner while it did.
+ *
+ * Reviews are what a passport is made of, so userActionsService invalidates this
+ * whenever one is written, edited or deleted — the TTL is a floor, not the
+ * mechanism.
+ */
+const passportCache = createKeyedAsyncCache<PassportBundle>(
+  userId => buildPassportBundle(userId),
+  60_000,
+);
+
+export function invalidatePassportCache(): void {
+  passportCache.invalidate();
+}
+
 export async function getPassport(userId: string): Promise<PassportBundle> {
+  return passportCache.get(userId);
+}
+
+async function buildPassportBundle(userId: string): Promise<PassportBundle> {
   const [reviews, profile] = await Promise.all([getUserReviews(userId), getUserProfile(userId)]);
 
   const homeCoordinates = profile?.homeCity ? findCityCoordinates(profile.homeCity) : null;

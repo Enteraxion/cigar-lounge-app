@@ -27,7 +27,12 @@ import MyReservationsScreen from '../screens/MyReservationsScreen';
 import AgeVerificationScreen from '../screens/AgeVerificationScreen';
 
 export type ProfileStackParamList = {
-  ProfileHome: undefined;
+  /**
+   * `scrollToTopAt` is a timestamp, set when Profile is opened from somewhere
+   * that means "show me my profile" — the avatar on Home. Switching to the tab
+   * carries no param and keeps its scroll position, which is what a tab is for.
+   */
+  ProfileHome: { scrollToTopAt?: number } | undefined;
   EditProfile: undefined;
   Passport: undefined;
   TravelTimeline: undefined;

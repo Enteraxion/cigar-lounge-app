@@ -114,6 +114,51 @@ const favoritesCache = createKeyedAsyncCache<Lounge[]>(
   SAVED_TTL_MS,
 );
 
+/**
+ * The Profile tab's two heaviest reads, cached for the same reason and on the
+ * same terms.
+ *
+ * Both run a collectionGroup query across every review in the database, and
+ * ProfileScreen refetches on focus — so every single tap of the Profile tab
+ * re-ran them and sat on a loading state while it did (Rohith, 2026-09-13).
+ * Worse, mount fired them twice: useEffect and useFocusEffect both load on the
+ * first render. The in-flight de-duplication collapses that pair into one
+ * request even before the TTL helps.
+ *
+ * Freshness is preserved by invalidation, not by refetching blindly — every
+ * write below clears these, so a review written or a profile edited still shows
+ * immediately on the way back, which is what the refetch-on-focus was for.
+ */
+const statsCache = createKeyedAsyncCache<UserStats>(async userId => {
+  const [reviewsSnapshot, favoriteIds, collections] = await Promise.all([
+    getDocs(query(collectionGroup(db, 'reviews'), where('userId', '==', userId))),
+    getUserFavoriteIds(userId),
+    getUserCollections(userId),
+  ]);
+  const photosUploaded = reviewsSnapshot.docs.reduce((sum, d) => {
+    const review = d.data() as ReviewDocument;
+    return sum + (review.photos?.length ?? 0);
+  }, 0);
+  return {
+    reviewsWritten: reviewsSnapshot.size,
+    favoritesSaved: favoriteIds.length,
+    photosUploaded,
+    collectionsCount: collections.length,
+  };
+}, SAVED_TTL_MS);
+
+const userReviewsCache = createKeyedAsyncCache<UserReviewEntry[]>(async userId => {
+  const snapshot = await getDocs(
+    query(collectionGroup(db, 'reviews'), where('userId', '==', userId)),
+  );
+  const reviews = snapshot.docs.map(d => ({
+    id: d.id,
+    loungeId: d.ref.parent.parent?.id ?? '',
+    ...(d.data() as ReviewDocument),
+  }));
+  return reviews.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+}, SAVED_TTL_MS);
+
 const collectionsCache = createKeyedAsyncCache<UserCollection[]>(async userId => {
   const snapshot = await getDocs(collection(db, 'users', userId, 'collections'));
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as CollectionDocument) }));
@@ -128,6 +173,25 @@ const collectionsCache = createKeyedAsyncCache<UserCollection[]>(async userId =>
 function invalidateSavedCaches(): void {
   favoritesCache.invalidate();
   collectionsCache.invalidate();
+  // Stats count favourites and collections, so anything that changes those
+  // changes the Profile header too.
+  statsCache.invalidate();
+}
+
+/**
+ * Called by every write that changes what Profile shows about a member.
+ *
+ * The passport cache is reached through a lazy require rather than a top-level
+ * import: passportService imports getUserReviews and getUserProfile from this
+ * file, so importing it back at module scope is a cycle — and a cycle here
+ * resolves to `undefined` at load time, which would fail silently the first time
+ * somebody wrote a review.
+ */
+function invalidateProfileCaches(): void {
+  statsCache.invalidate();
+  userReviewsCache.invalidate();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  (require('./passportService') as typeof import('./passportService')).invalidatePassportCache();
 }
 
 export async function getUserFavorites(userId: string): Promise<Lounge[]> {
@@ -280,6 +344,7 @@ export async function submitReview(loungeId: string, review: SubmitReviewInput):
     // Notifications are best-effort — the review itself already saved.
   }
 
+  invalidateProfileCaches();
   return ref.id;
 }
 
@@ -305,11 +370,13 @@ export async function updateReview(
   if (data.photos !== undefined) updates.photos = data.photos;
   if (data.visitDate !== undefined) updates.visitDate = Timestamp.fromDate(data.visitDate);
   await updateDoc(doc(db, 'lounges', loungeId, 'reviews', reviewId), updates);
+  invalidateProfileCaches();
 }
 
 /** Deletes a review doc outright — no soft-delete/undo, matching toggleFavorite's style of direct deleteDoc calls elsewhere in this file. */
 export async function deleteReview(loungeId: string, reviewId: string): Promise<void> {
   await deleteDoc(doc(db, 'lounges', loungeId, 'reviews', reviewId));
+  invalidateProfileCaches();
 }
 
 /**
@@ -573,23 +640,7 @@ export type UserStats = {
  * a bug.
  */
 export async function getUserStats(userId: string): Promise<UserStats> {
-  const [reviewsSnapshot, favoriteIds, collections] = await Promise.all([
-    getDocs(query(collectionGroup(db, 'reviews'), where('userId', '==', userId))),
-    getUserFavoriteIds(userId),
-    getUserCollections(userId),
-  ]);
-
-  const photosUploaded = reviewsSnapshot.docs.reduce((sum, d) => {
-    const review = d.data() as ReviewDocument;
-    return sum + (review.photos?.length ?? 0);
-  }, 0);
-
-  return {
-    reviewsWritten: reviewsSnapshot.size,
-    favoritesSaved: favoriteIds.length,
-    photosUploaded,
-    collectionsCount: collections.length,
-  };
+  return statsCache.get(userId);
 }
 
 export type UserReviewEntry = ReviewDocument & { id: string; loungeId: string };
@@ -604,15 +655,7 @@ export type UserReviewEntry = ReviewDocument & { id: string; loungeId: string };
  * getUserStats already documents.
  */
 export async function getUserReviews(userId: string): Promise<UserReviewEntry[]> {
-  const snapshot = await getDocs(
-    query(collectionGroup(db, 'reviews'), where('userId', '==', userId)),
-  );
-  const reviews = snapshot.docs.map(d => ({
-    id: d.id,
-    loungeId: d.ref.parent.parent?.id ?? '',
-    ...(d.data() as ReviewDocument),
-  }));
-  return reviews.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+  return userReviewsCache.get(userId);
 }
 
 // ---------------------------------------------------------------------------
@@ -644,6 +687,9 @@ export async function updateUserProfile(
   data: Partial<UserDocument>,
 ): Promise<void> {
   await setDoc(doc(db, 'users', userId), data, { merge: true });
+  // The passport anchors its distances to the profile's home city, so a profile
+  // edit changes more than the header.
+  invalidateProfileCaches();
 }
 
 // ---------------------------------------------------------------------------

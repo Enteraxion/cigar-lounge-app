@@ -23,11 +23,17 @@ import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 import { getLoungeById } from '../services/loungeService';
 import { updateLoungeDetails } from '../services/ownerService';
 import { auth } from '../services/firebaseAuth';
-import type { SearchStackParamList } from '../navigation/SearchNavigator';
 import { keyboardAwareScrollProps } from '../utils/keyboardAware';
 
-type EditListingNavigationProp = NativeStackNavigationProp<SearchStackParamList>;
-type EditListingRouteProp = RouteProp<SearchStackParamList, 'EditListing'>;
+/**
+ * Deliberately not tied to one stack's param list: this screen is registered in
+ * both the Search stack (reached from an owner's own lounge page) and the
+ * Profile stack (reached from My Shops), so that whichever way an owner walked
+ * in is the way back out. It only ever calls goBack(), so the minimum shape is
+ * all it needs.
+ */
+type EditListingNavigationProp = NativeStackNavigationProp<{ EditListing: { loungeId: string } }>;
+type EditListingRouteProp = RouteProp<{ EditListing: { loungeId: string } }, 'EditListing'>;
 
 export default function EditListingScreen() {
   const navigation = useNavigation<EditListingNavigationProp>();

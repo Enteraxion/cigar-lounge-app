@@ -23,6 +23,7 @@ import AISettingsScreen from '../screens/AISettingsScreen';
 import AIFeedbackScreen from '../screens/AIFeedbackScreen';
 import MyReviewsScreen from '../screens/MyReviewsScreen';
 import MyShopsScreen from '../screens/MyShopsScreen';
+import EditListingScreen from '../screens/EditListingScreen';
 import MyReservationsScreen from '../screens/MyReservationsScreen';
 import AgeVerificationScreen from '../screens/AgeVerificationScreen';
 
@@ -45,6 +46,18 @@ export type ProfileStackParamList = {
    * or have claimed a lounge, so most members never see this exists.
    */
   MyShops: undefined;
+  /**
+   * Registered here as well as in the Search stack, on purpose.
+   *
+   * An owner reaches this from two unrelated places — their own lounge page
+   * (Search) and My Shops (Profile) — and a screen belongs to whichever stack
+   * the member walked in through. Opening the Search copy from Profile hopped
+   * the member into the Search tab, so swiping back left them on Search
+   * looking at somebody else's search results instead of back in My Shops
+   * (Rohith, 2026-09-13). The screen itself only ever calls goBack(), so it
+   * does not care which stack it is in.
+   */
+  EditListing: { loungeId: string };
   MyReservations: undefined;
   /** Member-facing 21+ ID upload. Only surfaced while there is something to do. */
   AgeVerification: undefined;
@@ -65,6 +78,7 @@ export default function ProfileNavigator() {
       <Stack.Screen name="AIFeedback" component={AIFeedbackScreen} />
       <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
       <Stack.Screen name="MyShops" component={MyShopsScreen} />
+      <Stack.Screen name="EditListing" component={EditListingScreen} />
       <Stack.Screen name="MyReservations" component={MyReservationsScreen} />
       <Stack.Screen name="AgeVerification" component={AgeVerificationScreen} />
     </Stack.Navigator>

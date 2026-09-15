@@ -49,6 +49,7 @@ import {
   Sun,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { useMarkerTracking } from '../utils/mapMarker';
 import FilterChip from '../components/FilterChip';
 // TODO: the Concierge suggestion is still a fixed string — see the header.
 // The weather widget is real now (weatherService + patioWeather).
@@ -79,11 +80,14 @@ function MapPin({
   selected: boolean;
   onPress: () => void;
 }) {
+  // Redraws when the pin changes size and colour on selection — see the hook.
+  const tracksViewChanges = useMarkerTracking(selected);
+
   return (
     <Marker
       coordinate={{ latitude: lounge.coordinates.lat, longitude: lounge.coordinates.lng }}
       onPress={onPress}
-      tracksViewChanges={false}
+      tracksViewChanges={tracksViewChanges}
     >
       <View style={styles.pinWrap}>
         <View style={[styles.pinCircle, selected && styles.pinCircleSelected]}>

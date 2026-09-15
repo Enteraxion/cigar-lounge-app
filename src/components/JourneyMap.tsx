@@ -24,6 +24,7 @@ import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Cigarette, MapPin } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { useMarkerTracking } from '../utils/mapMarker';
 import { auth } from '../services/firebaseAuth';
 import { getUserFavorites } from '../services/userActionsService';
 import { getPassport } from '../services/passportService';
@@ -46,6 +47,30 @@ function regionForLounges(lounges: Lounge[]) {
     latitudeDelta: Math.max((maxLat - minLat) * PADDING_FACTOR, MIN_DELTA),
     longitudeDelta: Math.max((maxLng - minLng) * PADDING_FACTOR, MIN_DELTA),
   };
+}
+
+
+/**
+ * One pin. Split out so it can hold the tracking state a custom Android
+ * marker needs — see useMarkerTracking. These never change appearance, so
+ * the window opens once and closes.
+ */
+function JourneyPin({ lounge, onPress }: { lounge: Lounge; onPress: () => void }) {
+  const tracksViewChanges = useMarkerTracking();
+  return (
+    <Marker
+      coordinate={{ latitude: lounge.coordinates.lat, longitude: lounge.coordinates.lng }}
+      onPress={onPress}
+      tracksViewChanges={tracksViewChanges}
+    >
+      <View style={styles.pinWrap}>
+        <View style={styles.pinCircle}>
+          <Cigarette size={14} color={theme.colors.secondarySilver} />
+        </View>
+        <View style={styles.pinStem} />
+      </View>
+    </Marker>
+  );
 }
 
 export default function JourneyMap() {
@@ -115,19 +140,7 @@ export default function JourneyMap() {
         onPress={openMapTab}
       >
         {lounges.map(lounge => (
-          <Marker
-            key={lounge.id}
-            coordinate={{ latitude: lounge.coordinates.lat, longitude: lounge.coordinates.lng }}
-            onPress={() => openLounge(lounge.id)}
-            tracksViewChanges={false}
-          >
-            <View style={styles.pinWrap}>
-              <View style={styles.pinCircle}>
-                <Cigarette size={14} color={theme.colors.secondarySilver} />
-              </View>
-              <View style={styles.pinStem} />
-            </View>
-          </Marker>
+          <JourneyPin key={lounge.id} lounge={lounge} onPress={() => openLounge(lounge.id)} />
         ))}
       </MapView>
     </View>

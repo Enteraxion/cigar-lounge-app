@@ -25,6 +25,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { pluralize } from '../utils/plural';
 import StarRating from '../components/StarRating';
 import ProgressRatingBar from '../components/ProgressRatingBar';
 import { getLoungeById, getReviewsForLounge, type Lounge } from '../services/loungeService';
@@ -135,7 +136,7 @@ export default function RatingsBreakdownScreen() {
               </Text>
               <View style={styles.overallRightGroup}>
                 <StarRating rating={lounge.ratings.overall} size={14} />
-                <Text style={styles.verifiedLabel}>{lounge.reviewCount} Reviews</Text>
+                <Text style={styles.verifiedLabel}>{pluralize(lounge.reviewCount, 'Review')}</Text>
               </View>
             </View>
 

@@ -71,6 +71,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { pluralize } from '../utils/plural';
 import FilterChip from '../components/FilterChip';
 import SearchLoadingSkeleton from '../components/SearchLoadingSkeleton';
 import SearchResultCard from '../components/SearchResultCard';
@@ -449,7 +450,7 @@ export default function SearchResultsScreen() {
       </View>
 
       <Text style={styles.resultsCount}>
-        {displayResults ? `${displayResults.length} lounges found` : ' '}
+        {displayResults ? `${pluralize(displayResults.length, 'lounge')} found` : ' '}
       </Text>
 
       {/* ---------------- Quick Filter Chips ---------------- */}

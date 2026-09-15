@@ -65,7 +65,10 @@ export default function SearchResultCard({
               size={16}
             />
           ) : null}
-          <Pressable style={styles.iconButton} onPress={onPressSave} hitSlop={8}>
+          <Pressable style={styles.iconButton} onPress={onPressSave} hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Save to a collection"
+          >
             <Bookmark size={16} color={theme.colors.white} fill="transparent" />
           </Pressable>
         </View>

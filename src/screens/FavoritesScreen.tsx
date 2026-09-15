@@ -168,6 +168,8 @@ export default function FavoritesScreen() {
             </View>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
             style={styles.bellButton}
             hitSlop={8}
             onPress={() => (tabNavigation.navigate as (name: string, params?: object) => void)('Notifications')}
@@ -267,6 +269,8 @@ export default function FavoritesScreen() {
             </View>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
             style={styles.bellButton}
             hitSlop={8}
             onPress={() => (tabNavigation.navigate as (name: string, params?: object) => void)('Notifications')}
@@ -326,7 +330,10 @@ export default function FavoritesScreen() {
         </View>
       </ScrollView>
 
-      <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => navigation.navigate('CreateCollection')}>
+      <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => navigation.navigate('CreateCollection')}
+        accessibilityRole="button"
+        accessibilityLabel="Create a new collection"
+      >
         <Plus size={22} color={theme.colors.primaryBlack} />
       </Pressable>
     </SafeAreaView>

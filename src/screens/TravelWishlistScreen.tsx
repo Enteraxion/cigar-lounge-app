@@ -171,6 +171,8 @@ export default function TravelWishlistScreen() {
             <Text style={styles.headerTitle}>Adventure Bound</Text>
           </View>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
             style={styles.bellButton}
             hitSlop={8}
             onPress={() => (tabNavigation.navigate as (name: string, params?: object) => void)('Notifications')}
@@ -317,7 +319,10 @@ export default function TravelWishlistScreen() {
               showsHorizontalScrollIndicator={false}
               ItemSeparatorComponent={HorizontalGap}
               renderItem={({ item }) => (
-                <Pressable onPress={() => openLounge(item.id)}>
+                <Pressable onPress={() => openLounge(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}. Opens the lounge.`}
+                >
                   <CompactLoungeCard
                     image={{ uri: loungeImageUri(item) }}
                     name={item.name}
@@ -354,6 +359,8 @@ export default function TravelWishlistScreen() {
 
       {/* ---------------- Floating Action Button ---------------- */}
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Find lounges to add"
         style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]}
         // A destination appears here when a lounge is saved, so "add" means
         // "find a lounge to save" — which is the Search tab. Previously an

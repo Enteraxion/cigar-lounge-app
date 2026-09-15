@@ -238,6 +238,8 @@ export default function PassportScreen() {
             </View>
           </View>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
             style={styles.bellButton}
             hitSlop={8}
             onPress={() => (tabNavigation.navigate as (name: string, params?: object) => void)('Notifications')}

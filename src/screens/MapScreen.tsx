@@ -446,7 +446,10 @@ export default function MapScreen() {
           <Text style={styles.searchPlaceholder} numberOfLines={1}>
             Search lounges, cities or cigar brands
           </Text>
-          <Pressable onPress={openVoiceSearch} hitSlop={8}>
+          <Pressable onPress={openVoiceSearch} hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Search by voice"
+          >
             <Mic size={18} color={theme.colors.mutedGray} />
           </Pressable>
         </Pressable>
@@ -503,13 +506,22 @@ export default function MapScreen() {
 
         {/* ---------------- Map controls ---------------- */}
         <View style={styles.controlsColumn}>
-          <Pressable style={styles.controlButton} onPress={cycleMapType} hitSlop={4}>
+          <Pressable style={styles.controlButton} onPress={cycleMapType} hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel="Change the map style"
+          >
             <Layers size={18} color={theme.colors.secondarySilver} />
           </Pressable>
-          <Pressable style={styles.controlButton} onPress={recenter} hitSlop={4}>
+          <Pressable style={styles.controlButton} onPress={recenter} hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel="Centre the map on my location"
+          >
             <Crosshair size={18} color={theme.colors.secondarySilver} />
           </Pressable>
-          <Pressable style={styles.controlButton} onPress={openListView} hitSlop={4}>
+          <Pressable style={styles.controlButton} onPress={openListView} hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel="Show these lounges as a list"
+          >
             <List size={18} color={theme.colors.secondarySilver} />
           </Pressable>
         </View>
@@ -536,7 +548,10 @@ export default function MapScreen() {
                 <Text style={styles.infoName} numberOfLines={1}>
                   {selectedLounge.name}
                 </Text>
-                <Pressable onPress={() => setFavorited(prev => !prev)} hitSlop={8}>
+                <Pressable onPress={() => setFavorited(prev => !prev)} hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add to favourites"
+                >
                   <Heart
                     size={18}
                     color={favorited ? theme.colors.accentGold : theme.colors.secondarySilver}
@@ -552,7 +567,10 @@ export default function MapScreen() {
                 <Pressable style={styles.viewDetailsButton} onPress={openLoungeDetails}>
                   <Text style={styles.viewDetailsText}>View Details</Text>
                 </Pressable>
-                <Pressable style={styles.shareButton} onPress={onShare} hitSlop={8}>
+                <Pressable style={styles.shareButton} onPress={onShare} hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share this lounge"
+                >
                   <Share2 size={16} color={theme.colors.primaryBlack} />
                 </Pressable>
               </View>

@@ -216,7 +216,10 @@ export default function SearchSuggestionsScreen() {
             onSubmitEditing={() => query.trim() && goToResults(query)}
           />
           {query.length > 0 ? (
-            <Pressable style={styles.clearButton} onPress={() => setQuery('')} hitSlop={8}>
+            <Pressable style={styles.clearButton} onPress={() => setQuery('')} hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear the search"
+            >
               <X size={14} color={theme.colors.white} />
             </Pressable>
           ) : null}

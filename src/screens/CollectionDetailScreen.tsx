@@ -122,7 +122,10 @@ function SavedLoungeRow({
         >
           <Trash2 size={15} color={theme.colors.mutedGray} />
         </Pressable>
-        <Pressable style={styles.loungeChevronButton} onPress={onPress} hitSlop={8}>
+        <Pressable style={styles.loungeChevronButton} onPress={onPress} hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open"
+        >
           <ChevronRight size={18} color={theme.colors.primaryBlack} />
         </Pressable>
       </View>
@@ -373,6 +376,8 @@ export default function CollectionDetailScreen() {
             </Pressable>
             <View style={styles.headerRightButtons}>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add to favourites"
                 style={styles.headerButton}
                 onPress={onToggleFavorite}
                 hitSlop={8}
@@ -383,7 +388,10 @@ export default function CollectionDetailScreen() {
                   fill={favorited ? theme.colors.white : 'transparent'}
                 />
               </Pressable>
-              <Pressable style={styles.headerButton} onPress={onShare} hitSlop={8}>
+              <Pressable style={styles.headerButton} onPress={onShare} hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Share this lounge"
+              >
                 <Share2 size={18} color={theme.colors.white} />
               </Pressable>
               <Pressable

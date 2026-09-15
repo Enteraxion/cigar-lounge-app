@@ -8,7 +8,6 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest --selectProjects unit",
-    "seed:firestore": "ts-node --project scripts/tsconfig.json scripts/seedFirestore.ts",
     "import:lounges": "ts-node --project scripts/tsconfig.json scripts/importYelpLounges.ts",
     "remove:demo-data": "ts-node --project scripts/tsconfig.json scripts/removeDemoData.ts",
     "backfill:hours": "ts-node --project scripts/tsconfig.json scripts/backfillCityHours.ts",

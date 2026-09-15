@@ -16,7 +16,10 @@ a travel "passport" feature, and an AI concierge.
 - `src/services/` — Firebase auth, Firestore lounge data, storage, user actions
 - `src/data/` — mock data used before/alongside live Firestore data
 - `src/hooks/`, `src/types/`, `src/utils/`, `src/theme/`
-- `scripts/seedFirestore.ts` — seeds Firestore from mock data (needs `serviceAccountKey.json`, gitignored)
+- `scripts/` — one-off admin tasks against Firestore, all needing the gitignored
+  `serviceAccountKey.json`: `importYelpLounges`, `backfillFromGoogle`, `buildCityStats`,
+  `createAdmin`, `createReviewerAccount`. (`seedFirestore.ts` was deleted 2026-09-15 — it
+  seeded ~17 invented lounges and the directory now holds 8,513 real ones.)
 - `design-reference/` — Figma/design export PDFs for each screen
 - `owner-portal/` — separate Vite + React + TS web app, the shop-owner dashboard (login,
   claim status, edit listing) — same Firebase project/Auth/Firestore as the mobile app, deployed

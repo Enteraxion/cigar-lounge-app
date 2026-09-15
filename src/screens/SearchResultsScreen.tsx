@@ -74,7 +74,6 @@ import { theme, withAlpha } from '../theme';
 import FilterChip from '../components/FilterChip';
 import SearchLoadingSkeleton from '../components/SearchLoadingSkeleton';
 import SearchResultCard from '../components/SearchResultCard';
-import SimplifiedMapView from '../components/SimplifiedMapView';
 import SortBottomSheet from '../components/SortBottomSheet';
 import FilterBottomSheet from '../components/FilterBottomSheet';
 import AddToCollectionSheet from '../components/AddToCollectionSheet';
@@ -647,18 +646,6 @@ export default function SearchResultsScreen() {
           <ScrollView showsVerticalScrollIndicator={false}>
             <SearchLoadingSkeleton />
           </ScrollView>
-        ) : Platform.OS === 'android' ? (
-          // TODO(android-maps): same gap as MapScreen.tsx — no Google Maps
-          // API key set up on Android yet. SimplifiedMapView plots the same
-          // real results and navigates to LoungeDetail on tap, matching the
-          // real MapView's Marker onCalloutPress below. See MapScreen.tsx's
-          // comment for the full context.
-          <SimplifiedMapView
-            lounges={displayResults.slice(0, MAX_MAP_PINS)}
-            onPressLounge={lounge =>
-              navigation.navigate('LoungeDetail', { loungeId: lounge.id })
-            }
-          />
         ) : (
           <MapView
             style={StyleSheet.absoluteFill}

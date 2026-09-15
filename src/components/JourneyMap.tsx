@@ -5,9 +5,9 @@
  * stylized dot-scatter graphic plotted from mock src/data/mockPassport.ts
  * coordinates (bug reported by Julian Brinkley on TestFlight: "The
  * Journey map should have an actual map"). This is a real, embedded
- * MapView (same react-native-maps setup as MapScreen.tsx — PROVIDER_DEFAULT,
- * SimplifiedMapView fallback on Android since there's no Maps API key
- * there yet) showing pins for the lounges the member has actually
+ * MapView (same react-native-maps setup as MapScreen.tsx —
+ * PROVIDER_DEFAULT, which is Apple Maps on iOS and Google Maps on Android)
+ * showing pins for the lounges the member has actually
  * visited — see src/utils/passport.ts for why a review counts as a visit.
  * Favorites are the fallback when there are no visits yet, so a member
  * who has saved places but not reviewed any still gets a real map.
@@ -19,12 +19,11 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Cigarette, MapPin } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
-import SimplifiedMapView from './SimplifiedMapView';
 import { auth } from '../services/firebaseAuth';
 import { getUserFavorites } from '../services/userActionsService';
 import { getPassport } from '../services/passportService';
@@ -99,17 +98,6 @@ export default function JourneyMap() {
         <MapPin size={22} color={theme.colors.mutedGray} />
         <Text style={styles.emptyText}>Review a lounge you've visited to start your journey map.</Text>
       </View>
-    );
-  }
-
-  if (Platform.OS === 'android') {
-    return (
-      <Pressable style={styles.container} onPress={openMapTab}>
-        <SimplifiedMapView
-          lounges={lounges}
-          onPressLounge={lounge => openLounge(lounge.id)}
-        />
-      </Pressable>
     );
   }
 

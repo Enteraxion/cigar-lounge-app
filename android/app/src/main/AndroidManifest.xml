@@ -1,8 +1,38 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Required to show a notification at all from Android 13 (API 33).
+
+      It was reaching the merged manifest via firebase-messaging but never
+      declared here and never requested, so it sat permanently denied:
+      hasPermission() returned false, registerDeviceForPush() bailed out before
+      asking FCM for a token, and no Android device ever registered. Push has
+      been live since 2026-09-13 and worked on iOS the whole time, which is
+      exactly why nobody noticed (2026-09-15).
+
+      @react-native-firebase/messaging's requestPermission() asks for this on
+      Android 13+, so the prompt comes from the same call the ID submission
+      screen already makes on iOS.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!--
+      Android 11 hid other installed apps from package queries by default, and
+      SpeechRecognizer.isRecognitionAvailable() answers by looking for an app
+      that serves RecognitionService. Without this declaration it returns false
+      on a device that has one, and voice search would report itself
+      unavailable on a working phone — the same wrong answer the iOS
+      availability check gave in September, for a different reason.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 
     <application
       android:name=".MainApplication"

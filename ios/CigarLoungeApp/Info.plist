@@ -94,6 +94,22 @@
 		<string>Inter-SemiBold.ttf</string>
 		<string>Ionicons.ttf</string>
 	</array>
+	<!-- Lounge Locator has exactly one appearance: black and gold. Without
+	     this the app follows the phone, so on a light-mode phone the in-app
+	     alerts, action sheets and keyboards render light inside a black app.
+
+	     It does NOT fix the light Map, which is what it was added for
+	     (2026-09-15). Verified: the map still renders light with this set. The
+	     map component is not at fault either — AIRMap is an MKMapView subclass,
+	     the userInterfaceStyle prop reaches it, and react-native-maps' New
+	     Architecture code does set overrideUserInterfaceStyle = Dark on it.
+	     MKMapView on iOS 26.5 simply ignores that for its own tiles. The only
+	     remaining route to a dark map on iOS is switching to the Google Maps
+	     provider, which needs the Google Maps iOS SDK pod and a second API key.
+
+	     Kept anyway: an app with one appearance should say so. -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

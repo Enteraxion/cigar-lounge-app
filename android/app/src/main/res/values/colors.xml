@@ -1,0 +1,9 @@
+<resources>
+    <!--
+        The app's background, mirroring theme.colors.background in
+        src/theme/index.ts. Android needs it natively as well as in JS: the
+        status bar, the navigation bar and the window behind the React view are
+        all drawn by the system before any JavaScript has run.
+    -->
+    <color name="app_background">#0a0a0c</color>
+</resources>

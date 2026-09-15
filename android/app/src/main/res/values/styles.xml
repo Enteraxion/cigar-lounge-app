@@ -1,9 +1,36 @@
 <resources>
 
-    <!-- Base application theme. -->
+    <!--
+        Base application theme.
+
+        The status bar was light grey on every screen except the three auth
+        ones, which set it themselves in JS. Everywhere else Android fell back
+        to the DayNight parent's light-mode default — a pale strip across the
+        top of an app that is black everywhere else (first Android run,
+        2026-09-15).
+
+        Set here rather than in JavaScript on purpose. The system draws the
+        status bar, the navigation bar and the window behind the React view
+        before any JS has run, so a screen-by-screen fix leaves a flash of grey
+        at launch and misses any screen nobody remembered to decorate.
+
+        The parent stays DayNight so the AppCompat widget styling is unchanged;
+        the three values below are pinned regardless of the device's light or
+        dark setting, because this app has exactly one appearance.
+    -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+
+        <item name="android:statusBarColor">@color/app_background</item>
+        <!-- false = light icons on a dark bar. The default reads the system
+             theme and would put black icons on our black background. -->
+        <item name="android:windowLightStatusBar">false</item>
+
+        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <!-- What shows between the splash screen and the first React frame. -->
+        <item name="android:windowBackground">@color/app_background</item>
     </style>
 
 </resources>

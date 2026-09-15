@@ -39,7 +39,6 @@ import {
   MapPin,
   Navigation,
   Phone,
-  MessageCircle,
   Pencil,
   Share2,
   ShieldCheck,
@@ -48,6 +47,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { pluralize } from '../utils/plural';
 import { openInMaps } from '../utils/openMaps';
 import { useVerificationGate } from '../hooks/useVerificationGate';
 import HoursCard from '../components/HoursCard';
@@ -301,7 +301,7 @@ export default function LoungeDetailScreen() {
           <View style={styles.ratingRow}>
             <Star size={14} color={theme.colors.accentGold} fill={theme.colors.accentGold} />
             <Text style={styles.ratingValue}>{lounge.ratings.overall}</Text>
-            <Text style={styles.reviewCount}>· {lounge.reviewCount} Reviews</Text>
+            <Text style={styles.reviewCount}>· {pluralize(lounge.reviewCount, 'Review')}</Text>
           </View>
           <Text style={styles.name}>{lounge.name}</Text>
           <View style={styles.addressRow}>
@@ -585,9 +585,6 @@ export default function LoungeDetailScreen() {
                   <View style={styles.reviewStat}>
                     <ThumbsUp size={13} color={theme.colors.mutedGray} />
                     <Text style={styles.reviewStatText}>{latestReview.helpfulCount}</Text>
-                  </View>
-                  <View style={styles.reviewStat}>
-                    <MessageCircle size={13} color={theme.colors.mutedGray} />
                   </View>
                   {userId && latestReview.userId === userId ? (
                     <View style={styles.reviewOwnerActions}>

@@ -58,6 +58,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { pluralize } from '../utils/plural';
 import { auth } from '../services/firebaseAuth';
 import {
   deleteCollection,
@@ -423,7 +424,7 @@ export default function CollectionDetailScreen() {
               </Text>
             </View>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{collection.loungeIds.length} Lounges</Text>
+              <Text style={styles.badgeText}>{pluralize(collection.loungeIds.length, 'Lounge')}</Text>
             </View>
           </View>
 

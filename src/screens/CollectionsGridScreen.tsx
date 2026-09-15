@@ -20,6 +20,7 @@ import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navig
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Bell, Globe, Lock, Plus, User } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { pluralize } from '../utils/plural';
 import { auth } from '../services/firebaseAuth';
 import { getUserCollections, type UserCollection } from '../services/userActionsService';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -52,7 +53,7 @@ function CollectionCard({
       <Text style={styles.cardName} numberOfLines={1}>
         {collection.name}
       </Text>
-      <Text style={styles.cardCount}>{collection.loungeIds.length} Lounges</Text>
+      <Text style={styles.cardCount}>{pluralize(collection.loungeIds.length, 'Lounge')}</Text>
     </Pressable>
   );
 }

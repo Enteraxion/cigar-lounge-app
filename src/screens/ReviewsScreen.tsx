@@ -45,6 +45,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
+import { pluralize } from '../utils/plural';
 import {
   blockMember,
   getBlockedUserIds,
@@ -443,7 +444,7 @@ export default function ReviewsScreen() {
             <View style={styles.summaryLeft}>
               <Text style={styles.summaryRating}>{summary.overallRating.toFixed(1)}</Text>
               <StarRating rating={summary.overallRating} size={14} />
-              <Text style={styles.summaryCount}>{summary.totalCount} Reviews</Text>
+              <Text style={styles.summaryCount}>{pluralize(summary.totalCount, 'Review')}</Text>
             </View>
             <View style={styles.summaryRight}>
               {distributionTopToBottom.map(row => (

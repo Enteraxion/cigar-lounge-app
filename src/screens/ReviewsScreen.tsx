@@ -38,7 +38,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import {
   ChevronLeft,
-  MessageCircle,
   MoreHorizontal,
   Pencil,
   SlidersHorizontal,
@@ -209,9 +208,6 @@ function ReviewCard({
         <View style={styles.footerStat}>
           <ThumbsUp size={14} color={theme.colors.mutedGray} />
           <Text style={styles.footerStatText}>{review.helpfulCount}</Text>
-        </View>
-        <View style={styles.footerStat}>
-          <MessageCircle size={14} color={theme.colors.mutedGray} />
         </View>
         {isOwner ? (
           <View style={styles.reviewOwnerActions}>

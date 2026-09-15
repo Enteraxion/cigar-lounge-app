@@ -253,6 +253,8 @@ export default function ForgotPasswordScreen() {
                       autoComplete="password"
                     />
                     <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? "Hide password" : "Show password"}
                       style={styles.inputTrailingIconSlot}
                       onPress={() => setShowPassword(v => !v)}
                       hitSlop={8}

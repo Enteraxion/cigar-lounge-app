@@ -709,6 +709,8 @@ export default function ConciergeConversationScreen() {
             returnKeyType="send"
           />
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Send"
             style={styles.sendButton}
             onPress={() => sendMessage(inputText)}
             hitSlop={8}

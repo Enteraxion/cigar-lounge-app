@@ -241,6 +241,8 @@ export default function ReserveTableScreen() {
           <Text style={styles.fieldLabel}>Party Size</Text>
           <View style={styles.stepperRow}>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="One fewer guest"
               style={styles.stepperButton}
               onPress={() => setPartySize(size => Math.max(MIN_PARTY_SIZE, size - 1))}
             >
@@ -248,6 +250,8 @@ export default function ReserveTableScreen() {
             </Pressable>
             <Text style={styles.stepperValue}>{partySize}</Text>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="One more guest"
               style={styles.stepperButton}
               onPress={() => setPartySize(size => Math.min(MAX_PARTY_SIZE, size + 1))}
             >

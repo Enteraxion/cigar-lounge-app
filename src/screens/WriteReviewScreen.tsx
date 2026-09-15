@@ -359,6 +359,8 @@ export default function WriteReviewScreen() {
                 <View key={index} style={styles.photoSlot}>
                   <Image source={{ uri }} style={styles.photoThumbnail} />
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove this photo"
                     style={styles.removePhotoButton}
                     onPress={() => removePhoto(index)}
                     hitSlop={6}

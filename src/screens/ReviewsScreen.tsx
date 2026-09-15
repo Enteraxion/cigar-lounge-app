@@ -211,10 +211,16 @@ function ReviewCard({
         </View>
         {isOwner ? (
           <View style={styles.reviewOwnerActions}>
-            <Pressable onPress={onEdit} hitSlop={8} disabled={deleting}>
+            <Pressable onPress={onEdit} hitSlop={8} disabled={deleting}
+              accessibilityRole="button"
+              accessibilityLabel="Edit your review"
+            >
               <Pencil size={15} color={theme.colors.mutedGray} />
             </Pressable>
-            <Pressable onPress={onDelete} hitSlop={8} disabled={deleting}>
+            <Pressable onPress={onDelete} hitSlop={8} disabled={deleting}
+              accessibilityRole="button"
+              accessibilityLabel="Delete your review"
+            >
               {deleting ? (
                 <ActivityIndicator size="small" color={theme.colors.danger} />
               ) : (
@@ -404,6 +410,8 @@ export default function ReviewsScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Reviews</Text>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Filter these reviews"
           style={styles.filterButton}
           onPress={() => setFilterVisible(true)}
           hitSlop={8}

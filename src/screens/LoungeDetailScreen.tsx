@@ -269,13 +269,18 @@ export default function LoungeDetailScreen() {
                 />
               ) : null}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Save to a collection"
                 style={styles.headerButton}
                 onPress={() => setCollectionSheetVisible(true)}
                 hitSlop={8}
               >
                 <Bookmark size={18} color={theme.colors.white} fill="transparent" />
               </Pressable>
-              <Pressable style={styles.headerButton} onPress={onShare} hitSlop={8}>
+              <Pressable style={styles.headerButton} onPress={onShare} hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Share this lounge"
+              >
                 <Share2 size={18} color={theme.colors.white} />
               </Pressable>
             </View>
@@ -586,10 +591,16 @@ export default function LoungeDetailScreen() {
                   </View>
                   {userId && latestReview.userId === userId ? (
                     <View style={styles.reviewOwnerActions}>
-                      <Pressable onPress={onEditReview} hitSlop={8} disabled={deletingReview}>
+                      <Pressable onPress={onEditReview} hitSlop={8} disabled={deletingReview}
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit your review"
+                      >
                         <Pencil size={15} color={theme.colors.mutedGray} />
                       </Pressable>
-                      <Pressable onPress={onDeleteReview} hitSlop={8} disabled={deletingReview}>
+                      <Pressable onPress={onDeleteReview} hitSlop={8} disabled={deletingReview}
+                        accessibilityRole="button"
+                        accessibilityLabel="Delete your review"
+                      >
                         {deletingReview ? (
                           <ActivityIndicator size="small" color={theme.colors.danger} />
                         ) : (

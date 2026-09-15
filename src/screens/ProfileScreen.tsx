@@ -376,6 +376,8 @@ export default function ProfileScreen() {
         {/* ---------------- Profile ---------------- */}
         <View style={styles.profileSection}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
             style={styles.settingsButton}
             onPress={() => navigation.navigate('AISettings')}
             hitSlop={8}

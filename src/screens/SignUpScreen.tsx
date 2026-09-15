@@ -362,6 +362,8 @@ export default function SignUpScreen() {
                   autoComplete="new-password"
                 />
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
                   style={styles.inputTrailingIconSlot}
                   onPress={() => setShowPassword(prev => !prev)}
                   hitSlop={8}
@@ -394,6 +396,8 @@ export default function SignUpScreen() {
                   autoComplete="new-password"
                 />
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={showConfirmPassword ? "Hide password" : "Show password"}
                   style={styles.inputTrailingIconSlot}
                   onPress={() => setShowConfirmPassword(prev => !prev)}
                   hitSlop={8}

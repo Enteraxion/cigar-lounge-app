@@ -36,7 +36,10 @@ export default function SortBottomSheet({
 
         <View style={styles.header}>
           <Text style={styles.title}>Sort By</Text>
-          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
             <X size={18} color={theme.colors.white} />
           </Pressable>
         </View>

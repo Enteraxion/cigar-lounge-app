@@ -116,16 +116,25 @@ export default function AddToCollectionSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable style={styles.backdrop} onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+       />
       <View style={styles.sheet}>
         <View style={styles.handle} />
 
         <View style={styles.headerRow}>
-          <Pressable style={styles.iconButton} onPress={onClose} hitSlop={8}>
+          <Pressable style={styles.iconButton} onPress={onClose} hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
             <X size={18} color={theme.colors.white} />
           </Pressable>
           <Text style={styles.title}>Add to Collection</Text>
-          <Pressable style={styles.iconButton} onPress={onCreateNew} hitSlop={8}>
+          <Pressable style={styles.iconButton} onPress={onCreateNew} hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Create a new collection"
+          >
             <Plus size={18} color={theme.colors.white} />
           </Pressable>
         </View>

@@ -174,6 +174,8 @@ export default function AIFeedbackScreen() {
             <Text style={styles.headerTitle}>Recommendations</Text>
           </View>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Concierge settings"
             style={styles.headerButton}
             onPress={() => navigation.navigate('AISettings')}
             hitSlop={8}

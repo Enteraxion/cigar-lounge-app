@@ -167,6 +167,8 @@ export default function UploadPhotosScreen() {
             <View key={photo.id} style={styles.photoTile}>
               <Image source={{ uri: photo.localUri }} style={styles.photoImage} />
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Remove this photo"
                 style={styles.removeButton}
                 onPress={() => removePhoto(photo.id)}
                 hitSlop={6}

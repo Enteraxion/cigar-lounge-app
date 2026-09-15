@@ -336,6 +336,8 @@ export default function AISettingsScreen() {
             <Text style={styles.headerTitle}>AI Settings</Text>
           </View>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Give feedback on the Concierge"
             style={styles.headerButton}
             onPress={() => navigation.navigate('AIFeedback')}
             hitSlop={8}

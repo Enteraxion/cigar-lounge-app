@@ -359,7 +359,10 @@ export default function FilterBottomSheet({
           </View>
           <Text style={styles.title}>Filters</Text>
           <View style={[styles.headerSide, styles.headerSideRight]}>
-            <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+            <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Close filters"
+            >
               <X size={16} color={theme.colors.white} />
             </Pressable>
           </View>
@@ -409,7 +412,10 @@ export default function FilterBottomSheet({
                 <Text style={styles.savedFilterChipText} numberOfLines={1}>
                   {saved.name}
                 </Text>
-                <Pressable hitSlop={8} onPress={() => handleDeleteSavedFilter(saved)}>
+                <Pressable hitSlop={8} onPress={() => handleDeleteSavedFilter(saved)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete the saved filter ${saved.name}`}
+                >
                   <Trash2 size={12} color={theme.colors.mutedGray} />
                 </Pressable>
               </Pressable>

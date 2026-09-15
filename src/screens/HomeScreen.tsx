@@ -305,6 +305,8 @@ export default function HomeScreen() {
             </View>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
             style={styles.bellButton}
             hitSlop={8}
             onPress={() => (tabNavigation.navigate as (name: string, params?: object) => void)('Notifications')}
@@ -427,7 +429,10 @@ export default function HomeScreen() {
                 showsHorizontalScrollIndicator={false}
                 ItemSeparatorComponent={HorizontalGap}
                 renderItem={({ item }) => (
-                  <Pressable onPress={() => openLoungeDetails(item.id)}>
+                  <Pressable onPress={() => openLoungeDetails(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.name}. Opens the lounge.`}
+                  >
                     <LoungeCard
                       image={{ uri: loungeImageUri(item) }}
                       name={item.name}
@@ -509,7 +514,10 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               ItemSeparatorComponent={HorizontalGap}
               renderItem={({ item }) => (
-                <Pressable onPress={() => openLoungeDetails(item.id)}>
+                <Pressable onPress={() => openLoungeDetails(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}. Opens the lounge.`}
+                >
                   <LoungeCard
                     image={{ uri: loungeImageUri(item) }}
                     name={item.name}
@@ -580,7 +588,10 @@ export default function HomeScreen() {
           screen that already exists, so this is a real shortcut rather
           than a new feature — the fastest routes into the three things a
           member actually opens this app to do. */}
-      <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => setQuickActionsOpen(true)}>
+      <Pressable style={[styles.fab, { bottom: tabBarClearance(insets.bottom) }]} onPress={() => setQuickActionsOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Quick actions"
+      >
         <Plus size={22} color={theme.colors.primaryBlack} />
       </Pressable>
 

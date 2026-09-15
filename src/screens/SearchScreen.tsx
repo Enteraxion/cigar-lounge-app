@@ -184,7 +184,10 @@ export default function SearchScreen() {
         >
           <SearchIcon size={18} color={theme.colors.mutedGray} />
           <Text style={styles.searchPlaceholder}>Lounges, cities, or brands...</Text>
-          <Pressable onPress={openVoiceSearch} hitSlop={8}>
+          <Pressable onPress={openVoiceSearch} hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Search by voice"
+          >
             <Mic size={18} color={theme.colors.mutedGray} />
           </Pressable>
         </Pressable>
@@ -334,6 +337,8 @@ export default function SearchScreen() {
               ItemSeparatorComponent={HorizontalGap}
               renderItem={({ item }) => (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}. Opens the lounge.`}
                   onPress={() => navigation.navigate('LoungeDetail', { loungeId: item.id })}
                 >
                   <CompactLoungeCard

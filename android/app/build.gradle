@@ -78,6 +78,16 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 /**
  * Upload-key credentials, kept out of the repository. See signingConfigs below.
  */
+/**
+ * Google Maps key, read from android/local.properties (gitignored) and
+ * substituted into the manifest. See the meta-data tag in AndroidManifest.xml.
+ */
+def localPropertiesFile = rootProject.file("local.properties")
+def localProperties = new Properties()
+if (localPropertiesFile.exists()) {
+    localProperties.load(new FileInputStream(localPropertiesFile))
+}
+
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
@@ -96,6 +106,10 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        manifestPlaceholders = [
+            MAPS_API_KEY: localProperties.getProperty("MAPS_API_KEY", "")
+        ]
     }
     signingConfigs {
         debug {

@@ -13,6 +13,27 @@
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
+
+      <!--
+        Google Maps key for react-native-maps.
+
+        Absent until 2026-09-15, which is why the Map tab fell back to
+        SimplifiedMapView — pins on a blank grid, no streets, no geography.
+
+        The value comes from MAPS_API_KEY in android/local.properties, which is
+        gitignored. The key is restricted in Google Cloud Console to this
+        package and to our debug and upload signing fingerprints, so it is only
+        usable by builds we signed; that restriction, not secrecy, is what
+        protects it. An unrestricted key embedded in an APK is somebody else's
+        Maps bill.
+
+        Empty string when the property is missing, so a checkout without it
+        still builds and simply shows the simplified map.
+      -->
+      <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="${MAPS_API_KEY}" />
+
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

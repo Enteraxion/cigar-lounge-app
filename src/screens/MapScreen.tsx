@@ -27,7 +27,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
   Pressable,
   Share,
   StyleSheet,
@@ -51,7 +50,6 @@ import {
 } from 'lucide-react-native';
 import { theme, withAlpha } from '../theme';
 import FilterChip from '../components/FilterChip';
-import SimplifiedMapView from '../components/SimplifiedMapView';
 // TODO: the Concierge suggestion is still a fixed string — see the header.
 // The weather widget is real now (weatherService + patioWeather).
 import {
@@ -397,60 +395,45 @@ export default function MapScreen() {
 
   return (
     <View style={styles.screen}>
-      {Platform.OS === 'android' ? (
-        // TODO(android-maps): react-native-maps needs a Google Maps API
-        // key on Android (Maps SDK for Android + a billing-enabled GCP
-        // project) — not set up yet, so real MapView can't render here.
-        // SimplifiedMapView is a stylized stand-in that plots the same
-        // real lounges and wires the same selection behavior as the real
-        // MapView's markers below. iOS uses Apple Maps via
-        // PROVIDER_DEFAULT and needs no key. Once a Maps API key exists,
-        // add <meta-data android:name="com.google.android.geo.API_KEY"
-        // .../> to AndroidManifest.xml and remove this branch in favor of
-        // the real MapView everywhere.
-        <View style={StyleSheet.absoluteFill}>
-          <SimplifiedMapView
-            lounges={lounges ?? []}
-            selectedLoungeId={selectedLoungeId}
-            onPressLounge={lounge => setSelectedLoungeId(lounge.id)}
-          />
-        </View>
-      ) : (
-        <MapView
-          ref={mapRef}
-          style={StyleSheet.absoluteFill}
-          provider={PROVIDER_DEFAULT}
-          userInterfaceStyle="dark"
-          initialRegion={initialRegion}
-          mapType={mapType}
-          onPress={() => setSelectedLoungeId(null)}
-          onRegionChangeComplete={region => {
-            // Reuses the data cache key as the "has this meaningfully moved?"
-            // test, so the threshold for refetching is exactly the
-            // granularity at which the answer could differ. Returning the
-            // existing object makes React bail out of the render entirely,
-            // which is what keeps a long pan from re-rendering 150 markers
-            // on every gesture.
-            const next = {
-              lat: region.latitude,
-              lng: region.longitude,
-              latitudeDelta: region.latitudeDelta,
-            };
-            const keyOf = (v: typeof next) =>
-              nearbyCacheKey({ lat: v.lat, lng: v.lng }, radiusForViewport(v.latitudeDelta));
-            setViewport(current => (keyOf(current) === keyOf(next) ? current : next));
-          }}
+      {/* Real map on both platforms since 2026-09-15. Android drew a
+          stand-in — SimplifiedMapView, pins on a grid with no streets —
+          because there was no Maps SDK for Android key. There is one now, and
+          PROVIDER_DEFAULT resolves to Apple Maps on iOS and Google Maps on
+          Android, so one MapView serves both. */}
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFill}
+        provider={PROVIDER_DEFAULT}
+        userInterfaceStyle="dark"
+        initialRegion={initialRegion}
+        mapType={mapType}
+        onPress={() => setSelectedLoungeId(null)}
+        onRegionChangeComplete={region => {
+          // Reuses the data cache key as the "has this meaningfully moved?"
+          // test, so the threshold for refetching is exactly the
+          // granularity at which the answer could differ. Returning the
+          // existing object makes React bail out of the render entirely,
+          // which is what keeps a long pan from re-rendering 150 markers
+          // on every gesture.
+          const next = {
+            lat: region.latitude,
+            lng: region.longitude,
+            latitudeDelta: region.latitudeDelta,
+          };
+          const keyOf = (v: typeof next) =>
+            nearbyCacheKey({ lat: v.lat, lng: v.lng }, radiusForViewport(v.latitudeDelta));
+          setViewport(current => (keyOf(current) === keyOf(next) ? current : next));
+        }}
         >
-          {(lounges ?? []).map(lounge => (
-            <MapPin
-              key={lounge.id}
-              lounge={lounge}
-              selected={lounge.id === selectedLoungeId}
-              onPress={() => setSelectedLoungeId(lounge.id)}
-            />
-          ))}
-        </MapView>
-      )}
+        {(lounges ?? []).map(lounge => (
+          <MapPin
+            key={lounge.id}
+            lounge={lounge}
+            selected={lounge.id === selectedLoungeId}
+            onPress={() => setSelectedLoungeId(lounge.id)}
+          />
+        ))}
+      </MapView>
 
       <SafeAreaView style={styles.overlay} edges={['top']} pointerEvents="box-none">
         {/* ---------------- Search bar ---------------- */}

@@ -110,3 +110,9 @@ google-places-key.txt
 # Built output for the admin portal — same as owner-portal/dist.
 admin-portal/dist
 admin-portal/node_modules
+
+
+# Android upload-key credentials. The password in here cannot be recovered —
+# lose it and the app can never be updated on Google Play again.
+# (*.keystore is already ignored above.)
+android/keystore.properties

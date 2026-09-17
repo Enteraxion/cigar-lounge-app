@@ -28,7 +28,13 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+// Imported as a namespace rather than by name: PermissionsAndroid does not
+// exist in react-native-web, and a named import of something the module does
+// not export fails the web build even though the only code path that touches
+// it is guarded by Platform.OS === 'android' below (2026-09-17).
+import * as ReactNative from 'react-native';
+
+const { Platform } = ReactNative;
 import Geolocation from '@react-native-community/geolocation';
 
 export type CurrentLocation = { latitude: number; longitude: number };
@@ -43,6 +49,10 @@ Geolocation.setRNConfiguration({
 });
 
 async function requestAndroidPermission(): Promise<boolean> {
+  const { PermissionsAndroid } = ReactNative;
+  if (!PermissionsAndroid) {
+    return false;
+  }
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
   );

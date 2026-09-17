@@ -116,3 +116,6 @@ admin-portal/node_modules
 # lose it and the app can never be updated on Google Play again.
 # (*.keystore is already ignored above.)
 android/keystore.properties
+
+# Vite output for the web build
+web-build/

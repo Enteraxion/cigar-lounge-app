@@ -24,8 +24,45 @@ import path from 'node:path';
 const shim = (name: string) => path.resolve(__dirname, `src/web/shims/${name}.ts`);
 const shimx = (name: string) => path.resolve(__dirname, `src/web/shims/${name}.tsx`);
 
+/**
+ * Turn `require('./logo.png')` into a real URL string.
+ *
+ * React Native's own way of referring to a bundled image is `require()`, and
+ * four screens use it — the splash logo and the mark on all three auth screens.
+ * Rolldown compiles that `require` into a CommonJS namespace object, so what
+ * reached <Image source> was `{ default: '/assets/logo.png' }` rather than the
+ * path. react-native-web cannot read that and silently rendered nothing: the
+ * splash showed its rule and its tagline with a hole where the logo belongs,
+ * and the login screen lost its mark. No error anywhere — an Image with an
+ * unreadable source just occupies its space (reported from a phone, 2026-09-17).
+ *
+ * Rewriting it here rather than in the screens keeps `require()` in the source,
+ * which is what Metro wants for the iOS and Android builds. Vite gives an
+ * imported asset's default export as its final hashed URL, and react-native-web
+ * accepts a plain string as a source.
+ */
+function reactNativeImageRequires() {
+  const ASSET = /require\((['"])([^'"]+\.(?:png|jpe?g|gif|webp))\1\)/g;
+  return {
+    name: 'rn-image-requires',
+    // Before the JSX transform, so the replacement is plain expression text.
+    enforce: 'pre' as const,
+    transform(code: string, id: string) {
+      if (!/\.[jt]sx?$/.test(id) || !code.includes('require(')) return null;
+      const imports: string[] = [];
+      const out = code.replace(ASSET, (_match, _quote, request: string) => {
+        const name = `__rnAsset${imports.length}`;
+        imports.push(`import ${name} from '${request}';`);
+        return name;
+      });
+      if (imports.length === 0) return null;
+      return { code: `${imports.join('\n')}\n${out}`, map: null };
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [reactNativeImageRequires(), react()],
   resolve: {
     alias: {
       // ORDER MATTERS. Vite matches these in order and rewrites by prefix, so

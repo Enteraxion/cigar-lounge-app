@@ -87,7 +87,28 @@ export function pushIsSupported(): Promise<boolean> {
  */
 let registration: Promise<ServiceWorkerRegistration> | null = null;
 function serviceWorker(): Promise<ServiceWorkerRegistration> {
-  registration ??= navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+  registration ??= (async () => {
+    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    // register() resolves as soon as the worker is INSTALLING. Subscribing
+    // needs one that is ACTIVE, and asking too early fails with
+    // "Subscription failed - no active Service Worker" — which reads like a
+    // missing file rather than a race, and is why the first live run looked
+    // like the worker had not been deployed at all.
+    if (reg.active) return reg;
+    await new Promise<void>(resolve => {
+      const worker = reg.installing ?? reg.waiting;
+      if (!worker) {
+        resolve();
+        return;
+      }
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'activated') resolve();
+      });
+    });
+    // `ready` resolves against the registration controlling this page, which
+    // on a first visit is only true once activation has finished.
+    return navigator.serviceWorker.ready;
+  })();
   return registration;
 }
 

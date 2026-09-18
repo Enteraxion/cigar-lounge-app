@@ -1,0 +1,69 @@
+/*
+ * The app's typefaces, for the browser.
+ *
+ * React Native links font files at build time and refers to them by their
+ * POSTSCRIPT name — 'Inter-SemiBold', 'PlayfairDisplay-Regular' — so that is
+ * what every style in src/theme lives on. A browser knows nothing about any of
+ * that: an unknown family name silently falls back, and `document.fonts` was
+ * empty, so the entire web app was rendering in the browser's default serif.
+ * Not obviously broken, just wrong everywhere — the login field, the settings
+ * rows and the dialogs were all a Times-ish serif where the app uses Inter.
+ *
+ * Declaring the six faces under their React Native names, rather than
+ * rewriting the theme to web names, is what keeps one set of styles serving
+ * both platforms. The .ttf files are the same ones the iOS and Android builds
+ * link, imported so Vite hashes and emits them rather than copied to a second
+ * home that could drift.
+ *
+ * `font-display: swap` deliberately: text drawn immediately in a fallback and
+ * restyled when the face arrives beats a blank screen, and the splash is the
+ * first thing anybody sees.
+ */
+
+@font-face {
+  font-family: 'Inter-Regular';
+  src: url('../../assets/fonts/Inter-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter-Medium';
+  src: url('../../assets/fonts/Inter-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter-SemiBold';
+  src: url('../../assets/fonts/Inter-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter-Bold';
+  src: url('../../assets/fonts/Inter-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PlayfairDisplay-Regular';
+  src: url('../../assets/fonts/PlayfairDisplay-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PlayfairDisplay-SemiBold';
+  src: url('../../assets/fonts/PlayfairDisplay-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}

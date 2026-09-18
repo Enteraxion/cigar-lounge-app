@@ -12,6 +12,13 @@
          before React mounts, and rubber-band scrolling shows white at the
          edges on iOS. */
       html, body, #root { height: 100%; margin: 0; background: #0a0a0c; }
+
+      /* #root must be a flex column. Every React Native screen is built on
+         `flex: 1`, which needs a flex parent to mean anything — against a
+         plain block container it resolves to height 0, and the whole app
+         renders into a zero-height box. The text is still in the DOM, so this
+         fails as a completely black page rather than as an error. */
+      #root { display: flex; flex-direction: column; }
       body { overscroll-behavior: none; }
     </style>
   </head>

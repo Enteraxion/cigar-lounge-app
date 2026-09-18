@@ -28,6 +28,17 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // ORDER MATTERS. Vite matches these in order and rewrites by prefix, so
+      // the deep react-native paths have to be listed BEFORE the broad
+      // 'react-native' alias — otherwise they are rewritten to
+      // react-native-web/Libraries/... which does not exist, and the error
+      // says "no such file" rather than "wrong alias" (2026-09-17).
+      'react-native/Libraries/Utilities/codegenNativeComponent':
+        shim('codegen-native-component'),
+      'react-native/Libraries/Utilities/codegenNativeCommands':
+        shim('codegen-native-commands'),
+      'react-native/Libraries/ReactNative/AppContainer': shimx('app-container'),
+
       'react-native': 'react-native-web',
       '@react-native-firebase/app': shim('firebase-app'),
       '@react-native-firebase/auth': shim('firebase-auth'),
@@ -68,6 +79,14 @@ export default defineConfig({
     // react-native-web expects these; they are compiled away in the bundle.
     global: 'globalThis',
     __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
+  },
+  optimizeDeps: {
+    // The dependency pre-bundler runs its own resolver and does NOT read
+    // `resolve.extensions` above, so it cannot find react-native-screens'
+    // TabsHost.web.js and stops on `./TabsHost`. Excluding these leaves them
+    // to the main pipeline, which resolves platform extensions correctly.
+    // The production build never hit this — it does not pre-bundle at all.
+    exclude: ['react-native-screens', 'react-native-web', 'react-native-svg'],
   },
   server: { port: 5175 },
   build: { outDir: 'web-build' },

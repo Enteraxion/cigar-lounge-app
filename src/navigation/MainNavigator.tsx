@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   createBottomTabNavigator,
@@ -189,6 +189,18 @@ export default function MainNavigator() {
           fontSize: 10,
           letterSpacing: 0.5,
           textTransform: 'uppercase' as const,
+          // Web only. The tab item is a flex column, and on the web the label
+          // is the one child that will shrink — so it was compressed from its
+          // natural 14px to 9px with `overflow: hidden` over it, slicing the
+          // bottom off every capital ("HOME" rendered as a half-height smear).
+          // flexShrink: 0 is what actually fixes it; lineHeight only pins the
+          // resulting box so it cannot drift with the font. Measured in Chrome
+          // rather than guessed — the first attempt set lineHeight alone and
+          // changed nothing, because shrinking overrode it (2026-09-17).
+          //
+          // Not applied on iOS or Android: there the label already renders at
+          // full height, and touching this would move a tab bar that is right.
+          ...(Platform.OS === 'web' ? { flexShrink: 0, lineHeight: 14 } : null),
         },
         // React Navigation's documented API: tabBarIcon is a render callback it
         // invokes itself, not a component type it mounts, so the usual cost of

@@ -105,7 +105,19 @@ type MapViewProps = ViewProps & {
 };
 
 function MapViewImpl(
-  { initialRegion, region, mapType, onPress, onRegionChangeComplete, scrollEnabled, zoomEnabled, style, children }: MapViewProps,
+  {
+    initialRegion,
+    region,
+    mapType,
+    onPress,
+    onRegionChangeComplete,
+    scrollEnabled,
+    // Accepted and ignored: Google Maps for web has no separate zoom lock, and
+    // every caller that passes it also passes scrollEnabled, which does apply.
+    zoomEnabled: _zoomEnabled,
+    style,
+    children,
+  }: MapViewProps,
   ref: React.Ref<unknown>,
 ) {
   const host = useRef<HTMLDivElement | null>(null);
@@ -189,6 +201,10 @@ function MapViewImpl(
     if (map.current && region) {
       map.current.fitBounds(boundsFor(region));
     }
+    // Depends on the region's VALUES, not the object. MapScreen builds a fresh
+    // region object on every render, so listing `region` itself would refit the
+    // map — and cancel the user's pan — on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region?.latitude, region?.longitude, region?.latitudeDelta]);
 
   useEffect(() => {
@@ -199,14 +215,27 @@ function MapViewImpl(
 
   return (
     <View style={style}>
+      {/* A real DOM node, not a React Native View — this is the element the
+          Google Maps JS API mounts into, so its style has to be plain CSS. */}
       <div
         ref={host}
-        style={{ width: '100%', height: '100%', background: '#0a0a0c' }}
+        style={HOST_STYLE}
         aria-label={failed ? 'Map unavailable' : 'Map'}
       />
     </View>
   );
 }
+
+/**
+ * The DOM node Google Maps mounts into. Plain CSS rather than a StyleSheet
+ * entry because it is a real <div>, not a React Native View, and it is hoisted
+ * so the object identity is stable across renders.
+ */
+const HOST_STYLE: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  background: '#0a0a0c',
+};
 
 /** Dark map styling, so the map matches the app rather than fighting it. */
 const DARK_STYLE = [

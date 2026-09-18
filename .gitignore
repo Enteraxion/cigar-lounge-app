@@ -119,3 +119,10 @@ android/keystore.properties
 
 # Vite output for the web build
 web-build/
+
+# Local web build configuration (Vite reads .env.local at build time).
+# Not committed: this is where keys live, and the next `git add -A` would
+# otherwise sweep it in. VITE_ values ship inside the bundle by design, so
+# treat anything put here as public — but keep it out of the repository.
+.env.local
+.env.*.local

@@ -76,7 +76,10 @@ export default defineConfig({
         shim('codegen-native-commands'),
       'react-native/Libraries/ReactNative/AppContainer': shimx('app-container'),
 
-      'react-native': 'react-native-web',
+      // Not react-native-web directly: the shim re-exports all of it and
+      // replaces the exports that are silently inert (Alert, Linking) — see
+      // src/web/shims/react-native.ts.
+      'react-native': shim('react-native'),
       '@react-native-firebase/app': shim('firebase-app'),
       '@react-native-firebase/auth': shim('firebase-auth'),
       '@react-native-firebase/firestore': shim('firebase-firestore'),

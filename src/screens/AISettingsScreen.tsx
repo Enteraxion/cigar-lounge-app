@@ -71,6 +71,8 @@ import {
   type ExperienceMode,
 } from '../data/mockAISettings';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import { canOpenAppSettings, openAppSettings } from '../utils/appSettings';
+import { isPushSupported } from '../services/pushSupport';
 import { TAB_BAR_SCROLL_CLEARANCE } from '../utils/tabBarLayout';
 
 type AISettingsNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
@@ -160,14 +162,31 @@ export default function AISettingsScreen() {
         const granted = await askForPushPermission(userId);
         setPushEnabled(granted);
         if (!granted) {
-          Alert.alert(
-            'Notifications are off for this app',
-            'Turn them on in iOS Settings and Lounge Alerts will switch on here.',
-            [
-              { text: 'Not now', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => Linking.openSettings() },
-            ],
-          );
+          // Three different reasons this can fail, and the wrong remedy for
+          // any of them sends the member looking for a setting that is not
+          // there. Unavailable comes first because it is not a refusal at all
+          // — an iPhone Safari tab has no push API until the site is on the
+          // Home Screen, so there is nothing for them to have said no to.
+          if (!(await isPushSupported())) {
+            Alert.alert(
+              'Notifications are not available here',
+              'On iPhone, open the Share menu and choose “Add to Home Screen”, then open Lounge Locator from there and switch Lounge Alerts on.',
+            );
+          } else if (canOpenAppSettings) {
+            Alert.alert(
+              'Notifications are off for this app',
+              'Turn them on in Settings and Lounge Alerts will switch on here.',
+              [
+                { text: 'Not now', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => openAppSettings() },
+              ],
+            );
+          } else {
+            Alert.alert(
+              'Notifications are off for this site',
+              'Allow them from the padlock or ⓘ in the address bar, then switch Lounge Alerts back on.',
+            );
+          }
         }
       } else {
         await unregisterDeviceForPush(userId);
@@ -289,10 +308,23 @@ export default function AISettingsScreen() {
                       Alert.alert('Account not deleted', result.message);
                       return;
                     }
-                    // No sign-out and no navigation: the Auth account is gone, so
-                    // onAuthStateChanged fires and AppNavigator returns to the
-                    // sign-in screen by itself. Signing out here would be a call
-                    // against a user that no longer exists.
+                    // Sign out explicitly. On a phone the native SDK notices
+                    // the deletion quickly and onAuthStateChanged returns the
+                    // member to sign-in on its own, which is what this used to
+                    // rely on. The web SDK does not: it holds a valid ID token
+                    // for up to an hour and only discovers the account is gone
+                    // at the next refresh, so the member was left sitting in a
+                    // working-looking app with no account behind it (measured
+                    // in a browser, 2026-09-17).
+                    //
+                    // Safe on both: signOut only clears the local session and
+                    // fires the listener — it makes no call against the user,
+                    // which is what the earlier reasoning here got wrong.
+                    signOut(auth).catch(() => {
+                      // Nothing to recover: the account is already deleted, and
+                      // the session it refers to cannot outlive its next token
+                      // refresh in any case.
+                    });
                   },
                 },
               ],

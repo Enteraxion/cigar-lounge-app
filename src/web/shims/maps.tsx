@@ -40,7 +40,7 @@ export const MAP_TYPES = {
   NONE: 'none',
 } as const;
 
-const KEY = (import.meta as { env?: Record<string, string> }).env?.VITE_GOOGLE_MAPS_KEY ?? '';
+const KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY ?? '';
 
 /** Loads the Google Maps script once, however many maps are on the page. */
 let loader: Promise<void> | null = null;

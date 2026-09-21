@@ -148,10 +148,10 @@ export default function EventsPage() {
 
   return (
     <AppShell
+      loungeId={loungeId}
       eyebrow={loungeName}
       title="Events"
       subtitle="Events you post appear on your listing in the app for anyone browsing it."
-      backTo="/"
     >
       {loading ? (
         <p className="muted">Loading…</p>

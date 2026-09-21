@@ -1,26 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import AppShell from '../components/AppShell';
+import Modal from '../components/Modal';
 import type { HumidorItem, HumidorStockStatus, Lounge } from '../lib/types';
 
 /**
- * Humidor inventory editor — Julian Brinkley's ask from the 2026-08-05
- * meeting ("they can enter their inventory ... The main thing is to get
- * set up for shops, for them to be able to basically add inventories").
+ * Humidor inventory — restructured to match the Kiki Momo admin's Inventory
+ * page: a searchable, paginated table with a modal for adding/editing a
+ * single item, rather than one long page of inline-editable cards.
  *
- * `humidorItems` has existed in the schema since the app was seeded, and
- * the mobile LoungeDetailScreen already renders it as a "Humidor
- * Highlights" rail — but nothing could ever write it: both the Yelp
- * import and refreshCityLounges hardcode an empty array, since neither
- * API has inventory data. An owner filling this in here is the only way
- * a real lounge ever gets one.
+ * Each Save persists immediately (matching Kiki Momo's live per-action
+ * mutations) instead of batching edits behind one page-level Save button.
+ * Under the hood this is still a single `updateDoc` rewriting the whole
+ * `humidorItems` array — it's a small inline array on the lounge doc, not a
+ * subcollection with per-item ids, so there's nothing to diff against; a
+ * per-item edit just computes the next full array and writes it.
  *
- * The whole array is rewritten on save rather than diffed per item —
- * humidorItems is a small inline array on the lounge doc (not a
- * subcollection), so there's nothing to merge and a single updateDoc is
- * both simpler and atomic.
+ * There's no stock-adjustment ledger or CSV export here (unlike Kiki Momo's
+ * Inventory page) — that's backed by real order/stock-history data this
+ * app's schema doesn't have, and building it is a separate feature, not a
+ * UI restructure.
  */
 
 const STOCK_OPTIONS: { value: HumidorStockStatus; label: string }[] = [
@@ -38,6 +39,8 @@ const EMPTY_ITEM: HumidorItem = {
   stockStatus: 'in-stock',
 };
 
+const PAGE_SIZE = 20;
+
 export default function InventoryPage() {
   const { loungeId } = useParams<{ loungeId: string }>();
 
@@ -45,9 +48,15 @@ export default function InventoryPage() {
   const [loadError, setLoadError] = useState(false);
   const [loungeName, setLoungeName] = useState('');
   const [items, setItems] = useState<HumidorItem[]>([]);
+
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  const [editing, setEditing] = useState<{ item: HumidorItem; index: number | null } | null>(null);
+  const [form, setForm] = useState<HumidorItem>(EMPTY_ITEM);
+  const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [savedAt, setSavedAt] = useState('');
+  const [status, setStatus] = useState('');
 
   useEffect(() => {
     if (!loungeId) return;
@@ -65,57 +74,92 @@ export default function InventoryPage() {
       .finally(() => setLoading(false));
   }, [loungeId]);
 
-  const updateItem = (index: number, patch: Partial<HumidorItem>) => {
-    setItems(current => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
-    setSavedAt('');
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return items;
+    return items.filter(
+      item =>
+        item.name.toLowerCase().includes(needle) ||
+        item.strength.toLowerCase().includes(needle) ||
+        item.origin.toLowerCase().includes(needle),
+    );
+  }, [items, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const openAdd = () => {
+    setEditing({ item: EMPTY_ITEM, index: null });
+    setForm(EMPTY_ITEM);
+    setFormError('');
   };
 
-  const removeItem = (index: number) => {
-    setItems(current => current.filter((_, i) => i !== index));
-    setSavedAt('');
+  const openEdit = (item: HumidorItem) => {
+    const index = items.indexOf(item);
+    setEditing({ item, index });
+    setForm(item);
+    setFormError('');
   };
 
-  const addItem = () => {
-    setItems(current => [...current, { ...EMPTY_ITEM }]);
-    setSavedAt('');
-  };
+  const closeModal = () => setEditing(null);
 
-  const save = async () => {
+  const persist = async (nextItems: HumidorItem[]) => {
     if (!loungeId) return;
-    // A nameless cigar is the one field that makes a row meaningless — the
-    // rest can reasonably be left blank by an owner in a hurry.
-    if (items.some(item => !item.name.trim())) {
-      setSaveError('Every cigar needs a name.');
+    await updateDoc(doc(db, 'lounges', loungeId), {
+      humidorItems: nextItems,
+      updatedAt: Timestamp.now(),
+    });
+    setItems(nextItems);
+  };
+
+  const saveItem = async () => {
+    if (!form.name.trim()) {
+      setFormError('Every item needs a name.');
       return;
     }
-    setSaveError('');
+    setFormError('');
     setSaving(true);
+    const cleaned: HumidorItem = {
+      name: form.name.trim(),
+      image: form.image.trim(),
+      strength: form.strength.trim(),
+      origin: form.origin.trim(),
+      price: form.price.trim(),
+      stockStatus: form.stockStatus,
+    };
     try {
-      await updateDoc(doc(db, 'lounges', loungeId), {
-        humidorItems: items.map(item => ({
-          name: item.name.trim(),
-          image: item.image.trim(),
-          strength: item.strength.trim(),
-          origin: item.origin.trim(),
-          price: item.price.trim(),
-          stockStatus: item.stockStatus,
-        })),
-        updatedAt: Timestamp.now(),
-      });
-      setSavedAt(new Date().toLocaleTimeString());
+      const nextItems =
+        editing?.index == null
+          ? [...items, cleaned]
+          : items.map((item, i) => (i === editing.index ? cleaned : item));
+      await persist(nextItems);
+      setStatus(editing?.index == null ? 'Item added.' : 'Item saved.');
+      setEditing(null);
     } catch {
-      setSaveError("Couldn't save. Check your connection and try again.");
+      setFormError("Couldn't save. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
   };
 
+  const deleteItem = async (item: HumidorItem) => {
+    if (!confirm(`Remove "${item.name}" from your inventory?`)) return;
+    const index = items.indexOf(item);
+    const nextItems = items.filter((_, i) => i !== index);
+    try {
+      await persist(nextItems);
+      setStatus('Item removed.');
+    } catch {
+      setStatus("Couldn't remove that item. Check your connection and try again.");
+    }
+  };
+
   return (
     <AppShell
+      loungeId={loungeId}
       eyebrow={loungeName}
       title="Humidor Inventory"
-      subtitle="Cigars you add here appear in the “Humidor Highlights” section of your listing in the app."
-      backTo="/"
+      subtitle="Items you add here appear in the “Humidor Highlights” section of your listing in the app."
     >
       {loading ? (
         <p className="muted">Loading…</p>
@@ -123,109 +167,183 @@ export default function InventoryPage() {
         <div className="empty">Couldn't load this listing.</div>
       ) : (
         <>
-          {items.length === 0 ? (
-            <div className="empty">No cigars added yet.</div>
-          ) : (
-            <div className="stack">
-              {items.map((item, index) => (
-                <div key={index} className="card">
-                  <div className="card__head">
-                    <span className="card__label">Cigar {index + 1}</span>
-                    <button className="btn btn--danger" onClick={() => removeItem(index)}>
-                      Remove
-                    </button>
-                  </div>
-
-                  <div className="stack stack--tight" style={{ marginTop: 'var(--space-md)' }}>
-                    <label className="field">
-                      <span className="field__label">Name</span>
-                      <input
-                        className="input"
-                        value={item.name}
-                        onChange={e => updateItem(index, { name: e.target.value })}
-                        placeholder="e.g. Padrón 1926 Series"
-                      />
-                    </label>
-
-                    <div className="field-row">
-                      <label className="field">
-                        <span className="field__label">Strength</span>
-                        <input
-                          className="input"
-                          value={item.strength}
-                          onChange={e => updateItem(index, { strength: e.target.value })}
-                          placeholder="e.g. Full"
-                        />
-                      </label>
-                      <label className="field">
-                        <span className="field__label">Origin</span>
-                        <input
-                          className="input"
-                          value={item.origin}
-                          onChange={e => updateItem(index, { origin: e.target.value })}
-                          placeholder="e.g. Nicaragua"
-                        />
-                      </label>
-                    </div>
-
-                    <div className="field-row">
-                      <label className="field">
-                        <span className="field__label">Price</span>
-                        <input
-                          className="input"
-                          value={item.price}
-                          onChange={e => updateItem(index, { price: e.target.value })}
-                          placeholder="e.g. $28"
-                        />
-                      </label>
-                      <label className="field">
-                        <span className="field__label">Availability</span>
-                        <select
-                          className="select"
-                          value={item.stockStatus}
-                          onChange={e =>
-                            updateItem(index, {
-                              stockStatus: e.target.value as HumidorStockStatus,
-                            })
-                          }
-                        >
-                          {STOCK_OPTIONS.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    <label className="field">
-                      <span className="field__label">Photo URL (optional)</span>
-                      <input
-                        className="input"
-                        value={item.image}
-                        onChange={e => updateItem(index, { image: e.target.value })}
-                        placeholder="https://…"
-                      />
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="stack" style={{ marginTop: 'var(--space-md)' }}>
-            <button className="btn btn--dashed btn--block" onClick={addItem}>
-              + Add a cigar
-            </button>
-
-            {saveError && <p className="msg msg--error">{saveError}</p>}
-            {savedAt && <p className="msg msg--success">Saved at {savedAt}</p>}
-
-            <button className="btn btn--primary btn--block" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save Inventory'}
+          <div className="table-toolbar">
+            <input
+              className="input"
+              value={search}
+              onChange={e => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search by name, category, or origin…"
+              aria-label="Search inventory"
+            />
+            <button className="btn btn--primary" onClick={openAdd}>
+              + Add Item
             </button>
           </div>
+
+          {status && <p className="msg msg--success" style={{ marginBottom: 'var(--space-md)' }}>{status}</p>}
+
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Origin</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="table__empty">
+                      {items.length === 0
+                        ? 'No items added yet.'
+                        : 'No items found matching your search.'}
+                    </td>
+                  </tr>
+                ) : (
+                  paged.map(item => (
+                    <tr key={items.indexOf(item)}>
+                      <td className="table__name">{item.name}</td>
+                      <td>{item.strength || '—'}</td>
+                      <td>{item.origin || '—'}</td>
+                      <td>{item.price || '—'}</td>
+                      <td>
+                        <span className={`badge badge--${item.stockStatus}`}>
+                          {STOCK_OPTIONS.find(o => o.value === item.stockStatus)?.label}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="table__actions">
+                          <button className="table__action" onClick={() => openEdit(item)}>
+                            Edit
+                          </button>
+                          <button
+                            className="table__action table__action--danger"
+                            onClick={() => deleteItem(item)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {filtered.length > PAGE_SIZE && (
+            <div className="pagination">
+              <span className="pagination__label">
+                Page {page} of {pageCount}
+              </span>
+              <button
+                className="btn btn--secondary"
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+              >
+                Previous
+              </button>
+              <button
+                className="btn btn--secondary"
+                disabled={page >= pageCount}
+                onClick={() => setPage(p => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </>
+      )}
+
+      {editing && (
+        <Modal title={editing.index == null ? 'Add Item' : 'Edit Item'} onClose={closeModal}>
+          <div className="stack stack--tight">
+            <label className="field">
+              <span className="field__label">Name</span>
+              <input
+                className="input"
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. Padrón 1926 Series"
+              />
+            </label>
+
+            <div className="field-row">
+              <label className="field">
+                <span className="field__label">Category / Strength</span>
+                <input
+                  className="input"
+                  value={form.strength}
+                  onChange={e => setForm({ ...form, strength: e.target.value })}
+                  placeholder="e.g. Full, or Flower"
+                />
+              </label>
+              <label className="field">
+                <span className="field__label">Origin</span>
+                <input
+                  className="input"
+                  value={form.origin}
+                  onChange={e => setForm({ ...form, origin: e.target.value })}
+                  placeholder="e.g. Nicaragua"
+                />
+              </label>
+            </div>
+
+            <div className="field-row">
+              <label className="field">
+                <span className="field__label">Price</span>
+                <input
+                  className="input"
+                  value={form.price}
+                  onChange={e => setForm({ ...form, price: e.target.value })}
+                  placeholder="e.g. $28"
+                />
+              </label>
+              <label className="field">
+                <span className="field__label">Availability</span>
+                <select
+                  className="select"
+                  value={form.stockStatus}
+                  onChange={e => setForm({ ...form, stockStatus: e.target.value as HumidorStockStatus })}
+                >
+                  {STOCK_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label className="field">
+              <span className="field__label">Photo URL (optional)</span>
+              <input
+                className="input"
+                value={form.image}
+                onChange={e => setForm({ ...form, image: e.target.value })}
+                placeholder="https://…"
+              />
+            </label>
+
+            {formError && <p className="msg msg--error">{formError}</p>}
+
+            <div className="btn-row">
+              <button className="btn btn--primary" onClick={saveItem} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              <button className="btn btn--secondary" onClick={closeModal} disabled={saving}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </AppShell>
   );

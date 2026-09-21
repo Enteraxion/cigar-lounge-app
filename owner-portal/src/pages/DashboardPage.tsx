@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import AppShell from '../components/AppShell';
-import type { Lounge, LoungeDocument, ReservationDocument, EventDocument } from '../lib/types';
+import { useOwnedLounges } from '../lib/useOwnedLounges';
+import type { Lounge, ReservationDocument, EventDocument } from '../lib/types';
 
 /**
- * At-a-glance summary per claimed listing, rather than the bare
- * name-plus-status card this used to be — an owner landing here should be
- * able to see whether anything needs their attention (unacknowledged
- * reservations especially) without opening three sub-pages to find out.
+ * At-a-glance summary per claimed listing: a row of clickable stat tiles
+ * (Kiki Momo's overview-page pattern — uppercase micro-label + a big
+ * number, the whole tile is the link) instead of the previous stat-grid
+ * plus a separate row of buttons pointing at the same destinations.
  */
 type LoungeSummary = {
   lounge: Lounge;
@@ -20,77 +21,54 @@ type LoungeSummary = {
 };
 
 export default function DashboardPage() {
+  const { loading: loungesLoading, lounges } = useOwnedLounges();
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<LoungeSummary[]>([]);
-  const userId = auth.currentUser?.uid;
 
   useEffect(() => {
-    if (!userId) return;
-    /**
-     * Both fields, because ownership and a claim are not the same thing.
-     *
-     * This used to ask only for `claimantUserId`, on the reasoning that the
-     * field survives approval — which is true of the approval path in
-     * ownerService.approveLoungeClaim, and not true of every lounge. Ownership
-     * can be set without a claim ever existing (the demo seed does it, and so
-     * does an admin assigning one), and such a lounge was invisible here while
-     * the app's own My Shops listed it perfectly well: getLoungesForOwner has
-     * always queried both. Rohith hit exactly that on 2026-09-13 — a shop he
-     * owned, absent from the portal that exists to manage it.
-     *
-     * Firestore has no OR across different fields, so this is two queries
-     * merged by id.
-     */
-    const owned = query(collection(db, 'lounges'), where('ownerId', '==', userId));
-    const claimed = query(collection(db, 'lounges'), where('claimantUserId', '==', userId));
+    if (loungesLoading) return;
+    if (lounges.length === 0) {
+      setSummaries([]);
+      setLoading(false);
+      return;
+    }
 
-    Promise.all([getDocs(owned), getDocs(claimed)])
-      .then(async ([ownedSnap, claimedSnap]) => {
-        // A lounge that is both owned and claimed by this member appears in
-        // both snapshots; keying by id is what stops it rendering twice.
-        const byId = new Map<string, Lounge>();
-        for (const d of [...ownedSnap.docs, ...claimedSnap.docs]) {
-          byId.set(d.id, { id: d.id, ...(d.data() as LoungeDocument) });
+    const now = new Date();
+    Promise.all(
+      lounges.map(async lounge => {
+        // Reservations and events are only readable once the claim is
+        // approved (firestore.rules keys off ownerId), so don't even ask
+        // for a pending listing — it would just be a guaranteed denial.
+        if (!lounge.ownerId) {
+          return {
+            lounge,
+            newReservations: 0,
+            totalReservations: 0,
+            inventoryCount: lounge.humidorItems?.length ?? 0,
+            upcomingEvents: 0,
+          };
         }
-        const lounges: Lounge[] = [...byId.values()];
 
-        const now = new Date();
-        const rows = await Promise.all(
-          lounges.map(async lounge => {
-            // Reservations and events are only readable once the claim is
-            // approved (firestore.rules keys off ownerId), so don't even ask
-            // for a pending listing — it would just be a guaranteed denial.
-            if (!lounge.ownerId) {
-              return {
-                lounge,
-                newReservations: 0,
-                totalReservations: 0,
-                inventoryCount: lounge.humidorItems?.length ?? 0,
-                upcomingEvents: 0,
-              };
-            }
+        const [reservationSnap, eventSnap] = await Promise.all([
+          getDocs(collection(db, 'lounges', lounge.id, 'reservations')),
+          getDocs(collection(db, 'lounges', lounge.id, 'events')),
+        ]);
 
-            const [reservationSnap, eventSnap] = await Promise.all([
-              getDocs(collection(db, 'lounges', lounge.id, 'reservations')),
-              getDocs(collection(db, 'lounges', lounge.id, 'events')),
-            ]);
+        const reservations = reservationSnap.docs.map(d => d.data() as ReservationDocument);
+        const events = eventSnap.docs.map(d => d.data() as EventDocument);
 
-            const reservations = reservationSnap.docs.map(d => d.data() as ReservationDocument);
-            const events = eventSnap.docs.map(d => d.data() as EventDocument);
-
-            return {
-              lounge,
-              newReservations: reservations.filter(r => !r.acknowledgedAt).length,
-              totalReservations: reservations.length,
-              inventoryCount: lounge.humidorItems?.length ?? 0,
-              upcomingEvents: events.filter(e => e.startsAt.toDate() >= now).length,
-            };
-          }),
-        );
-        setSummaries(rows);
-      })
+        return {
+          lounge,
+          newReservations: reservations.filter(r => !r.acknowledgedAt).length,
+          totalReservations: reservations.length,
+          inventoryCount: lounge.humidorItems?.length ?? 0,
+          upcomingEvents: events.filter(e => e.startsAt.toDate() >= now).length,
+        };
+      }),
+    )
+      .then(setSummaries)
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [loungesLoading, lounges]);
 
   return (
     <AppShell
@@ -98,7 +76,7 @@ export default function DashboardPage() {
       title="Your Listings"
       subtitle="Manage how your business appears in Lounge Locator, and keep on top of bookings."
     >
-      {loading ? (
+      {loungesLoading || loading ? (
         <p className="muted">Loading…</p>
       ) : summaries.length === 0 ? (
         <div className="empty">
@@ -118,52 +96,40 @@ export default function DashboardPage() {
                       {lounge.address}
                     </p>
                   </div>
-                  <span className={`pill ${isApproved ? 'pill--approved' : 'pill--pending'}`}>
-                    {isApproved ? 'Approved' : 'Pending Review'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+                    <span className={`pill ${isApproved ? 'pill--approved' : 'pill--pending'}`}>
+                      {isApproved ? 'Approved' : 'Pending Review'}
+                    </span>
+                    {isApproved && (
+                      <Link to={`/listing/${lounge.id}/edit`} className="field__action">
+                        Edit Listing
+                      </Link>
+                    )}
+                  </div>
                 </div>
 
                 {isApproved ? (
-                  <>
-                    <div className="stats">
-                      <Link to={`/listing/${lounge.id}/reservations`} className="stat">
-                        <span className="stat__value">{totalReservations}</span>
-                        <span className="stat__label">Reservations</span>
-                        {newReservations > 0 && (
-                          <span className="stat__hint">
-                            {newReservations} need acknowledging
-                          </span>
-                        )}
-                      </Link>
+                  <div className="stats">
+                    <Link to={`/listing/${lounge.id}/reservations`} className="stat">
+                      <span className="stat__value">{totalReservations}</span>
+                      <span className="stat__label">Reservations</span>
+                      {newReservations > 0 && (
+                        <span className="stat__hint">{newReservations} need acknowledging</span>
+                      )}
+                    </Link>
 
-                      <Link to={`/listing/${lounge.id}/inventory`} className="stat">
-                        <span className="stat__value">{inventoryCount}</span>
-                        <span className="stat__label">Humidor Items</span>
-                        {inventoryCount === 0 && <span className="stat__hint">Add your first</span>}
-                      </Link>
+                    <Link to={`/listing/${lounge.id}/inventory`} className="stat">
+                      <span className="stat__value">{inventoryCount}</span>
+                      <span className="stat__label">Humidor Items</span>
+                      {inventoryCount === 0 && <span className="stat__hint">Add your first</span>}
+                    </Link>
 
-                      <Link to={`/listing/${lounge.id}/events`} className="stat">
-                        <span className="stat__value">{upcomingEvents}</span>
-                        <span className="stat__label">Upcoming Events</span>
-                        {upcomingEvents === 0 && <span className="stat__hint">Post an event</span>}
-                      </Link>
-                    </div>
-
-                    <div className="btn-row">
-                      <Link to={`/listing/${lounge.id}/edit`} className="btn btn--primary">
-                        Edit Listing
-                      </Link>
-                      <Link to={`/listing/${lounge.id}/reservations`} className="btn btn--secondary">
-                        Reservations
-                      </Link>
-                      <Link to={`/listing/${lounge.id}/inventory`} className="btn btn--secondary">
-                        Inventory
-                      </Link>
-                      <Link to={`/listing/${lounge.id}/events`} className="btn btn--secondary">
-                        Events
-                      </Link>
-                    </div>
-                  </>
+                    <Link to={`/listing/${lounge.id}/events`} className="stat">
+                      <span className="stat__value">{upcomingEvents}</span>
+                      <span className="stat__label">Upcoming Events</span>
+                      {upcomingEvents === 0 && <span className="stat__hint">Post an event</span>}
+                    </Link>
+                  </div>
                 ) : (
                   <p className="muted" style={{ marginTop: 'var(--space-md)' }}>
                     We're reviewing your claim. Once it's approved you'll be able to edit this

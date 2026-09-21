@@ -124,7 +124,7 @@ export default function ReservationsPage() {
   };
 
   return (
-    <AppShell eyebrow={loungeName} title="Reservations" backTo="/">
+    <AppShell loungeId={loungeId} eyebrow={loungeName} title="Reservations">
       {loading ? (
         <p className="muted">Loading…</p>
       ) : loadError ? (

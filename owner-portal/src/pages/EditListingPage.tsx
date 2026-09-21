@@ -73,10 +73,10 @@ export default function EditListingPage() {
 
   return (
     <AppShell
+      loungeId={loungeId}
       eyebrow={loungeName}
       title="Edit Listing"
       subtitle="This is what guests see on your business's page in the Lounge Locator app."
-      backTo="/"
     >
       {loading ? (
         <p className="muted">Loading…</p>

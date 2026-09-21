@@ -69,6 +69,20 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    match /lounges/{loungeId}/humidor/{fileName} {
+      // Ownership of a lounge is enforced in firestore.rules
+      // (isOwnListingEdit's `ownerId == request.auth.uid` check) — not here,
+      // since Storage rules cannot read Firestore (see header comment). This
+      // only gates file type and size, not which lounge someone uploads
+      // into. Worst case a stray image sits unused in another lounge's
+      // folder: it can never be referenced from that lounge's humidorItems
+      // without a matching Firestore write, which IS ownership-checked.
+      allow write: if isSignedIn() && isImage() && isReasonableSize();
+
+      // Humidor photos are shown to anyone browsing the listing.
+      allow read: if true;
+    }
+
     // Anything not matched above is denied by default.
   }
 }

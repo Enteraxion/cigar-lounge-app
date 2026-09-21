@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../lib/firebase';
 import AppShell from '../components/AppShell';
 import Modal from '../components/Modal';
 import type { HumidorItem, HumidorStockStatus, Lounge } from '../lib/types';
@@ -57,6 +58,8 @@ export default function InventoryPage() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     if (!loungeId) return;
@@ -92,6 +95,7 @@ export default function InventoryPage() {
     setEditing({ item: EMPTY_ITEM, index: null });
     setForm(EMPTY_ITEM);
     setFormError('');
+    setUploadError('');
   };
 
   const openEdit = (item: HumidorItem) => {
@@ -99,9 +103,36 @@ export default function InventoryPage() {
     setEditing({ item, index });
     setForm(item);
     setFormError('');
+    setUploadError('');
   };
 
   const closeModal = () => setEditing(null);
+
+  const uploadPhoto = async (file: File) => {
+    if (!loungeId) return;
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please choose an image file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image must be under 10 MB.');
+      return;
+    }
+    setUploadError('');
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const path = `lounges/${loungeId}/humidor/${Date.now()}-${safeName}`;
+      const fileRef = storageRef(storage, path);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      setForm(current => ({ ...current, image: url }));
+    } catch {
+      setUploadError("Couldn't upload that photo. Check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const persist = async (nextItems: HumidorItem[]) => {
     if (!loungeId) return;
@@ -322,15 +353,42 @@ export default function InventoryPage() {
               </label>
             </div>
 
-            <label className="field">
-              <span className="field__label">Photo URL (optional)</span>
-              <input
-                className="input"
-                value={form.image}
-                onChange={e => setForm({ ...form, image: e.target.value })}
-                placeholder="https://…"
-              />
-            </label>
+            <div className="field">
+              <span className="field__label">Photo</span>
+              <div className="photo-upload">
+                <div className="photo-upload__preview">
+                  {form.image ? (
+                    <img src={form.image} alt="" />
+                  ) : (
+                    <span className="photo-upload__placeholder">No photo</span>
+                  )}
+                </div>
+                <div className="photo-upload__actions">
+                  <input
+                    className="file-input"
+                    type="file"
+                    accept="image/*"
+                    disabled={uploading}
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (file) uploadPhoto(file);
+                    }}
+                  />
+                  {uploading && <span className="muted" style={{ fontSize: 12 }}>Uploading…</span>}
+                  {form.image && !uploading && (
+                    <button
+                      type="button"
+                      className="btn btn--danger"
+                      onClick={() => setForm({ ...form, image: '' })}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              {uploadError && <p className="msg msg--error">{uploadError}</p>}
+            </div>
 
             {formError && <p className="msg msg--error">{formError}</p>}
 

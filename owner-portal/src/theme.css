@@ -1009,6 +1009,80 @@ a {
 }
 
 /* ---------------------------------------------------------------------
+   Photo upload
+   --------------------------------------------------------------------- */
+
+.photo-upload {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.photo-upload__preview {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.photo-upload__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-upload__placeholder {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  padding: 0 8px;
+}
+
+.photo-upload__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.file-input {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 220px;
+}
+
+.file-input::file-selector-button {
+  height: 36px;
+  padding: 0 var(--space-md);
+  margin-right: var(--space-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--silver);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--ease), color var(--ease);
+}
+
+.file-input::file-selector-button:hover {
+  border-color: var(--gold);
+  color: var(--white);
+}
+
+.file-input:disabled::file-selector-button {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------
    Modal
    --------------------------------------------------------------------- */
 

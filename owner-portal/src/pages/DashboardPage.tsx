@@ -18,6 +18,7 @@ type LoungeSummary = {
   totalReservations: number;
   inventoryCount: number;
   upcomingEvents: number;
+  staffPicksCount: number;
 };
 
 export default function DashboardPage() {
@@ -46,12 +47,14 @@ export default function DashboardPage() {
             totalReservations: 0,
             inventoryCount: lounge.humidorItems?.length ?? 0,
             upcomingEvents: 0,
+            staffPicksCount: 0,
           };
         }
 
-        const [reservationSnap, eventSnap] = await Promise.all([
+        const [reservationSnap, eventSnap, staffPicksSnap] = await Promise.all([
           getDocs(collection(db, 'lounges', lounge.id, 'reservations')),
           getDocs(collection(db, 'lounges', lounge.id, 'events')),
+          getDocs(collection(db, 'lounges', lounge.id, 'staffPicks')),
         ]);
 
         const reservations = reservationSnap.docs.map(d => d.data() as ReservationDocument);
@@ -63,6 +66,7 @@ export default function DashboardPage() {
           totalReservations: reservations.length,
           inventoryCount: lounge.humidorItems?.length ?? 0,
           upcomingEvents: events.filter(e => e.startsAt.toDate() >= now).length,
+          staffPicksCount: staffPicksSnap.size,
         };
       }),
     )
@@ -85,7 +89,8 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="stack">
-          {summaries.map(({ lounge, newReservations, totalReservations, inventoryCount, upcomingEvents }) => {
+          {summaries.map(
+            ({ lounge, newReservations, totalReservations, inventoryCount, upcomingEvents, staffPicksCount }) => {
             const isApproved = !!lounge.ownerId;
             return (
               <div key={lounge.id} className="card">
@@ -128,6 +133,12 @@ export default function DashboardPage() {
                       <span className="stat__value">{upcomingEvents}</span>
                       <span className="stat__label">Upcoming Events</span>
                       {upcomingEvents === 0 && <span className="stat__hint">Post an event</span>}
+                    </Link>
+
+                    <Link to={`/listing/${lounge.id}/staff-picks`} className="stat">
+                      <span className="stat__value">{staffPicksCount}</span>
+                      <span className="stat__label">Staff Picks</span>
+                      {staffPicksCount === 0 && <span className="stat__hint">Add your first</span>}
                     </Link>
                   </div>
                 ) : (

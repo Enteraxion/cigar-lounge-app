@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Edit Listing', suffix: 'edit' },
   { label: 'Inventory', suffix: 'inventory' },
   { label: 'Events', suffix: 'events' },
+  { label: 'Staff Picks', suffix: 'staff-picks' },
   { label: 'Reservations', suffix: 'reservations' },
 ];
 

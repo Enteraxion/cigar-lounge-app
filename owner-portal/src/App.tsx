@@ -9,6 +9,7 @@ import EditListingPage from './pages/EditListingPage';
 import ReservationsPage from './pages/ReservationsPage';
 import InventoryPage from './pages/InventoryPage';
 import EventsPage from './pages/EventsPage';
+import StaffPicksPage from './pages/StaffPicksPage';
 
 function SplashScreen() {
   return (
@@ -67,6 +68,10 @@ export default function App() {
         <Route
           path="/listing/:loungeId/events"
           element={user ? <EventsPage /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/listing/:loungeId/staff-picks"
+          element={user ? <StaffPicksPage /> : <Navigate to="/login" replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

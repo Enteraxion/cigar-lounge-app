@@ -256,6 +256,21 @@ service cloud.firestore {
         allow read: if true;
         allow create, update, delete: if isLoungeOwner();
       }
+
+      // ---------------------------------------------------------------
+      // lounges/{loungeId}/staffPicks/{pickId}
+      // ---------------------------------------------------------------
+      // Owner-curated highlights from the physical kiosk's own product
+      // catalog (Product.kt in the kiosk app — this doc only stores the
+      // sku + an optional note, not name/price/image, since the kiosk
+      // already has that data locally and resolves it by sku). Same
+      // public-read / owner-write shape as events, for the same reason:
+      // shown to anyone (here, anyone at the kiosk), editable only by the
+      // approved owner.
+      match /staffPicks/{pickId} {
+        allow read: if true;
+        allow create, update, delete: if isLoungeOwner();
+      }
     }
 
     // Collection-group read for getUserStats/getUserReviews's

@@ -83,6 +83,12 @@ service firebase.storage {
       allow read: if true;
     }
 
+    // Event posters — same reasoning and shape as the humidor path above.
+    match /lounges/{loungeId}/events/{fileName} {
+      allow write: if isSignedIn() && isImage() && isReasonableSize();
+      allow read: if true;
+    }
+
     // Anything not matched above is denied by default.
   }
 }

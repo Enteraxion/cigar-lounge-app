@@ -11,7 +11,8 @@ import {
   query,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../lib/firebase';
 import AppShell from '../components/AppShell';
 import type { EventDocument, Lounge, LoungeEvent } from '../lib/types';
 
@@ -41,9 +42,37 @@ export default function EventsPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startsAt, setStartsAt] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  const uploadPoster = async (file: File) => {
+    if (!loungeId) return;
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please choose an image file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image must be under 10 MB.');
+      return;
+    }
+    setUploadError('');
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const path = `lounges/${loungeId}/events/${Date.now()}-${safeName}`;
+      const fileRef = storageRef(storage, path);
+      await uploadBytes(fileRef, file);
+      setImageUrl(await getDownloadURL(fileRef));
+    } catch {
+      setUploadError("Couldn't upload that photo. Check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const loadEvents = async (id: string) => {
     const snapshot = await getDocs(
@@ -85,11 +114,13 @@ export default function EventsPage() {
         title: title.trim(),
         description: description.trim(),
         startsAt: Timestamp.fromDate(startsAtDate),
+        ...(imageUrl ? { imageUrl } : {}),
         createdAt: Timestamp.now(),
       });
       setTitle('');
       setDescription('');
       setStartsAt('');
+      setImageUrl('');
       await loadEvents(loungeId);
     } catch {
       setFormError("Couldn't save the event. Check your connection and try again.");
@@ -118,17 +149,32 @@ export default function EventsPage() {
   const renderEvent = (event: LoungeEvent, isPast: boolean) => (
     <div key={event.id} className={`card ${isPast ? 'card--muted' : ''}`}>
       <div className="card__head">
-        <div>
-          <h2 style={{ fontSize: 18, marginBottom: 2 }}>{event.title}</h2>
-          <p style={{ fontSize: 13, color: 'var(--gold)', margin: 0 }}>
-            {event.startsAt.toDate().toLocaleString(undefined, {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })}
-          </p>
+        <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
+          {event.imageUrl && (
+            <img
+              src={event.imageUrl}
+              alt=""
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 'var(--radius-md)',
+                objectFit: 'cover',
+                flexShrink: 0,
+              }}
+            />
+          )}
+          <div>
+            <h2 style={{ fontSize: 18, marginBottom: 2 }}>{event.title}</h2>
+            <p style={{ fontSize: 13, color: 'var(--gold)', margin: 0 }}>
+              {event.startsAt.toDate().toLocaleString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+            </p>
+          </div>
         </div>
         <button
           className="btn btn--danger"
@@ -194,6 +240,39 @@ export default function EventsPage() {
                   rows={3}
                 />
               </label>
+
+              <div className="field">
+                <span className="field__label">Poster (optional)</span>
+                <div className="photo-upload">
+                  <div className="photo-upload__preview">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt="" />
+                    ) : (
+                      <span className="photo-upload__placeholder">No poster</span>
+                    )}
+                  </div>
+                  <div className="photo-upload__actions">
+                    <input
+                      className="file-input"
+                      type="file"
+                      accept="image/*"
+                      disabled={uploading}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (file) uploadPoster(file);
+                      }}
+                    />
+                    {uploading && <span className="muted" style={{ fontSize: 12 }}>Uploading…</span>}
+                    {imageUrl && !uploading && (
+                      <button type="button" className="btn btn--danger" onClick={() => setImageUrl('')}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {uploadError && <p className="msg msg--error">{uploadError}</p>}
+              </div>
 
               {formError && <p className="msg msg--error">{formError}</p>}
 

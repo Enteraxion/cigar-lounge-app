@@ -121,12 +121,25 @@ export default defineConfig({
     __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
   },
   optimizeDeps: {
-    // The dependency pre-bundler runs its own resolver and does NOT read
-    // `resolve.extensions` above, so it cannot find react-native-screens'
-    // TabsHost.web.js and stops on `./TabsHost`. Excluding these leaves them
-    // to the main pipeline, which resolves platform extensions correctly.
-    // The production build never hit this — it does not pre-bundle at all.
-    exclude: ['react-native-screens', 'react-native-web', 'react-native-svg'],
+    // The dependency pre-bundler's OWN resolver (esbuild) does not read Vite's
+    // `resolve.extensions` above by default, so excluding react-native-web/
+    // -screens/-svg here (as this file previously did) stopped esbuild from
+    // failing to find react-native-screens' TabsHost.web.js — but it also
+    // meant the optimizer never crawled into any of react-native-web's own
+    // CJS-only dependencies (@react-native/normalize-colors,
+    // inline-style-prefixer, ...), which then got served raw and broke one
+    // at a time with "does not provide an export named 'default'" (a plain
+    // `module.exports = fn` has no `default` when loaded as native ESM).
+    // esbuildOptions.resolveExtensions gives the SAME list to esbuild's
+    // scanner, so it resolves TabsHost.web.js correctly too — letting the
+    // optimizer pre-bundle the whole graph properly instead of excluding
+    // pieces of it and fixing the fallout file by file.
+    esbuildOptions: {
+      resolveExtensions: [
+        '.web.tsx', '.web.ts', '.web.jsx', '.web.js',
+        '.tsx', '.ts', '.jsx', '.js', '.json',
+      ],
+    },
   },
   server: { port: 5175 },
   build: { outDir: 'web-build' },

@@ -1,0 +1,65 @@
+/*
+ * What react-native-web's TextInput reset leaves out.
+ *
+ * RNW renders every TextInput as a real <input>, and styles it with the
+ * `textinput$raw` rule in its own dist (exports/TextInput/index.js). That rule
+ * neutralises appearance, border, border-radius, background, font, margin,
+ * padding and resize — so a field looks like the native one — but it sets
+ * neither `outline` nor `min-width`. Both defaults then behave in ways React
+ * Native has no equivalent for, and both are invisible until the app is opened
+ * in a browser.
+ *
+ * This is web-only by construction: the file is imported from index.web.tsx,
+ * which the phone build never loads.
+ */
+
+/*
+ * 1. The focus ring.
+ *
+ * With no `outline` in the reset, the browser paints its own focus ring on the
+ * inner <input> — a blue rectangle sitting INSIDE the app's custom field
+ * container, which already draws the border and background the design calls
+ * for. Native has no such thing; the caret is the focus affordance.
+ *
+ * Deliberately `:focus` and not `:focus-visible`: browsers match
+ * :focus-visible on text inputs even for pointer and touch interaction, on the
+ * grounds that a text field always warrants a focus indicator, so scoping this
+ * to :focus-visible would leave the ring exactly where it is on a tap. The
+ * caret remains visible and the field is still the focus target, so the state
+ * is conveyed without a second rectangle.
+ */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+/* iOS paints a grey flash over the tap target before focus lands, which reads
+   as the same spurious rectangle a moment earlier. */
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * 2. The intrinsic width.
+ *
+ * An <input> defaults to roughly 20 characters wide, and a flex item's default
+ * `min-width: auto` forbids shrinking below that intrinsic size. So a field
+ * with `flex: 1` inside a narrow row cannot become narrow: it overflows its
+ * container and drags its text — centred text most visibly — out of the box
+ * that is supposed to hold it. This is what broke the three Date of Birth
+ * boxes on the sign-up and age-verification screens, where MM, DD and YYYY
+ * each demanded 20 characters of a third of the screen.
+ *
+ * A React Native TextInput has no intrinsic width at all, so `min-width: 0` is
+ * what makes the browser agree with the layout every screen was written
+ * against. Set here rather than per screen because the cause is the shared
+ * reset, not any one component.
+ */
+input,
+textarea,
+select {
+  min-width: 0;
+}

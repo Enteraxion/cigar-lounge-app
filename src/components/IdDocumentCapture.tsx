@@ -224,11 +224,24 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
       if (!uri) {
         return;
       }
-      // The scanner returns a bare path on iOS; Image and the uploader both
-      // need a scheme.
+      /**
+       * The scanner returns a bare path on iOS — `/var/mobile/.../scan.jpg` —
+       * and Image and the uploader both need a scheme on it.
+       *
+       * Test for a scheme rather than for `file://` specifically. The web build
+       * swaps the scanner for the browser's file input (see
+       * src/web/shims/document-scanner.ts), which hands back an OBJECT URL:
+       * `blob:http://host/uuid`. That does not start with `file://`, so the old
+       * check prefixed it anyway and produced `file://blob:http://host/uuid` —
+       * a URL that Image cannot render, leaving the preview blank, and that
+       * Safari's parser reads as a host carrying credentials, so fetch() in the
+       * putFile shim rejected with "URL is not valid or contains user
+       * credentials". One malformed string, both symptoms.
+       */
+      const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(uri);
       setShots(current => ({
         ...current,
-        [side]: uri.startsWith('file://') ? uri : `file://${uri}`,
+        [side]: hasScheme ? uri : `file://${uri}`,
       }));
     } catch {
       // Falling back rather than dead-ending. The scanner needs camera
@@ -348,15 +361,33 @@ export default function IdDocumentCapture({ onSubmitted, existing }: Props) {
       // sign-up wall lets them straight into the app on approval, the voluntary
       // route simply updates in place.
       onSubmitted(outcome);
-    } catch {
+    } catch (error) {
       setReview('idle');
+      /**
+       * Logged, because this catch covers the whole submission — two uploads, a
+       * Firestore write and the automated review — and every one of those fails
+       * differently. Swallowing the reason meant a member reporting "it says
+       * check your connection" gave no way to tell a Storage rule rejection
+       * from an expired sign-in from a genuinely dropped request, on the one
+       * screen nobody can get past. The member still sees the wording below;
+       * this is the only record of what actually happened.
+       */
+      console.error('[IdDocumentCapture] submission failed', error);
       // Retryable, not a dead end: the usual cause is a dropped connection, and
       // a member at the sign-up wall cannot reach the app until this succeeds, so
       // the message has to invite another attempt. The local photos are kept so
       // "try again" does not mean "photograph everything again".
+      //
+      // In development the reason is appended, because this screen is most often
+      // tested on a real phone against the dev server, where the console is only
+      // reachable over a cable. A member never sees this — `__DEV__` is false in
+      // both the release build and `vite build`.
+      const detail =
+        error instanceof Error ? `${error.name}: ${error.message}` : String(error);
       Alert.alert(
         "Couldn't send that",
-        'Check your connection and tap Submit again — your photos are still here.',
+        'Check your connection and tap Submit again — your photos are still here.' +
+          (__DEV__ ? `\n\n[dev] ${detail}` : ''),
       );
     } finally {
       setUploading(false);

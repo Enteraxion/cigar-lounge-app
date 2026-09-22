@@ -10,6 +10,9 @@
         ],
         "admin-portal": [
           "reserve-admin-portal"
+        ],
+        "web-app": [
+          "lounge-locator"
         ]
       }
     }

@@ -32,6 +32,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -125,6 +126,16 @@ export default function MapScreen() {
   // see src/utils/tabBarLayout.ts for why this isn't a fixed number.
   const insets = useSafeAreaInsets();
   const infoCardStyle = [styles.infoCard, { bottom: tabBarClearance(insets.bottom) }];
+  /**
+   * The info card's height is not knowable in advance — it grows with a second
+   * line of address, and with however many amenity chips a lounge has — so it
+   * is measured and the controls column is placed against the measured value.
+   * See `controlsColumn` for what this replaced.
+   */
+  const [cardHeight, setCardHeight] = useState(0);
+  const onCardLayout = (event: LayoutChangeEvent) => {
+    setCardHeight(event.nativeEvent.layout.height);
+  };
   const mapRef = useRef<MapView>(null);
   const { location, settled: locationSettled } = useCurrentLocation();
   const initialRegion = location
@@ -299,6 +310,13 @@ export default function MapScreen() {
   }, [location]);
 
   const selectedLounge = lounges?.find(lounge => lounge.id === selectedLoungeId) ?? null;
+  /**
+   * Whether anything is occupying the bottom of the screen. Mirrors the three
+   * branches of the info card below — loading, error, selection — because the
+   * controls only need lifting while one of them is on screen; with no card
+   * they keep the position they have always had.
+   */
+  const cardShowing = (lounges === null && !error) || Boolean(error) || Boolean(selectedLounge);
 
   /**
    * Back to where the member is.
@@ -505,7 +523,24 @@ export default function MapScreen() {
             nothing else was removed. */}
 
         {/* ---------------- Map controls ---------------- */}
-        <View style={styles.controlsColumn}>
+        <View
+          style={[
+            styles.controlsColumn,
+            /**
+             * Exactly ONE of top/bottom, never both. An absolutely positioned
+             * box given both stretches between them and lays its children out
+             * from the top, so overriding with `top: undefined` changed
+             * nothing — react-native-web drops the undefined and keeps the
+             * original `top`, leaving the buttons where they were.
+             *
+             * So the resting position lives here rather than in the
+             * stylesheet, and the two cases are mutually exclusive.
+             */
+            cardShowing && cardHeight > 0
+              ? { bottom: tabBarClearance(insets.bottom) + cardHeight + theme.spacing.sm }
+              : styles.controlsResting,
+          ]}
+        >
           <Pressable style={styles.controlButton} onPress={cycleMapType} hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel="Change the map style"
@@ -529,18 +564,18 @@ export default function MapScreen() {
 
       {/* ---------------- Bottom info card ---------------- */}
       {lounges === null && !error ? (
-        <View style={infoCardStyle}>
+        <View style={infoCardStyle} onLayout={onCardLayout}>
           <ActivityIndicator color={theme.colors.secondarySilver} />
         </View>
       ) : error ? (
-        <View style={infoCardStyle}>
+        <View style={infoCardStyle} onLayout={onCardLayout}>
           <Text style={styles.infoRatingRow}>{error}</Text>
           <Pressable style={styles.viewDetailsButton} onPress={loadLounges}>
             <Text style={styles.viewDetailsText}>Try Again</Text>
           </Pressable>
         </View>
       ) : selectedLounge ? (
-        <View style={infoCardStyle}>
+        <View style={infoCardStyle} onLayout={onCardLayout}>
           <View style={styles.infoTopRow}>
             <Image source={{ uri: loungeImageUri(selectedLounge) }} style={styles.infoImage} />
             <View style={styles.infoTextGroup}>
@@ -676,8 +711,20 @@ const styles = StyleSheet.create({
   controlsColumn: {
     position: 'absolute',
     right: theme.spacing.lg,
-    top: '46%',
+    /**
+     * Deliberately no `top` or `bottom` here — the render supplies whichever
+     * one applies. A fraction of the screen height says nothing about where
+     * the card's top edge is: the card grows from the bottom with its content
+     * (a wrapped two-line address and a row of amenity chips are enough), so
+     * on a shorter screen it reached up over the third control and swallowed
+     * the list button. Setting both here and overriding one of them does not
+     * work; see the comment at the call site.
+     */
     gap: theme.spacing.sm,
+  },
+  /** The resting position, applied only while no info card is on screen. */
+  controlsResting: {
+    top: '46%',
   },
   controlButton: {
     width: 40,
